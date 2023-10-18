@@ -10,11 +10,11 @@ const Layout = () => {
             headerLeft: () => <DrawerToggleButton />
         }}>
         </Drawer.Screen>
-        {/* <Drawer.Screen name='chat/id' options={{
-            title: "Чат",
+        <Drawer.Screen name='Home' options={{
+            title: "Профіль",
             headerLeft: () => <DrawerToggleButton />
         }}>
-        </Drawer.Screen> */}
+        </Drawer.Screen>
     </Drawer>
   )
 }
