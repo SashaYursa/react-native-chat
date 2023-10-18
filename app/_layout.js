@@ -6,7 +6,7 @@ const RootLayout = () => {
     const [isAuth, setIsAuth] = useState(false)
     console.log('layout rerender')
   return (
-    <RootLayoutNav /> 
+      <RootLayoutNav /> 
   )
 }
 const RootLayoutNav = () => {

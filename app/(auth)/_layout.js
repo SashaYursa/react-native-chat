@@ -9,6 +9,7 @@ const AuthLayout = () => {
   return (
     <Stack>
         <Stack.Screen name='Login' options={{
+          headerTitle: '',
           headerRight: () => <MoveButton
           onPress = {()=> router.push('SignUp')}
           style={({pressed}) => [
@@ -19,7 +20,9 @@ const AuthLayout = () => {
           ><ButtonText>SignUp</ButtonText>
           </MoveButton>
         }}/>
-        <Stack.Screen name='SignUp' />
+        <Stack.Screen name='SignUp' options={{
+          headerTitle: ''
+        }} />
     </Stack>
   )
 }
