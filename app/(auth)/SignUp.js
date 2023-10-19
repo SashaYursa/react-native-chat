@@ -8,7 +8,7 @@ const SignUp = () => {
   const addUser = (email,password, passwordConfirm) => {
     if(password === passwordConfirm){
       createUserWithEmailAndPassword(auth, email, password)
-      .then(data => console.log(data, ' created'))
+      .then(data => console.log('created'))
       .catch(error => console.log(error, 'error'))
     }
   }

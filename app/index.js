@@ -1,34 +1,22 @@
 import { View, Text, SafeAreaView } from 'react-native'
-import React from 'react'
-import { Link, Redirect, useNavigation } from 'expo-router'
+import React, { createContext, useContext, useEffect, useState } from 'react'
+import { Link, Redirect, useGlobalSearchParams, useLocalSearchParams, useNavigation } from 'expo-router'
 import { Stack} from 'expo-router/stack';
+import { ActivityIndicator } from 'react-native-paper';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '../config/firebase';
+import Navigation from './Navigation';
+import { AuthUserContext } from './_layout';
 
-const Root = (props) => {
-  // console.log('index rerender')
-  // const navigation = useNavigation();
-  // console.log(props.isAuth)
-  // return props.isAuth ? (
-  //   // <View><Text>isAuth</Text></View>
-  //   <Redirect href={'chats'}/>
-  //   //<Stack.Screen name='(drawer)/chats'/>
-  // )
-  // : (
-  //   <Redirect href={'/auth'}/>
-  //   //<View><Text>isNoAuth</Text></View>
-  //   //navigation.push('/auth')
-  // )
+const Root = () => {
+  const  user = useContext(AuthUserContext)
+  useEffect(()=> {
+    console.log(user, '12312312312')
+  }, [AuthUserContext])
+  console.log(user, 'ess')
   return (
-    <SafeAreaView style={{paddingTop: Platform.OS === 'android' ? 25 : 0}}>
-      {props.isAuth ? 
-    <View>
-      <Text>
-        Main page
-      </Text>
-    </View>
-    : <Redirect href='(auth)/Login'/>
-    }
-    </SafeAreaView>
-    )
+      <Navigation user={user}/>
+  )
 }
 
 export default Root
