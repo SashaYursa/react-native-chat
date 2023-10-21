@@ -1,6 +1,6 @@
 import React from 'react'
 import styled from 'styled-components'
-import ChatItem from '../../components/ChatList/ChatItem'
+import ChatItem from '../../../components/ChatList/ChatItem'
 import { TouchableOpacity } from 'react-native-gesture-handler'
 import { Link, useRouter } from 'expo-router'
 

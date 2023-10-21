@@ -4,6 +4,7 @@ import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../../config/firebase'
 import { useContext } from 'react';
 import { AuthUserContext } from '../_layout';
+import { router } from 'expo-router';
 
 const Login = () => {
   const { user, setUser }  = useContext(AuthUserContext)
@@ -11,6 +12,7 @@ const Login = () => {
     signInWithEmailAndPassword(auth, email, password)
     .then(data => { 
       setUser(data)
+      router.push('/');
     })
     .catch(error => console.log(error))
   }
