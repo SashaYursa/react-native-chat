@@ -10,7 +10,10 @@ import {
   onSnapshot,
   query,
   setMessage,
-  FieldValue
+  FieldValue,
+  getDocs,
+  where,
+  or
 } from 'firebase/firestore'
 import firebase from "firebase/compat/app";
 import "firebase/compat/auth";
@@ -20,8 +23,15 @@ const Chat = (props) => {
   const {auth, database} = useContext(FirebaseContext);
   const { user } = useContext(AuthUserContext);
   const { id } = useLocalSearchParams();
-  const docRef = doc(database, "messages", 'SQ844ndsHdXklqWRJo9k');
-  const docSnap = getDoc(docRef).then(data=> console.log(data.data()));
+  //const docRef = doc(database, "chats", 'SF');
+  const q = query(collection(database, "chats"), where("users", "array-contains", "ouO7fry4IUPpj4LyT9BeuGCAXll2"));
+  const snapshots = getDocs(q).then(data=> {
+    data.forEach(element => {
+      console.log('------')
+      console.log('---->', element.data())
+    });
+  })
+  //const docSnap = getDoc(docRef).then(data=> console.log(data.data()));
   const sendMessage = async () => {
     await addDoc(collection(database, 'messages'),{
       uid: user.uid,

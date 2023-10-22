@@ -11,7 +11,7 @@ const AuthLayout = () => {
         <Stack.Screen name='Login' options={{
           headerTitle: '',
           headerRight: () => <MoveButton
-          onPress = {()=> router.push('SignUp')}
+          onPress = {()=> router.push('auth/SignUp')}
           style={({pressed}) => [
             {
               backgroundColor: pressed ? 'gray' : 'white',

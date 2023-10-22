@@ -21,7 +21,7 @@ const SignUpForm = ({handleRegistration}) => {
       onChangeText={text => setPassword(text)}
       right={<TextInput.Icon onPress={handleShowPass} icon="eye" />}
       />
-      <TextInput label='PasswordConfirm' mode='outlined'
+      <TextInput label='Password Confirm' mode='outlined'
       value={passwordConfirm}
       secureTextEntry={hidePass}
       onChangeText={text => setPasswordConfirm(text)}
