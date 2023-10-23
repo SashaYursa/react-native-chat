@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@react-navigation/drawer": "^6.6.4",
+    "dayjs": "^1.11.10",
     "dotenv": "^16.3.1",
     "expo": "~49.0.13",
     "expo-constants": "~14.4.2",

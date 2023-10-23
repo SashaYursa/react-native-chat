@@ -7,13 +7,11 @@ import { auth } from '../../config/firebase';
 
 const AppLayout = () => {
     const {user, setUser} = useContext(AuthUserContext);
-    console.log( 'is rerender')
     useEffect(()=> {
         const unsub = onAuthStateChanged(auth, 
             authUser => {
                 authUser ? setUser(authUser) : setUser(null)
             })
-        console.log('context 123')
         return () => unsub();
     }, [user])
     if (!user) return (

@@ -1,23 +1,32 @@
 import { View, Text, Image } from 'react-native'
+// import * as dayjs from 'dayjs'
+// import * as relativeTime from 'dayjs/plugin/relativeTime'
 import React from 'react'
 import styled from 'styled-components'
 const ChatItem = ({item}) => {
+    const dayjs = require("dayjs");
+    const relativeTime = require("dayjs/plugin/relativeTime");
+    dayjs.extend(relativeTime);
+    
+    let dateNow = dayjs();
+    let blogDate = new Date(item.time * 1000);
+    let str = dateNow.from(blogDate, true);
   return (
     <Container>
         <ImageContainer>
-            <ChatImage source={{uri: item.image}}/>
+            <ChatImage source={item.image === null ? require('../../../assets/default-chat-image.png') : {uri:item.image}}/>
         </ImageContainer>
         <ChatData>
             <UserName numberOfLines={1}>
-                {item.name}
+                {item.name ? item.name : 'No data'}
             </UserName>
             <MessageData numberOfLines={2}>
-                {item.data}
+                {item.data ? item.data : 'No message'}
             </MessageData>
         </ChatData>
         <ChatInfo>
             <InfoTime>
-                {item.time}
+                {item.time ? String(str) : 'No time'}
             </InfoTime>
         </ChatInfo>
     </Container>
