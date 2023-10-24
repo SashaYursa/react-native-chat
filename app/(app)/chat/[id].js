@@ -1,5 +1,5 @@
 import { View, Text, ScrollView, Image, TextInput, TouchableOpacity } from 'react-native'
-import React, { useContext, useLayoutEffect } from 'react'
+import React, { useContext, useEffect, useLayoutEffect, useState } from 'react'
 import styled from 'styled-components'
 import { Stack, useLocalSearchParams } from 'expo-router'
 import {
@@ -13,62 +13,93 @@ import {
   FieldValue,
   getDocs,
   where,
-  or
+  or,
+  orderBy,
+  Timestamp,
+  serverTimestamp
 } from 'firebase/firestore'
 import firebase from "firebase/compat/app";
 import "firebase/compat/auth";
 import "firebase/compat/firestore";
 import { AuthUserContext, FirebaseContext } from '../../_layout'
+let i = 0;
 const Chat = (props) => {
+  const [messages, setMessages] = useState([]);
+  const [newMessageText, setNewMessageText] = useState('');
   const {auth, database} = useContext(FirebaseContext);
   const { user } = useContext(AuthUserContext);
   const { id } = useLocalSearchParams();
+  console.log(id, 'id')
   //const docRef = doc(database, "chats", 'SF');
-  const q = query(collection(database, "chats"), where("users", "array-contains", "ouO7fry4IUPpj4LyT9BeuGCAXll2"));
-  const snapshots = getDocs(q).then(data=> {
-    data.forEach(element => {
-      console.log('------')
-      console.log('---->', element.data())
-    });
-  })
+  //const q = query(collection(database, "chats"), where("users", "array-contains", "ouO7fry4IUPpj4LyT9BeuGCAXll2"));
+  // const snapshots = getDocs(q).then(data=> {
+  //   data.forEach(element => {
+  //   });
+  // })
+  useEffect(() => {
+    const q = query(collection(database, 'messages', String(id), 'message'), orderBy('createdAt', 'asc'))
+    // getDocs(q).then(async data => data.forEach(element => {
+    // //  console.log('eee')
+    // }))
+    console.log('123')
+    const unsubscribe = onSnapshot(q,async (snapshot) => {
+      console.log(i++, 'add message');
+      const newMessages = await Promise.all(snapshot.docs.map(element => {
+        return {...element.data(), id: element.id};
+      }))
+      console.log(newMessages)
+      setMessages(newMessages)
+    })
+    return () => unsubscribe();
+  }, [])
   //const docSnap = getDoc(docRef).then(data=> console.log(data.data()));
   const sendMessage = async () => {
-    await addDoc(collection(database, 'messages'),{
+    await addDoc(collection(database, 'messages', String(id), 'message'),{
       uid: user.uid,
-      displayName: 'alex',
-      text: 'first message',
-      createdAt: 'now'
+      text: newMessageText,
+      createdAt: serverTimestamp()
     })
     .then(data=> {
-      console.log(data, 'data')
+      setNewMessageText('');
     })
   }
   return (
     <>
     <ChatCanvas>
-      <CompanionMessagesContainer>
-          <CompanionImageContainer>
-            <CompanionImage source={{uri: 'https://cdn.icon-icons.com/icons2/2468/PNG/512/user_icon_149329.png'}}/>
-          </CompanionImageContainer>
-        <CompanionMessages>
-          <MessageText>
-            Прив
-          </MessageText>
-        </CompanionMessages>
-      </CompanionMessagesContainer>
-        <MyMessage>
-          <MessageText>
-            ку
-          </MessageText>
-        </MyMessage>
-        <MyMessage>
-          <MessageText>
-            ку
-          </MessageText>
-        </MyMessage>
+      {
+        messages.length === 0
+        ? <View>
+        <Text>No data</Text>
+      </View>
+        : messages.map(message => {
+          if(message.uid == user.uid) {
+            return (
+              <MyMessage key={message.id}>
+                <MessageText>
+                  {message.text}
+                </MessageText>
+              </MyMessage>
+            )
+          } 
+          else{
+            return (
+              <CompanionMessagesContainer key={message.id}>
+                <CompanionImageContainer>
+                  <CompanionImage source={{uri: 'https://cdn.icon-icons.com/icons2/2468/PNG/512/user_icon_149329.png'}}/>
+                </CompanionImageContainer>
+                <CompanionMessages>
+                  <MessageText>
+                    {message.text}
+                  </MessageText>
+                </CompanionMessages>
+              </CompanionMessagesContainer>
+            )
+          }
+        })
+      }
     </ChatCanvas>
     <NewMessageContainer>
-      <NewMessageInput placeholder='Ввеідть повідомлення...'/>
+      <NewMessageInput value={newMessageText} onChangeText={setNewMessageText} placeholder='Ввеідть повідомлення...'/>
       <NewMessageButton onPress={sendMessage}><NewMessageText>Надіслати</NewMessageText></NewMessageButton>
     </NewMessageContainer>
     </>
