@@ -1,16 +1,16 @@
 import { View, Text, Image } from 'react-native'
-// import * as dayjs from 'dayjs'
-// import * as relativeTime from 'dayjs/plugin/relativeTime'
 import React from 'react'
 import styled from 'styled-components'
 const ChatItem = ({item}) => {
-    const dayjs = require("dayjs");
-    const relativeTime = require("dayjs/plugin/relativeTime");
-    dayjs.extend(relativeTime);
-    
-    let dateNow = dayjs();
-    let blogDate = new Date(item.time * 1000);
-    let str = dateNow.from(blogDate, true);
+    const getTime = (time) => {
+        const dayjs = require("dayjs");
+        const relativeTime = require("dayjs/plugin/relativeTime");
+        dayjs.extend(relativeTime);
+        
+        let dateNow = dayjs();
+        let blogDate = new Date(time * 1000);
+        return dateNow.from(blogDate, true);
+    }
   return (
     <Container>
         <ImageContainer>
@@ -26,7 +26,7 @@ const ChatItem = ({item}) => {
         </ChatData>
         <ChatInfo>
             <InfoTime>
-                {item.time ? String(str) : 'No time'}
+                {item.time ? getTime(item.time) : 'No time'}
             </InfoTime>
         </ChatInfo>
     </Container>
