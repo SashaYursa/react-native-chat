@@ -1,76 +1,71 @@
-import { View, Text, ScrollView, Image, TextInput, TouchableOpacity } from 'react-native'
-import React, { useContext, useEffect, useLayoutEffect, useState } from 'react'
+import { View, Text, ScrollView, Image, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native'
+import React, { useContext, useEffect, useState } from 'react'
 import styled from 'styled-components'
-import { Stack, useLocalSearchParams } from 'expo-router'
+import { useLocalSearchParams, useRouter } from 'expo-router'
 import {
   collection,
   addDoc,
-  doc,
-  getDoc,
   onSnapshot,
   query,
-  setMessage,
-  FieldValue,
-  getDocs,
-  where,
-  or,
   orderBy,
-  Timestamp,
   serverTimestamp
 } from 'firebase/firestore'
 import firebase from "firebase/compat/app";
 import "firebase/compat/auth";
 import "firebase/compat/firestore";
 import { AuthUserContext, FirebaseContext } from '../../_layout'
-let i = 0;
-const Chat = (props) => {
+const Chat = () => {
   const [messages, setMessages] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [buttonDisable, setButtonDisable] = useState(true);
   const [newMessageText, setNewMessageText] = useState('');
   const {auth, database} = useContext(FirebaseContext);
   const { user } = useContext(AuthUserContext);
   const { id } = useLocalSearchParams();
-  console.log(id, 'id')
-  //const docRef = doc(database, "chats", 'SF');
-  //const q = query(collection(database, "chats"), where("users", "array-contains", "ouO7fry4IUPpj4LyT9BeuGCAXll2"));
-  // const snapshots = getDocs(q).then(data=> {
-  //   data.forEach(element => {
-  //   });
-  // })
+  const router = useRouter();
+  console.log(router)
   useEffect(() => {
     const q = query(collection(database, 'messages', String(id), 'message'), orderBy('createdAt', 'asc'))
-    // getDocs(q).then(async data => data.forEach(element => {
-    // //  console.log('eee')
-    // }))
-    console.log('123')
-    const unsubscribe = onSnapshot(q,async (snapshot) => {
-      console.log(i++, 'add message');
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
       const newMessages = await Promise.all(snapshot.docs.map(element => {
-        return {...element.data(), id: element.id};
+        return {
+          ...element.data(),
+          id: element.id
+        }
       }))
-      console.log(newMessages)
+      setLoading(false)
       setMessages(newMessages)
     })
     return () => unsubscribe();
   }, [])
-  //const docSnap = getDoc(docRef).then(data=> console.log(data.data()));
+  useEffect(() => {
+    if(newMessageText.length > 0){
+      setButtonDisable(false)
+    }
+    else{
+      setButtonDisable(true)
+    }
+  }, [newMessageText])
+
   const sendMessage = async () => {
+    setButtonDisable(true);
+    setNewMessageText('');
     await addDoc(collection(database, 'messages', String(id), 'message'),{
       uid: user.uid,
       text: newMessageText,
       createdAt: serverTimestamp()
     })
-    .then(data=> {
-      setNewMessageText('');
-    })
   }
+
   return (
     <>
     <ChatCanvas>
-      {
-        messages.length === 0
+      { loading 
+      ? <ActivityIndicator style={{alignSelf: 'center'}} color={'blue'} size={'large'}/>
+      : messages.length === 0
         ? <View>
-        <Text>No data</Text>
-      </View>
+            <Text>No data</Text>
+          </View>
         : messages.map(message => {
           if(message.uid == user.uid) {
             return (
@@ -100,7 +95,7 @@ const Chat = (props) => {
     </ChatCanvas>
     <NewMessageContainer>
       <NewMessageInput value={newMessageText} onChangeText={setNewMessageText} placeholder='Ввеідть повідомлення...'/>
-      <NewMessageButton onPress={sendMessage}><NewMessageText>Надіслати</NewMessageText></NewMessageButton>
+      <NewMessageButton disabled={buttonDisable} style={buttonDisable ? {backgroundColor: 'gray'} : {}} onPress={sendMessage}><NewMessageText>Надіслати</NewMessageText></NewMessageButton>
     </NewMessageContainer>
     </>
   )
@@ -143,14 +138,15 @@ font-size: 14px;
 font-weight: 400;
 color: #fff;
 `
+
 const ChatCanvas = styled.ScrollView`
 flex-grow: 1;
 background-color: #eaeaea;
 margin: 10px 0;
 padding: 0 5px;
 flex-direction: column;
-
 `
+
 const NewMessageContainer = styled.View`
 flex-direction: row;
 gap: 10px;
@@ -159,6 +155,7 @@ padding: 10px 5px;
 border-radius: 12px 12px 0 0;
 flex-shrink: 1;
 `
+
 const NewMessageInput = styled.TextInput`
 border-radius: 12px;
 padding: 5px 10px;
@@ -171,6 +168,7 @@ font-weight: 400;
 flex-grow: 1;
 flex-shrink: 1;
 `
+
 const NewMessageButton = styled.TouchableOpacity`
 padding: 5px 10px;
 background-color: #1657f2;
@@ -178,6 +176,7 @@ border-radius: 12px;
 align-items: center;
 justify-content: center;
 `
+
 const NewMessageText = styled.Text`
 font-size: 14px;
 font-weight: 700;

@@ -7,6 +7,7 @@ import { Link, useRouter } from 'expo-router'
 import { collection, doc, getDoc, getDocs, limit, limitToLast, orderBy, query, where } from 'firebase/firestore'
 import { AuthUserContext } from '../../../_layout'
 import { database } from '../../../../config/firebase'
+import { setParams } from 'expo-router/src/global-state/routing'
 const Chats = () => {
     const { user } = useContext(AuthUserContext);
     const [chats, setChats] = useState([]);
@@ -50,15 +51,17 @@ const Chats = () => {
         fetchData();
     }, [user])
     const router = useRouter();
-    const moveToChat = (id) => {
-        router.push(`chat/${id}`);
+    const moveToChat = (id, title, image) => {
+        image = !image ? 'default' : image
+        console.log(image, 'image')
+        router.push({pathname: `chat/${id}`, params: {title, chatImage: image}});
     }
 
     return (
         <Container>
             <ChatsList>
                 {chats.length > 0 && chats.map(chat=> (
-                <ChatLink key={chat.id} onPress={()=>moveToChat(chat.id)}>
+                <ChatLink key={chat.id} onPress={()=>moveToChat(chat.id, chat.name ? chat.name : chat.userData.displayName, chat.image ? chat.image : chat.userData.image)}>
                     <ChatItem item={{image: chat.image ? chat.image : chat.userData.image, name: chat.name ? chat.name : chat.userData.displayName, data: chat?.message?.text !== undefined ? chat.message.text : 'Повідомлень немає' , time: chat?.message?.createdAt?.seconds ? chat.message.createdAt.seconds : null}}/>
                 </ChatLink>
                 ))}
