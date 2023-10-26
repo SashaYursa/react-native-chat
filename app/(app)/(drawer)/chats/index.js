@@ -8,15 +8,11 @@ import { collection, doc, getDoc, getDocs, limit, limitToLast, orderBy, query, w
 import { AuthUserContext } from '../../../_layout'
 import { database } from '../../../../config/firebase'
 import { setParams } from 'expo-router/src/global-state/routing'
+import { getUserData } from '../../_layout'
 const Chats = () => {
     const { user } = useContext(AuthUserContext);
     const [chats, setChats] = useState([]);
-    const getUserData = async (uid) => {
-        const qUser = doc(database, "users", String(uid))
-        return await getDoc(qUser)
-        .then(data => data.data())
-        .catch(error => console.log(error))
-    }
+    
     const getLastMessage = async (chatId) => {
         const qMessages = query(collection(database, "messages", String(chatId), "message"), orderBy('createdAt', 'desc'), limit(1));
         const data = await getDocs(qMessages)
@@ -27,7 +23,7 @@ const Chats = () => {
         return await res[0];
     }
 
-    useEffect(()=> {
+    useEffect(() => {
         const fetchData = async () => {
         const qChats = query(collection(database, "chats"), where("users", "array-contains", String(user.uid)));
         const chats = await getDocs(qChats);
@@ -36,10 +32,10 @@ const Chats = () => {
             chat.id =  doc.id
             const users = chat.users;
             const selectedUserID = users[0] === user.uid 
-            ? users[1]
-            : users[0]
+                ? users[1]
+                : users[0]
             const messages = await getLastMessage(doc.id);
-            const userData = await getUserData(selectedUserID, doc.id)
+            const userData = await getUserData(database, selectedUserID)
             return {
                 ...chat,
                 message: messages,
@@ -51,10 +47,8 @@ const Chats = () => {
         fetchData();
     }, [user])
     const router = useRouter();
-    const moveToChat = (id, title, image) => {
-        image = !image ? 'default' : image
-        console.log(image, 'image')
-        router.push({pathname: `chat/${id}`, params: {title, chatImage: image}});
+    const moveToChat = (id, name, image) => {
+        router.push({pathname: `chat/${id}`, params: name, image});
     }
 
     return (

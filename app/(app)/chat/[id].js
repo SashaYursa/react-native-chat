@@ -1,29 +1,36 @@
 import { View, Text, ScrollView, Image, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native'
-import React, { useContext, useEffect, useState } from 'react'
+import React, { useContext, useEffect, useLayoutEffect, useState } from 'react'
 import styled from 'styled-components'
-import { useLocalSearchParams, useRouter } from 'expo-router'
+import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router'
 import {
   collection,
   addDoc,
   onSnapshot,
   query,
   orderBy,
-  serverTimestamp
+  serverTimestamp,
+  doc,
+  getDoc,
+  where,
+  getDocs
 } from 'firebase/firestore'
 import firebase from "firebase/compat/app";
 import "firebase/compat/auth";
 import "firebase/compat/firestore";
 import { AuthUserContext, FirebaseContext } from '../../_layout'
+import { getUserData } from '../_layout'
 const Chat = () => {
   const [messages, setMessages] = useState([]);
+  const [chat, setChat] = useState(null);
   const [loading, setLoading] = useState(true);
   const [buttonDisable, setButtonDisable] = useState(true);
   const [newMessageText, setNewMessageText] = useState('');
   const {auth, database} = useContext(FirebaseContext);
   const { user } = useContext(AuthUserContext);
+  const [selectedUser, setSelectedUser] = useState(null);
   const { id } = useLocalSearchParams();
   const router = useRouter();
-  console.log(router)
+  const navigation = useNavigation();
   useEffect(() => {
     const q = query(collection(database, 'messages', String(id), 'message'), orderBy('createdAt', 'asc'))
     const unsubscribe = onSnapshot(q, async (snapshot) => {
@@ -38,6 +45,43 @@ const Chat = () => {
     })
     return () => unsubscribe();
   }, [])
+
+  const getChat = async () => {
+    const qChat = doc(database, "chats", id);
+    const chat = await getDoc(qChat);
+    setChat(chat.data());
+  } 
+  const getUser = async (id) => {
+    console.log(id, 'id')
+    const qUser = query(collection(database, "users"), where("id", "==", id))
+    let res = await getDocs(qUser);
+    res = await Promise.all(res.docs.map(item => item.data()))
+    setSelectedUser(await res[0]);
+  }
+
+  useLayoutEffect(() => {
+    if(!chat){
+      getChat();
+    }
+    else{
+      if(chat.type === "private"){
+        if(selectedUser === null){
+          getUser(chat.users.find(id => id !== user.uid))
+        }
+        else{
+          navigation.setOptions({
+            headerTitle: () => (
+              <TouchableOpacity onPress={() => {router.push(`(drawer)/user/${selectedUser.id}`)}} style={{flexDirection: 'row', alignItems: 'center', gap: 10}}>
+                <Image style={{width: 35, height: 35, borderRadius: 50, overflow: 'hidden', backgroundColor: "#eaeaea"}} source={selectedUser.image === null ? require('../../../assets/default-chat-image.png') : {uri: selectedUser.image}} />
+                <Text style={{fontSize: 18, fontWeight: 700}}>{selectedUser.displayName}</Text>
+              </TouchableOpacity>
+            )
+          })
+        }
+      }
+    }
+  }, [chat, selectedUser])
+  
   useEffect(() => {
     if(newMessageText.length > 0){
       setButtonDisable(false)

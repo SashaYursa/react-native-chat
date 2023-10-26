@@ -12,17 +12,23 @@ const Layout = () => {
   const router = useRouter();
   return (
     <Drawer initialRouteName='chats' screenOptions={{headerShown: true}}>
+        <Drawer.Screen name='user/index' options={{
+            headerShown: false,
+            title: user.displayName ? user.displayName : user.email,
+        }} />
         <Drawer.Screen name='chats' options={{
             title: "Чати",
             headerLeft: () => <DrawerToggleButton/>,
-            headerRight: () => <UsersButton activeOpacity={.5} onPress={() => router.push('(drawer)/Users')}><UserImage source={require('../../../assets/users.png')}/></UsersButton>
-        }}>
-        </Drawer.Screen>
-        <Drawer.Screen name='Home' options={{
-            title: "Профіль",
-            headerLeft: () => <DrawerToggleButton />
-        }}>
-        </Drawer.Screen>
+            headerRight: () => <UsersButton activeOpacity={.5} onPress={() => router.push('Users')}><UserImage source={require('../../../assets/users.png')}/></UsersButton>
+        }} />
+        <Drawer.Screen name='user/[userId]' options={{
+          drawerLabel: () => null,
+          title: () => null,
+          drawerIcon: () => null,
+          headerShown: false,
+          drawerItemStyle: {display: 'none'}
+        }} />
+
     </Drawer>
   )
 }
