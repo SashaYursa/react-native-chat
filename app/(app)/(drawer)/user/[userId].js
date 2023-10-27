@@ -6,27 +6,32 @@ import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router'
 import Animated, {FadeInUp, FadeOutDown, FadeOutUp}from 'react-native-reanimated'
 import { ActivityIndicator, Button } from 'react-native-paper'
 import { AuthUserContext } from '../../../_layout';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import { database } from '../../../../config/firebase';
 const Home = () => {
   const {user} = useContext(AuthUserContext)
   const [displayFullInfo, setDisplayFullInfo] = useState(true);
+  const [loading, setLoading] = useState(true)
   const navigation = useNavigation();
   const [selectedUser, setSelectedUser] = useState(null);
   const router = useRouter();
   const { userId } = useLocalSearchParams();
-  console.log(userId, user.uid, 'usididi')
+
   useEffect(() => {
-    
-    if(userId == user.uid){
-      //console.log('there')
-      setSelectedUser(user);
-    }
-    // TODO: get user, if selected userId !== user.uid and set it to selected user and out data then
+    const getUser = async () =>{
+    const qUser = query(collection(database, "users"), where("id", "==", userId))
+    let res = await getDocs(qUser);
+    res = await Promise.all(res.docs.map(item => item.data()))
+    setSelectedUser(await res[0]);
+    setLoading(false)
+    } 
+    getUser()
   }, [userId])
-  //console.log(selectedUser, 'selelelel')
-  return (
+
+  return selectedUser ? (
     <Container>
       <View style={{position: "absolute", top: 10, right: 10, left: 10, zIndex: 10}}>
-      { !displayFullInfo && <SmallUserWindow />}
+      { !displayFullInfo && <SmallUserWindow displayName={selectedUser.displayName} email={selectedUser.email} image={selectedUser.image} />}
       </View>
       <ScrollView onScroll={(e)=>{
           if(e.nativeEvent.contentOffset.y > 440 && displayFullInfo !== false){
@@ -36,25 +41,23 @@ const Home = () => {
             setDisplayFullInfo(true)
           }
           }}
-          
           >
-            
               <UserInfoContainer>
-                <View style={{backgroundColor: "#000", width: 55, backroundOpacity: 0}}>
+                <View style={{backgroundColor: "#000", width: 53, backroundOpacity: 0, position: 'absolute', top: 10, left: 10, zIndex: 2, borderRadius: 12}}>
                 <DrawerToggleButton tintColor='#fff' backgroundColor="#000"/>
                 </View>
                   <UserImageContainer>
-                    <UserImage source={{uri: 'https://img.freepik.com/free-photo/painting-mountain-lake-with-mountain-background_188544-9126.jpg'}}/>
+                    <UserImage source={selectedUser.image ? {uri: selectedUser.image} : require('../../../../assets/default-user-big.png')}/>
                   </UserImageContainer>
                   <UserDataContainer>
                     <UserDataItem>
-                      <PreText>Username</PreText>
-                      <UserDataText>Text</UserDataText>
+                      <PreText>Name</PreText>
+                      <UserDataText>{selectedUser.displayName}</UserDataText>
                     </UserDataItem>
                     <BreakLine/>
                     <UserDataItem>
                       <PreText>Email</PreText>
-                      <UserDataText>Text</UserDataText>
+                      <UserDataText>{selectedUser.email}</UserDataText>
                     </UserDataItem>
                   </UserDataContainer>
                </UserInfoContainer>
@@ -63,6 +66,17 @@ const Home = () => {
       </View>
       </ScrollView>
     </Container>  
+  )
+  : loading 
+  ? (
+    <ActivityIndicator/>
+  )
+  : (
+    <View style={{alignItems: 'center', justifyContent: 'center', marginTop: 200}}>
+      <Text>
+        User not found
+      </Text>
+    </View>
   )
 }
 const Buttons = () => {
@@ -111,7 +125,7 @@ const Buttons = () => {
   )
 }
 
-const SmallUserWindow = () => {
+const SmallUserWindow = ({displayName, email, image}) => {
   return (
   <Animated.View
     entering={FadeInUp}
@@ -119,16 +133,16 @@ const SmallUserWindow = () => {
   >
     <SmallUserInfoContainer>
     <SmallUserImageContainer>
-      <SmallUserImage source={{uri: 'https://img.freepik.com/free-photo/painting-mountain-lake-with-mountain-background_188544-9126.jpg'}}/>
+      <SmallUserImage source={image ? {uri: image} : require('../../../../assets/default-user-big.png')}/>
     </SmallUserImageContainer>
     <SmallUserDataContainer>
     <UserDataItem>
                   <PreText>Username</PreText>
-                  <UserDataText>Text</UserDataText>
+                  <UserDataText>{displayName}</UserDataText>
                 </UserDataItem>
                 <UserDataItem>
                   <PreText>Email</PreText>
-                  <UserDataText>Text</UserDataText>
+                  <UserDataText>{email}</UserDataText>
                 </UserDataItem>
     </SmallUserDataContainer>
   </SmallUserInfoContainer>
@@ -161,11 +175,13 @@ position: relative;
 const UserImage = styled.Image`
 position: absolute;
 top: -40px;
-z-index: -1;
+z-index: -2;
 right: 0;
 left: 0;
 bottom: 0;
-object-fit: fill;
+object-fit: cover;
+height: 115%;
+width: 100%;
 `
 const UserDataContainer = styled.View`
 gap: 10px;
@@ -214,11 +230,14 @@ padding: 10px 10px;
 const SmallUserImageContainer = styled.View`
 align-items: center;
 justify-content: center;
+
 `
 const SmallUserImage = styled.Image`
 width: 80px;
 height: 80px;
 border-radius: 40px;
+align-self: center;
+object-fit: scale-down;
 `
 const SmallUserDataContainer = styled.View`
 flex-grow: 1;

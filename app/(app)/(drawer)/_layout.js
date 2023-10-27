@@ -13,6 +13,7 @@ const Layout = () => {
   return (
     <Drawer initialRouteName='chats' screenOptions={{headerShown: true}}>
         <Drawer.Screen name='user/index' options={{
+            unmountOnBlur: true,
             headerShown: false,
             title: user.displayName ? user.displayName : user.email,
         }} />

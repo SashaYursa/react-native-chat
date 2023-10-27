@@ -25,7 +25,7 @@ const AppLayout = () => {
 
     if (!user) {
         return (
-            <Redirect href={'auth'}/>
+           <Redirect href='auth' />
         )
     }
     return (

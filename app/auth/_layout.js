@@ -1,11 +1,15 @@
 import { View, Text, Pressable } from 'react-native'
-import React from 'react'
+import React, { useContext } from 'react'
 import { Stack } from 'expo-router/stack'
 import styled from 'styled-components'
-import { useRouter } from 'expo-router'
+import { Redirect, useRouter } from 'expo-router'
+import { AuthUserContext } from '../_layout'
 
 const AuthLayout = () => {
   const router = useRouter();
+  const {user} = useContext(AuthUserContext)
+  console.log('auth')
+  if(user) return <Redirect href='(drawer)/chats'/>
   return (
     <Stack>
         <Stack.Screen name='Login' options={{
