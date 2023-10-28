@@ -1,5 +1,5 @@
-import { View, Text, ScrollView, Image, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native'
-import React, { useContext, useEffect, useLayoutEffect, useState } from 'react'
+import { View, Text, ScrollView, Image, TextInput, TouchableOpacity, ActivityIndicator, PermissionsAndroid, FlatList, Alert } from 'react-native'
+import React, { useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import styled from 'styled-components'
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router'
 import {
@@ -18,19 +18,23 @@ import firebase from "firebase/compat/app";
 import "firebase/compat/auth";
 import "firebase/compat/firestore";
 import { AuthUserContext, FirebaseContext } from '../../_layout'
-import { getUserData } from '../_layout'
+import * as ImagePicker from 'expo-image-picker';
+import PreloadImages from '../../components/PreloadImages'
 const Chat = () => {
   const [messages, setMessages] = useState([]);
   const [chat, setChat] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [buttonDisable, setButtonDisable] = useState(true);
   const [newMessageText, setNewMessageText] = useState('');
+  const [preloadImages, setPreloadImages] = useState(null);
   const {auth, database} = useContext(FirebaseContext);
   const { user } = useContext(AuthUserContext);
   const [selectedUser, setSelectedUser] = useState(null);
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const navigation = useNavigation();
+  const chatScroll = useRef();
+  const preloadImagesCountError = preloadImages?.length > 4 ? true : false;
+  const buttonDisable = preloadImages?.length > 5 || !preloadImages?.length && newMessageText === '';
   useEffect(() => {
     const q = query(collection(database, 'messages', String(id), 'message'), orderBy('createdAt', 'asc'))
     const unsubscribe = onSnapshot(q, async (snapshot) => {
@@ -41,7 +45,7 @@ const Chat = () => {
         }
       }))
       setLoading(false)
-      setMessages(newMessages)
+      setMessages(newMessages.reverse())
     })
     return () => unsubscribe();
   }, [])
@@ -58,6 +62,45 @@ const Chat = () => {
     res = await Promise.all(res.docs.map(item => item.data()))
     setSelectedUser(await res[0]);
   }
+  
+  const selectImages = async () => {
+    if(preloadImagesCountError){
+      Alert.alert('Error', 'Max count images is 5', [
+        {
+          text: 'OK'
+        }
+      ]);
+    }
+    else{
+      const options = {
+      mediaTypes: ImagePicker.MediaTypeOptions.All,
+      aspect: [4, 3],
+      quality: .4,
+      allowsMultipleSelection: true,
+      selectionLimit: 5,
+      mediaTypes: ImagePicker.MediaTypeOptions.Images
+    }
+    const result = await ImagePicker.launchImageLibraryAsync(options);
+    if(!result.canceled){
+      const images = result.assets.map(item => {
+      if(item.type === 'image'){
+        return item.uri
+      }
+    })
+    setPreloadImages(preloadImages ? [...preloadImages, ...images] : images)
+    }
+    }
+  }
+
+  const removePreloadImage = (image) => {
+    if(preloadImages.length === 1){
+      setPreloadImages(null);
+    }
+    else{
+      setPreloadImages(preloadImages.filter(img => img !== image));
+    }
+  }
+
 
   useLayoutEffect(() => {
     if(!chat){
@@ -81,18 +124,9 @@ const Chat = () => {
       }
     }
   }, [chat, selectedUser])
-  
-  useEffect(() => {
-    if(newMessageText.length > 0){
-      setButtonDisable(false)
-    }
-    else{
-      setButtonDisable(true)
-    }
-  }, [newMessageText])
 
   const sendMessage = async () => {
-    setButtonDisable(true);
+    if(!preloadImagesCountError){
     setNewMessageText('');
     await addDoc(collection(database, 'messages', String(id), 'message'),{
       uid: user.uid,
@@ -100,9 +134,11 @@ const Chat = () => {
       createdAt: serverTimestamp()
     })
   }
+  }
 
   return (
     <>
+    
     <ChatCanvas>
       { loading 
       ? <ActivityIndicator style={{alignSelf: 'center'}} color={'blue'} size={'large'}/>
@@ -110,37 +146,42 @@ const Chat = () => {
         ? <View>
             <Text>No data</Text>
           </View>
-        : messages.map(message => {
-          if(message.uid == user.uid) {
+        : <ChatScroll ref={chatScroll} inverted showsVerticalScrollIndicator={false} data={messages} renderItem={(( {item }) => {
+          if(item.uid == user.uid) {
             return (
-              <MyMessage key={message.id}>
+              <MyMessage key={item.id}>
                 <MessageText>
-                  {message.text}
+                  {item.text}
                 </MessageText>
               </MyMessage>
             )
           } 
           else{
             return (
-              <CompanionMessagesContainer key={message.id}>
+              <CompanionMessagesContainer key={item.id}>
                 <CompanionImageContainer>
                   <CompanionImage source={{uri: 'https://cdn.icon-icons.com/icons2/2468/PNG/512/user_icon_149329.png'}}/>
                 </CompanionImageContainer>
                 <CompanionMessages>
                   <MessageText>
-                    {message.text}
+                    {item.text}
                   </MessageText>
                 </CompanionMessages>
               </CompanionMessagesContainer>
             )
           }
-        })
+        })}>
+        </ChatScroll>
       }
-    </ChatCanvas>
-    <NewMessageContainer>
-      <NewMessageInput value={newMessageText} onChangeText={setNewMessageText} placeholder='Ввеідть повідомлення...'/>
-      <NewMessageButton disabled={buttonDisable} style={buttonDisable ? {backgroundColor: 'gray'} : {}} onPress={sendMessage}><NewMessageText>Надіслати</NewMessageText></NewMessageButton>
-    </NewMessageContainer>
+      </ChatCanvas>
+    <BottomContainer>
+      {preloadImages && <PreloadImages images={preloadImages} removeImage={removePreloadImage}/>}
+      <NewMessageContainer>
+        <NewMessageButton onPress={selectImages}><Image style={{width: 25, height: 25, transform: [{ rotate: '90deg'}]}} source={require('../../../assets/back.png')}/></NewMessageButton>
+        <NewMessageInput value={newMessageText} onChangeText={setNewMessageText} placeholder='Ввеідть повідомлення...'/>
+        <NewMessageButton disabled={buttonDisable} style={buttonDisable ? {backgroundColor: 'gray'} : {}} onPress={sendMessage}><NewMessageText>Надіслати</NewMessageText></NewMessageButton>
+      </NewMessageContainer>
+    </BottomContainer>
     </>
   )
 }
@@ -183,21 +224,25 @@ font-weight: 400;
 color: #fff;
 `
 
-const ChatCanvas = styled.ScrollView`
-flex-grow: 1;
+const ChatCanvas = styled.View`
 background-color: #eaeaea;
-margin: 10px 0;
+padding: 10px 0; 
+flex-shrink: 1;
+flex-grow: 1;
+`
+const ChatScroll = styled.FlatList`
 padding: 0 5px;
 flex-direction: column;
 `
-
+const BottomContainer = styled.View`
+background-color: #fff;
+padding: 5px;
+`
 const NewMessageContainer = styled.View`
 flex-direction: row;
 gap: 10px;
-background-color: #fff;
-padding: 10px 5px;
-border-radius: 12px 12px 0 0;
 flex-shrink: 1;
+border-radius: 12px 12px 0 0;
 `
 
 const NewMessageInput = styled.TextInput`
