@@ -14,12 +14,13 @@ import {
   where,
   getDocs
 } from 'firebase/firestore'
-import firebase from "firebase/compat/app";
+import { getDownloadURL, ref, uploadBytes, uploadBytesResumable } from 'firebase/storage'
 import "firebase/compat/auth";
 import "firebase/compat/firestore";
 import { AuthUserContext, FirebaseContext } from '../../_layout'
 import * as ImagePicker from 'expo-image-picker';
 import PreloadImages from '../../components/PreloadImages'
+import { fileStorage } from '../../../config/firebase'
 const Chat = () => {
   const [messages, setMessages] = useState([]);
   const [chat, setChat] = useState(null);
@@ -27,6 +28,7 @@ const Chat = () => {
   const [newMessageText, setNewMessageText] = useState('');
   const [preloadImages, setPreloadImages] = useState(null);
   const {auth, database} = useContext(FirebaseContext);
+  const [uploadImageProgress, setUploadImageProgress] = useState(null);
   const { user } = useContext(AuthUserContext);
   const [selectedUser, setSelectedUser] = useState(null);
   const { id } = useLocalSearchParams();
@@ -49,6 +51,28 @@ const Chat = () => {
     })
     return () => unsubscribe();
   }, [])
+  useLayoutEffect(() => {
+    if(!chat){
+      getChat();
+    }
+    else{
+      if(chat.type === "private"){
+        if(selectedUser === null){
+          getUser(chat.users.find(id => id !== user.uid))
+        }
+        else{
+          navigation.setOptions({
+            headerTitle: () => (
+              <TouchableOpacity onPress={() => {router.push(`(drawer)/user/${selectedUser.id}`)}} style={{flexDirection: 'row', alignItems: 'center', gap: 10}}>
+                <Image style={{width: 35, height: 35, borderRadius: 50, overflow: 'hidden', backgroundColor: "#eaeaea"}} source={selectedUser.image === null ? require('../../../assets/default-chat-image.png') : {uri: selectedUser.image}} />
+                <Text style={{fontSize: 18, fontWeight: 700}}>{selectedUser.displayName}</Text>
+              </TouchableOpacity>
+            )
+          })
+        }
+      }
+    }
+  }, [chat, selectedUser])
 
   const getChat = async () => {
     const qChat = doc(database, "chats", id);
@@ -84,7 +108,7 @@ const Chat = () => {
     if(!result.canceled){
       const images = result.assets.map(item => {
       if(item.type === 'image'){
-        return item.uri
+        return {path: item.uri, progress: null}
       }
     })
     setPreloadImages(preloadImages ? [...preloadImages, ...images] : images)
@@ -97,48 +121,59 @@ const Chat = () => {
       setPreloadImages(null);
     }
     else{
-      setPreloadImages(preloadImages.filter(img => img !== image));
+      setPreloadImages(preloadImages.filter(preloadImage => preloadImage.path !== image));
     }
   }
 
-
-  useLayoutEffect(() => {
-    if(!chat){
-      getChat();
-    }
-    else{
-      if(chat.type === "private"){
-        if(selectedUser === null){
-          getUser(chat.users.find(id => id !== user.uid))
+  const uploadChatMedia = async (path) => {
+    const fileName = path.split('/').pop();
+    
+    const response = await fetch(path).catch(err => console.log(err))
+    const blobImage = await response.blob();
+    
+    const storageRef = ref(fileStorage, `media/${fileName}`);
+    const uploadTask = uploadBytesResumable(storageRef, blobImage)
+    uploadTask.on("state_changed", (snapshot => {
+      const progress = Math.floor((snapshot.bytesTransferred / snapshot.totalBytes) * 100)
+      setPreloadImages(images => images.map(img => {
+        if(img.path === path){
+          return {...img, progress}
         }
-        else{
-          navigation.setOptions({
-            headerTitle: () => (
-              <TouchableOpacity onPress={() => {router.push(`(drawer)/user/${selectedUser.id}`)}} style={{flexDirection: 'row', alignItems: 'center', gap: 10}}>
-                <Image style={{width: 35, height: 35, borderRadius: 50, overflow: 'hidden', backgroundColor: "#eaeaea"}} source={selectedUser.image === null ? require('../../../assets/default-chat-image.png') : {uri: selectedUser.image}} />
-                <Text style={{fontSize: 18, fontWeight: 700}}>{selectedUser.displayName}</Text>
-              </TouchableOpacity>
-            )
-          })
-        }
-      }
-    }
-  }, [chat, selectedUser])
+        return img
+      }))
+    }),
+    (error => console.log('uploadTask.on error --------->', error))
+    )
+    return uploadTask.then(async data => {
+      return await getDownloadURL(uploadTask.snapshot.ref).then(url => url)
+    })
+    .catch(error => console.log('uploadTask error -----> ', error))
+  }
 
   const sendMessage = async () => {
-    if(!preloadImagesCountError){
-    setNewMessageText('');
-    await addDoc(collection(database, 'messages', String(id), 'message'),{
-      uid: user.uid,
-      text: newMessageText,
+
+    if(!preloadImagesCountError){    
+    let mediaItems = null;
+    if(preloadImages?.length){
+       mediaItems = await Promise.all(await preloadImages.map(async image => {
+        return await uploadChatMedia(image.path)
+      }))
+    }
+    const newText = newMessageText === '' ? null : newMessageText
+    const data = {
+       uid: user.uid,
+      text: newText,
+      media: mediaItems,
       createdAt: serverTimestamp()
-    })
-  }
+    }
+    setNewMessageText('');
+    setPreloadImages(null)
+    await addDoc(collection(database, 'messages', String(id), 'message'),data)
+    }
   }
 
   return (
     <>
-    
     <ChatCanvas>
       { loading 
       ? <ActivityIndicator style={{alignSelf: 'center'}} color={'blue'} size={'large'}/>
@@ -146,13 +181,24 @@ const Chat = () => {
         ? <View>
             <Text>No data</Text>
           </View>
-        : <ChatScroll ref={chatScroll} inverted showsVerticalScrollIndicator={false} data={messages} renderItem={(( {item }) => {
+        : <ChatScroll ref={chatScroll} inverted showsVerticalScrollIndicator={false} data={messages} renderItem={(({ item }) => {
           if(item.uid == user.uid) {
             return (
               <MyMessage key={item.id}>
+                {item?.media?.length &&
+                <MessageImagesContainer>
+                  {item.media.map(image => (
+                  <MessageImageContainer>
+                    <MessageImage source={{uri: image}}/>
+                  </MessageImageContainer>
+                  ))}
+                </MessageImagesContainer>
+                }
+                {item.text !== null &&
                 <MessageText>
                   {item.text}
                 </MessageText>
+                }
               </MyMessage>
             )
           } 
@@ -163,9 +209,20 @@ const Chat = () => {
                   <CompanionImage source={{uri: 'https://cdn.icon-icons.com/icons2/2468/PNG/512/user_icon_149329.png'}}/>
                 </CompanionImageContainer>
                 <CompanionMessages>
-                  <MessageText>
-                    {item.text}
-                  </MessageText>
+                {item?.media?.length &&
+                <MessageImagesContainer>
+                  {item.media.map(image => (
+                  <MessageImageContainer>
+                    <MessageImage source={{uri: image}}/>
+                  </MessageImageContainer>
+                  ))}
+                </MessageImagesContainer>
+                }
+                {item.text !== null &&
+                <MessageText>
+                  {item.text}
+                </MessageText>
+                }
                 </CompanionMessages>
               </CompanionMessagesContainer>
             )
@@ -188,26 +245,29 @@ const Chat = () => {
 
 const MyMessage = styled.View`
 background-color: #183373;
-padding: 8px 10px;
+padding: 5px;
 margin-top: 5px;
 align-self: flex-end;
 border-radius: 12px 0 12px 12px;
 flex-shrink: 1;
+max-width: 80%;
 `
 const CompanionMessagesContainer = styled.View`
 flex-direction: row;
-align-items: center;
+align-items: flex-end;
 gap: 10px;
+
 `
 const CompanionMessages = styled.View`
+background-color: #296314;
 padding: 5px;
 margin-top: 5px;
-background-color: #296314;
-align-self: flex-start;
-padding: 8px 10px;
+align-self: flex-end;
 border-radius: 0 12px 12px 12px;
 flex-shrink: 1;
+max-width: 80%;
 `
+
 const CompanionImageContainer = styled.View`
 
 `
@@ -218,10 +278,32 @@ border-radius: 15px;
 background-color: gray;
 `
 
+const MessageImagesContainer = styled.View`
+flex-direction: row;
+flex-wrap: wrap;
+gap: 5px;
+width: 100%;
+`
+const MessageImageContainer = styled.View`
+width: 49%;
+height: 200px;
+border-radius: 12px;
+overflow: hidden;
+flex-grow: 1;
+`
+
+const MessageImage = styled.Image`
+width: 100%;
+height: 100%;
+object-fit: cover;
+`
+
+
 const MessageText = styled.Text`
 font-size: 14px;
 font-weight: 400;
 color: #fff;
+padding: 2px 5px;
 `
 
 const ChatCanvas = styled.View`

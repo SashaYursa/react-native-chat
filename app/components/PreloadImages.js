@@ -8,14 +8,26 @@ const PreloadImages = ({images, removeImage}) => {
     <ImagesScroll horizontal>
         <Container>
         {
-            images.map(image => (
-                <ImageContainer key={image}>
-                    <ImageItem source={{uri: image}}/>
-                    <DeleteButton onPress={() => removeImage(image)}>
+            images.map(image => {
+                if(image.progress){
+                    return <ImageContainer key={image.path}>
+                    <ImageItem source={{uri: image.path}}/>
+                    <DeleteButton onPress={() => removeImage(image.path)}>
+                        <DeleteImage source={require('../../assets/remove-item.png')}/>
+                    </DeleteButton>
+                    <LoadProgress>
+                        <LoadProgressText>{image.progress}%</LoadProgressText>
+                    </LoadProgress>
+                    </ImageContainer>
+                }
+                return (
+                <ImageContainer key={image.path}>
+                    <ImageItem source={{uri: image.path}}/>
+                    <DeleteButton onPress={() => removeImage(image.path)}>
                         <DeleteImage source={require('../../assets/remove-item.png')}/>
                     </DeleteButton>
                 </ImageContainer>
-            ))
+            )})
         }
         </Container>
     </ImagesScroll>
@@ -57,6 +69,21 @@ const DeleteImage = styled.Image`
 width: 100%;
 height: 100%;
 background-color: #fff;
+`
+const LoadProgress = styled.View`
+position: absolute;
+left: 0;
+right: 0;
+top: 0;
+bottom: 0;
+background-color: rgba(0, 0, 0, 0.3);
+align-items: center;
+justify-content: center;
+`
+const LoadProgressText = styled.Text`
+font-size: 16px;
+font-weight: 700;
+color: #fff;
 `
 
 export default PreloadImages
