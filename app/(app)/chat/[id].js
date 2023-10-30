@@ -1,5 +1,5 @@
 import { View, Text, ScrollView, Image, TextInput, TouchableOpacity, ActivityIndicator, PermissionsAndroid, FlatList, Alert } from 'react-native'
-import React, { useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import React, { memo, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import styled from 'styled-components'
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router'
 import {
@@ -21,6 +21,7 @@ import { AuthUserContext, FirebaseContext } from '../../_layout'
 import * as ImagePicker from 'expo-image-picker';
 import PreloadImages from '../../components/PreloadImages'
 import { fileStorage } from '../../../config/firebase'
+import ChatItem from '../../components/ChatItem'
 const Chat = () => {
   const [messages, setMessages] = useState([]);
   const [chat, setChat] = useState(null);
@@ -34,16 +35,17 @@ const Chat = () => {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const navigation = useNavigation();
-  const chatScroll = useRef();
   const preloadImagesCountError = preloadImages?.length > 4 ? true : false;
   const buttonDisable = preloadImages?.length > 5 || !preloadImages?.length && newMessageText === '';
   useEffect(() => {
+    console.log('rere')
     const q = query(collection(database, 'messages', String(id), 'message'), orderBy('createdAt', 'asc'))
     const unsubscribe = onSnapshot(q, async (snapshot) => {
       const newMessages = await Promise.all(snapshot.docs.map(element => {
         return {
           ...element.data(),
-          id: element.id
+          id: element.id,
+          selected: false
         }
       }))
       setLoading(false)
@@ -73,6 +75,7 @@ const Chat = () => {
       }
     }
   }, [chat, selectedUser])
+
 
   const getChat = async () => {
     const qChat = doc(database, "chats", id);
@@ -151,7 +154,6 @@ const Chat = () => {
   }
 
   const sendMessage = async () => {
-
     if(!preloadImagesCountError){    
     let mediaItems = null;
     if(preloadImages?.length){
@@ -181,54 +183,7 @@ const Chat = () => {
         ? <View>
             <Text>No data</Text>
           </View>
-        : <ChatScroll ref={chatScroll} inverted showsVerticalScrollIndicator={false} data={messages} renderItem={(({ item }) => {
-          if(item.uid == user.uid) {
-            return (
-              <MyMessage key={item.id}>
-                {item?.media?.length &&
-                <MessageImagesContainer>
-                  {item.media.map(image => (
-                  <MessageImageContainer>
-                    <MessageImage source={{uri: image}}/>
-                  </MessageImageContainer>
-                  ))}
-                </MessageImagesContainer>
-                }
-                {item.text !== null &&
-                <MessageText>
-                  {item.text}
-                </MessageText>
-                }
-              </MyMessage>
-            )
-          } 
-          else{
-            return (
-              <CompanionMessagesContainer key={item.id}>
-                <CompanionImageContainer>
-                  <CompanionImage source={{uri: 'https://cdn.icon-icons.com/icons2/2468/PNG/512/user_icon_149329.png'}}/>
-                </CompanionImageContainer>
-                <CompanionMessages>
-                {item?.media?.length &&
-                <MessageImagesContainer>
-                  {item.media.map(image => (
-                  <MessageImageContainer>
-                    <MessageImage source={{uri: image}}/>
-                  </MessageImageContainer>
-                  ))}
-                </MessageImagesContainer>
-                }
-                {item.text !== null &&
-                <MessageText>
-                  {item.text}
-                </MessageText>
-                }
-                </CompanionMessages>
-              </CompanionMessagesContainer>
-            )
-          }
-        })}>
-        </ChatScroll>
+        : <ChatList messages={messages} setMessages={setMessages}/>
       }
       </ChatCanvas>
     <BottomContainer>
@@ -243,72 +198,72 @@ const Chat = () => {
   )
 }
 
-const MyMessage = styled.View`
-background-color: #183373;
-padding: 5px;
-margin-top: 5px;
-align-self: flex-end;
-border-radius: 12px 0 12px 12px;
-flex-shrink: 1;
-max-width: 80%;
-`
-const CompanionMessagesContainer = styled.View`
+const ChatList = React.memo(({messages, setMessages}) => {
+  const {user} = useContext(AuthUserContext);
+  useEffect(() => {
+    console.log('data upd')
+  }, [user])
+  const openImage = (imageId) => {
+    console.log('openedImage: ', imageId)
+  }
+  const selectMessage = (index) => {
+    setMessages(messages => {
+      const newMessages = Array.from(messages);
+      newMessages[index].selected = !messages[index].selected
+      return newMessages;
+    })
+  }
+  
+  const rerenderItem = useCallback(({ item, index }) => {
+    const selected = item.selected ? {
+      backgroundColor: '#85aded'
+    }
+    : {
+
+    }
+    return(
+      <MessagesContainer delayLongPress={300} onLongPress={() => {selectMessage(index)}} activeOpacity={1} style={item.uid == user.uid ? {justifyContent: 'flex-end', ...selected} : {justifyContent: 'flex-start', ...selected} }>
+        <ChatItem item={item} index={index} openImage={openImage} selectMessage={selectMessage} />
+      </MessagesContainer>
+      )
+  }, [])
+  return (
+    <ChatScroll contentContainerStyle={{paddingVertical: 10}} 
+                inverted showsVerticalScrollIndicator={false} 
+                data={messages} 
+                renderItem={rerenderItem} />
+  )
+})
+
+const MessagesContainer = styled.TouchableOpacity`
 flex-direction: row;
 align-items: flex-end;
+width: 100%;
 gap: 10px;
-
+padding: 2.5px 0;
+position: relative;
 `
 const CompanionMessages = styled.View`
 background-color: #296314;
-padding: 5px;
-margin-top: 5px;
-align-self: flex-end;
+padding: 5px ;
+margin: 2.5px 0;
+align-self: flex-start;
 border-radius: 0 12px 12px 12px;
 flex-shrink: 1;
 max-width: 80%;
 `
-
-const CompanionImageContainer = styled.View`
-
+const MessageButton = styled.TouchableOpacity`
+position: absolute;
+top: 0;
+right: 0;
+bottom: 0;
+left: 0;
+background-color: red;
+z-index: 1;
+opacity: 0;
 `
-const CompanionImage = styled.Image`
-width: 30px;
-height: 30px;
-border-radius: 15px;
-background-color: gray;
-`
-
-const MessageImagesContainer = styled.View`
-flex-direction: row;
-flex-wrap: wrap;
-gap: 5px;
-width: 100%;
-`
-const MessageImageContainer = styled.View`
-width: 49%;
-height: 200px;
-border-radius: 12px;
-overflow: hidden;
-flex-grow: 1;
-`
-
-const MessageImage = styled.Image`
-width: 100%;
-height: 100%;
-object-fit: cover;
-`
-
-
-const MessageText = styled.Text`
-font-size: 14px;
-font-weight: 400;
-color: #fff;
-padding: 2px 5px;
-`
-
 const ChatCanvas = styled.View`
-background-color: #eaeaea;
-padding: 10px 0; 
+background-color: #eaeaea; 
 flex-shrink: 1;
 flex-grow: 1;
 `
