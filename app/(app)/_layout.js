@@ -42,6 +42,9 @@ const AppLayout = () => {
             <Stack.Screen name='Users' options={{
                 headerShown: false
             }}/>
+            <Stack.Screen name='user/[userId]' options={{
+                headerShown: false
+            }}/>
         </Stack>
     )
 }

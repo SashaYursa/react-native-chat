@@ -1,11 +1,17 @@
 import { View, Text, TouchableOpacity, Image } from 'react-native'
-import React, { useContext } from 'react'
+import React, { useContext, useState } from 'react'
 import styled from 'styled-components'
 import { AuthUserContext } from '../_layout'
 import ImageView from "react-native-image-viewing";
 
-const ChatItem = React.memo(({item, selectMessage, openImage, index}) => {
-    console.log('---',123)
+const ChatItem = React.memo(({item, selectMessage, index}) => {
+    console.log('---',item?.media)
+    const [isOpenedImages, setIsOpenedImages] = useState(false);
+    const [selectedImage, setSelectedImage] = useState(0);
+    const openImage = (index) => {
+        setSelectedImage(index);
+        setIsOpenedImages(true);
+    }
     const {user} = useContext(AuthUserContext);
     const isAuthor = item.uid === user.uid;
     return (
@@ -18,8 +24,8 @@ const ChatItem = React.memo(({item, selectMessage, openImage, index}) => {
         <MessageDataContainer style={!isAuthor && {backgroundColor: '#4c7873', borderTopLeftRadius: 0, borderTopRightRadius: 12}}>
             {item?.media?.length &&
                 <MessageImagesContainer>
-                    {item.media.map(image => (
-                        <MessageImageButton style={item.media.length > 1 && {width: '49%'}} key={image} onPress={()=>{openImage(item)}} onLongPress={() => {selectMessage(index)}} delayLongPress={300 } activeOpacity={1}>
+                    {item.media.map((image, index) => (
+                        <MessageImageButton style={item.media.length > 1 && {width: '49%'}} key={image} onPress={()=>{openImage(index)}} onLongPress={() => {selectMessage(index)}} delayLongPress={300 } activeOpacity={1}>
                             <MessageImage source={{uri: image}}/>
                         </MessageImageButton>
                     ))}
@@ -31,6 +37,13 @@ const ChatItem = React.memo(({item, selectMessage, openImage, index}) => {
                 </MessageText>
             }
         </MessageDataContainer>    
+        {item?.media?.length && 
+        <ImageView 
+        images={item.media.map(image => ({uri: image}))}
+        visible={isOpenedImages}
+        imageIndex={selectedImage}
+        onRequestClose={() => setIsOpenedImages(false)}
+        />}
   </MessageOutsideContaier>
   )
 })

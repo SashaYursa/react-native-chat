@@ -65,7 +65,7 @@ const Chat = () => {
         else{
           navigation.setOptions({
             headerTitle: () => (
-              <TouchableOpacity onPress={() => {router.push(`(drawer)/user/${selectedUser.id}`)}} style={{flexDirection: 'row', alignItems: 'center', gap: 10}}>
+              <TouchableOpacity onPress={() => {router.push(`user/${selectedUser.id}`)}} style={{flexDirection: 'row', alignItems: 'center', gap: 10}}>
                 <Image style={{width: 35, height: 35, borderRadius: 50, overflow: 'hidden', backgroundColor: "#eaeaea"}} source={selectedUser.image === null ? require('../../../assets/default-chat-image.png') : {uri: selectedUser.image}} />
                 <Text style={{fontSize: 18, fontWeight: 700}}>{selectedUser.displayName}</Text>
               </TouchableOpacity>
@@ -183,7 +183,7 @@ const Chat = () => {
         ? <View>
             <Text>No data</Text>
           </View>
-        : <ChatList messages={messages} setMessages={setMessages}/>
+        : <ChatContent messages={messages} setMessages={setMessages}/>
       }
       </ChatCanvas>
     <BottomContainer>
@@ -198,7 +198,7 @@ const Chat = () => {
   )
 }
 
-const ChatList = React.memo(({messages, setMessages}) => {
+const ChatContent = React.memo(({messages, setMessages}) => {
   const {user} = useContext(AuthUserContext);
   useEffect(() => {
     console.log('data upd')
@@ -222,11 +222,18 @@ const ChatList = React.memo(({messages, setMessages}) => {
 
     }
     return(
-      <MessagesContainer delayLongPress={300} onLongPress={() => {selectMessage(index)}} activeOpacity={1} style={item.uid == user.uid ? {justifyContent: 'flex-end', ...selected} : {justifyContent: 'flex-start', ...selected} }>
+      <MessagesContainer 
+      delayLongPress={300} 
+      onLongPress={() => {selectMessage(index)}} 
+      activeOpacity={1} 
+      style={item.uid == user.uid 
+      ? {justifyContent: 'flex-end', ...selected} 
+      : {justifyContent: 'flex-start', ...selected} }>
         <ChatItem item={item} index={index} openImage={openImage} selectMessage={selectMessage} />
       </MessagesContainer>
       )
   }, [])
+  
   return (
     <ChatScroll contentContainerStyle={{paddingVertical: 10}} 
                 inverted showsVerticalScrollIndicator={false} 

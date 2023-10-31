@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react'
 import { View, Text } from 'react-native'
 import styled from 'styled-components'
-import ChatItem from '../../../components/ChatList/ChatItem'
+import ChatListItem from '../../../components/ChatList/ChatListItem'
 import { DrawerLayoutAndroid, TouchableOpacity } from 'react-native-gesture-handler'
 import { Link, useRouter } from 'expo-router'
 import { collection, doc, getDoc, getDocs, limit, limitToLast, orderBy, query, where } from 'firebase/firestore'
@@ -56,7 +56,7 @@ const Chats = () => {
             <ChatsList>
                 {chats.length > 0 && chats.map(chat=> (
                 <ChatLink key={chat.id} onPress={()=>moveToChat(chat.id, chat.name ? chat.name : chat.userData.displayName, chat.image ? chat.image : chat.userData.image)}>
-                    <ChatItem item={{image: chat.image ? chat.image : chat.userData.image, name: chat.name ? chat.name : chat.userData.displayName, data: chat?.message?.text !== undefined ? chat.message.text : 'Повідомлень немає' , time: chat?.message?.createdAt?.seconds ? chat.message.createdAt.seconds : null}}/>
+                    <ChatListItem item={{image: chat.image ? chat.image : chat.userData.image, name: chat.name ? chat.name : chat.userData.displayName, data: chat?.message?.text !== undefined ? chat.message.text : 'Повідомлень немає' , time: chat?.message?.createdAt?.seconds ? chat.message.createdAt.seconds : null}}/>
                 </ChatLink>
                 ))}
             </ChatsList>

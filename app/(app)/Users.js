@@ -6,6 +6,7 @@ import styled from 'styled-components'
 import { ActivityIndicator, TextInput } from 'react-native-paper';
 import useDebounce from '../../hooks/useDebounce'
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router'
+import BackButton from '../components/Buttons/BackButton'
 const Users = () => {
   const {database} = useContext(FirebaseContext)
   const {user} = useContext(AuthUserContext)
@@ -35,9 +36,7 @@ const Users = () => {
       fetchUsers(value);
     }
   }, [debouncedSearchValue])
-  const goBackAction = () => {
-    router.back();
-  }
+
   const createChat = async (userId) => {
     const qChats = query(collection(database, "chats"), 
     where("users", "array-contains", user.uid),
@@ -61,9 +60,7 @@ const Users = () => {
   return (
     <Container>
       <HeaderContainer>
-        <BackButton onPress={goBackAction}>
-          <BackImage source={require('../../assets/back.png')} />
-        </BackButton>
+       <BackButton/>
         <SearchContainer>
           <TextInput ref={ipnutRef} mode='outlined' label='Search' style={{flexGrow: 1}} value={searchText} onChangeText={setSearchText}/>
         </SearchContainer>
@@ -93,16 +90,6 @@ padding-top: 15px;
 const HeaderContainer = styled.View`
 flex-direction: row;
 gap: 5px;
-`
-const BackButton = styled.TouchableOpacity`
-justify-content: center;
-align-items: center;
-padding-top: 10px;
-padding-left: 10px;
-`
-const BackImage = styled.Image`
-height: 25px;
-width: 25px;
 `
 const SearchContainer = styled.View`
 flex-direction: row;

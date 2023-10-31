@@ -1,7 +1,7 @@
 import { View, Text, Image } from 'react-native'
 import React from 'react'
 import styled from 'styled-components'
-const ChatItem = ({item}) => {
+const ChatListItem = ({item}) => {
     const getTime = (time) => {
         const dayjs = require("dayjs");
         const relativeTime = require("dayjs/plugin/relativeTime");
@@ -82,4 +82,4 @@ font-weight: 400;
 font-size: 12px;
 `
 
-export default ChatItem
+export default ChatListItem
