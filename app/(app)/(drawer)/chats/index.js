@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react'
-import { View, Text } from 'react-native'
+import { View, Text, RefreshControl, ScrollView } from 'react-native'
 import styled from 'styled-components'
 import ChatListItem from '../../../components/ChatList/ChatListItem'
 import { DrawerLayoutAndroid, TouchableOpacity } from 'react-native-gesture-handler'
@@ -12,7 +12,7 @@ import { getUserData } from '../../_layout'
 const Chats = () => {
     const { user } = useContext(AuthUserContext);
     const [chats, setChats] = useState([]);
-    
+    const [refresh, setRefresh] = useState(false);
     const getLastMessage = async (chatId) => {
         const qMessages = query(collection(database, "messages", String(chatId), "message"), orderBy('createdAt', 'desc'), limit(1));
         const data = await getDocs(qMessages)
@@ -22,9 +22,7 @@ const Chats = () => {
         }));
         return await res[0];
     }
-
-    useEffect(() => {
-        const fetchData = async () => {
+    const fetchData = async () => {
         const qChats = query(collection(database, "chats"), where("users", "array-contains", String(user.uid)));
         const chats = await getDocs(qChats);
         const newChats = await Promise.all(chats.docs.map(async (doc) => {
@@ -43,7 +41,10 @@ const Chats = () => {
             }  
         }))
         setChats(newChats);
+        setRefresh(false);
         } 
+
+    useEffect(() => {
         fetchData();
     }, [user])
     const router = useRouter();
@@ -51,16 +52,26 @@ const Chats = () => {
         router.push({pathname: `chat/${id}`, params: name, image});
     }
 
+    const onRefresh = () => {
+        setRefresh(true);
+        fetchData()
+    }
+
     return (
-        <Container>
-            <ChatsList>
-                {chats.length > 0 && chats.map(chat=> (
-                <ChatLink key={chat.id} onPress={()=>moveToChat(chat.id, chat.name ? chat.name : chat.userData.displayName, chat.image ? chat.image : chat.userData.image)}>
-                    <ChatListItem item={{image: chat.image ? chat.image : chat.userData.image, name: chat.name ? chat.name : chat.userData.displayName, data: chat?.message?.text !== undefined ? chat.message.text : 'Повідомлень немає' , time: chat?.message?.createdAt?.seconds ? chat.message.createdAt.seconds : null}}/>
-                </ChatLink>
-                ))}
-            </ChatsList>
-        </Container>
+         <ScrollView
+                refreshControl={
+                <RefreshControl refreshing={refresh} onRefresh={onRefresh} />
+                }>
+            <Container>
+                <ChatsList>
+                    {chats.length > 0 && chats.map(chat=> (
+                    <ChatLink key={chat.id} onPress={()=>moveToChat(chat.id, chat.name ? chat.name : chat.userData.displayName, chat.image ? chat.image : chat.userData.image)}>
+                        <ChatListItem item={{image: chat.image ? chat.image : chat.userData.image, name: chat.name ? chat.name : chat.userData.displayName, data: chat?.message?.text !== undefined ? chat.message.text : 'Повідомлень немає' , time: chat?.message?.createdAt?.seconds ? chat.message.createdAt.seconds : null}}/>
+                    </ChatLink>
+                    ))}
+                </ChatsList>
+            </Container>
+        </ScrollView>
     )
 }
 const Container  = styled.View`

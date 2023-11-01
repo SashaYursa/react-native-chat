@@ -5,10 +5,13 @@ import User from '../../../components/User';
 import styled from 'styled-components';
 import { DrawerToggleButton } from '@react-navigation/drawer';
 import EditUser from '../../../components/EditUser';
-import { addDoc, collection, connectFirestoreEmulator, endAt, getDoc, getDocs, orderBy, query, startAt, where } from 'firebase/firestore'
+import { collection, doc, getDocs, query, setDoc, where } from 'firebase/firestore'
 import { database } from '../../../../config/firebase';
-
-const Profile = () => {
+import { auth } from '../../../../config/firebase';
+import { signOut, updateProfile } from "firebase/auth";
+import { router } from 'expo-router';
+import { Button } from 'react-native-paper';
+const Profile = ({}) => {
   const { user } = useContext(AuthUserContext)
   const [loading, setLoading] = useState(true)
   const [displayModal, setDisplayModal] = useState(false)
@@ -29,8 +32,34 @@ const Profile = () => {
     setDisplayModal(displayModal => !displayModal)
   }
 
-  const updateUser = (updateData) => {
+  const updateUser = async (updateData) => {
     console.log('updated', updateData)
+    console.log(userData)
+    const userDocRef = doc(database, 'users', user.uid)
+    await setDoc(userDocRef, {
+      ...userData,
+      image: updateData.image,
+      displayName: updateData.displayName
+    })
+    await updateProfile(auth.currentUser, {
+      displayName: updateData.displayName, 
+      photoURL: updateData.image
+    })
+    .then(() => {
+      console.log(updateData.image)
+      setUserData(user => ({
+        ...user,
+        displayName: updateData.displayName, 
+        image: updateData.image
+      }))
+      setDisplayModal(false)
+    })
+  }
+
+  const logout = () => {
+    signOut(auth).then(()=> {
+      router.push('auth/Login')
+    })
   }
 
   
@@ -59,7 +88,15 @@ const Profile = () => {
         </EditButton>
       </TopButton>
     </TopButtonsContainer>
-    <User user={userData} />
+    <User user={userData}>
+    <ActionContainer>
+      <ActionData>
+      </ActionData>
+      <Button style={{justifySelf: 'flex-end'}} icon="logout" mode="elevated" textColor='#000' onPress={logout}>
+        Logout
+      </Button>
+    </ActionContainer>
+    </User>
     </SafeArea>
   )
 }
@@ -89,6 +126,17 @@ const EditButton = styled.TouchableOpacity`
 background-color: #000;
 border-radius: 6px;
 margin: 5px 12px;
+`
+const ActionContainer = styled.View`
+flex-grow: 1;
+flex-direction: column;
+`
+const ActionData = styled.View`
+flex-grow: 1;
+`
+
+const LogoutButton = styled.Button`
+
 `
 
 export default Profile

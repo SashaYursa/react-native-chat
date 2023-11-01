@@ -21,7 +21,7 @@ const LoginForm = ({handleLogin}) => {
       onChangeText={text => setPassword(text)}
       right={<TextInput.Icon onPress={handleShowPass} icon="eye" />}
       />
-      <Button style={{alignSelf: 'center', marginTop: 20}} icon="login" mode="elevated" uppee textColor='#000' onPress={() => handleLogin(email, password)}>
+      <Button style={{alignSelf: 'center', marginTop: 20}} icon="login" mode="elevated" textColor='#000' onPress={() => handleLogin(email, password)}>
         Login
       </Button>
       </>

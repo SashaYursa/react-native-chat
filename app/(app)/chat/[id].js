@@ -1,5 +1,5 @@
 import { View, Text, ScrollView, Image, TextInput, TouchableOpacity, ActivityIndicator, PermissionsAndroid, FlatList, Alert } from 'react-native'
-import React, { memo, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import React, { createContext, memo, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import styled from 'styled-components'
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router'
 import {
@@ -22,9 +22,12 @@ import * as ImagePicker from 'expo-image-picker';
 import PreloadImages from '../../components/PreloadImages'
 import { fileStorage } from '../../../config/firebase'
 import ChatItem from '../../components/ChatItem'
+
+const ChatContext = createContext({});
+
 const Chat = () => {
+  const [chatData, setChatData] = useState({chat: null, users: null})
   const [messages, setMessages] = useState([]);
-  const [chat, setChat] = useState(null);
   const [loading, setLoading] = useState(true);
   const [newMessageText, setNewMessageText] = useState('');
   const [preloadImages, setPreloadImages] = useState(null);
@@ -37,6 +40,7 @@ const Chat = () => {
   const navigation = useNavigation();
   const preloadImagesCountError = preloadImages?.length > 4 ? true : false;
   const buttonDisable = preloadImages?.length > 5 || !preloadImages?.length && newMessageText === '';
+  
   useEffect(() => {
     console.log('rere')
     const q = query(collection(database, 'messages', String(id), 'message'), orderBy('createdAt', 'asc'))
@@ -53,14 +57,15 @@ const Chat = () => {
     })
     return () => unsubscribe();
   }, [])
+
   useLayoutEffect(() => {
-    if(!chat){
+    if(!chatData?.chat){
       getChat();
     }
     else{
-      if(chat.type === "private"){
+      if(chatData.chat.type === "private"){
         if(selectedUser === null){
-          getUser(chat.users.find(id => id !== user.uid))
+          getUser(chatData.chat.users.find(id => id !== user.uid))
         }
         else{
           navigation.setOptions({
@@ -74,13 +79,13 @@ const Chat = () => {
         }
       }
     }
-  }, [chat, selectedUser])
+  }, [chatData.chat, selectedUser])
 
 
   const getChat = async () => {
     const qChat = doc(database, "chats", id);
-    const chat = await getDoc(qChat);
-    setChat(chat.data());
+    let chat = await getDoc(qChat);
+    setChatData(chatData => ({...chatData, chat: chat.data()}));
   } 
   const getUser = async (id) => {
     console.log(id, 'id')
@@ -175,7 +180,7 @@ const Chat = () => {
   }
 
   return (
-    <>
+    <ChatContext.Provider value={{chatData}}>
     <ChatCanvas>
       { loading 
       ? <ActivityIndicator style={{alignSelf: 'center'}} color={'blue'} size={'large'}/>
@@ -194,7 +199,7 @@ const Chat = () => {
         <NewMessageButton disabled={buttonDisable} style={buttonDisable ? {backgroundColor: 'gray'} : {}} onPress={sendMessage}><NewMessageText>Надіслати</NewMessageText></NewMessageButton>
       </NewMessageContainer>
     </BottomContainer>
-    </>
+    </ChatContext.Provider>
   )
 }
 

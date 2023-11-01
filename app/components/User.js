@@ -4,53 +4,46 @@ import styled from 'styled-components'
 import { collection, getDocs, query, where } from 'firebase/firestore'
 import { ActivityIndicator } from 'react-native-paper'
 import { database } from '../../config/firebase'
-const User = ({user, children}) => {
+const User = ({ user, children }) => {
     const [displayFullInfo, setDisplayFullInfo] = useState(true)
     return (
         <Container>
           <View style={{position: "absolute", top: 10, right: 10, left: 10, zIndex: 10}}>
           { !displayFullInfo && <SmallUserWindow displayName={user.displayName} email={user.email} image={user.image} />}
           </View>
-          <ScrollView onScroll={(e)=>{
-              if(e.nativeEvent.contentOffset.y > 440 && displayFullInfo !== false){
-                setDisplayFullInfo(false)
-              }
-              if(e.nativeEvent.contentOffset.y < 440 && displayFullInfo !== true){
-                setDisplayFullInfo(true)
-              }
-              }}
-              >
-                  <UserInfoContainer>
-                    
-                      <UserImageContainer>
-                        <UserImage source={user.image ? {uri: user.image} : require('../../assets/default-user-big.png')}/>
-                      </UserImageContainer>
-                      <UserDataContainer>
-                        <UserDataItem>
-                          <PreText>Name</PreText>
-                          <UserDataText>{user.displayName}</UserDataText>
-                        </UserDataItem>
-                        <BreakLine/>
-                        <UserDataItem>
-                          <PreText>Email</PreText>
-                          <UserDataText>{user.email}</UserDataText>
-                        </UserDataItem>
-                      </UserDataContainer>
-                   </UserInfoContainer>
-          <View style={{backgroundColor: '#eaeaea', height: 4000}}>
-            {/* Here will be chrildren */}
-            <Buttons/>
-          </View>
+          <ScrollView contentContainerStyle={{ flexGrow: 1 }} style={{height: "100%"}} onScroll={(e)=>{
+          if(e.nativeEvent.contentOffset.y > 440 && displayFullInfo !== false){
+            setDisplayFullInfo(false)
+          }
+          if(e.nativeEvent.contentOffset.y < 440 && displayFullInfo !== true){
+            setDisplayFullInfo(true)
+          }
+          }}
+          >
+            <UserInfoContainer>
+              <UserImageContainer>
+                <UserImage source={user.image ? {uri: user.image} : require('../../assets/default-user-big.png')}/>
+              </UserImageContainer>
+              <UserDataContainer>
+                <UserDataItem>
+                  <PreText>Name</PreText>
+                  <UserDataText>{user.displayName}</UserDataText>
+                </UserDataItem>
+                <BreakLine/>
+                <UserDataItem>
+                  <PreText>Email</PreText>
+                  <UserDataText>{user.email}</UserDataText>
+                </UserDataItem>
+              </UserDataContainer>
+            </UserInfoContainer>
+            <View style={{ flex: 1, padding: 10}}>
+              {/* Here chrildren */}
+              {children}
+            </View>
           </ScrollView>
         </Container>  
     )
 }
-    const Buttons = () => {
-      return (
-        <>
-        </>
-      )
-    }
     
     const SmallUserWindow = ({displayName, email, image}) => {
       return (

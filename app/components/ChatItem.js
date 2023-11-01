@@ -14,6 +14,7 @@ const ChatItem = React.memo(({item, selectMessage, index}) => {
     }
     const {user} = useContext(AuthUserContext);
     const isAuthor = item.uid === user.uid;
+    console.log(item,'item')
     return (
     <MessageOutsideContaier style={isAuthor ? {justifyContent: 'flex-end'} : {justifyContent: 'flex-start'} }>
         { !isAuthor &&

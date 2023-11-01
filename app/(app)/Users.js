@@ -1,12 +1,12 @@
 import { View, Text, Image, TouchableOpacity} from 'react-native'
 import React, { useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { AuthUserContext, FirebaseContext } from '../_layout'
-import { addDoc, collection, connectFirestoreEmulator, endAt, getDoc, getDocs, orderBy, query, startAt, where } from 'firebase/firestore'
 import styled from 'styled-components'
 import { ActivityIndicator, TextInput } from 'react-native-paper';
 import useDebounce from '../../hooks/useDebounce'
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router'
 import BackButton from '../components/Buttons/BackButton'
+import { addDoc, collection, endAt, getDocs, orderBy, query, startAt, where } from 'firebase/firestore';
 const Users = () => {
   const {database} = useContext(FirebaseContext)
   const {user} = useContext(AuthUserContext)
@@ -16,6 +16,7 @@ const Users = () => {
   const [usersLoading, setUsersLoading] = useState(false);
   const ipnutRef = useRef();
   const router = useRouter();
+  
   const fetchUsers = async (userName) => {
     const qUsers = query(collection(database, "users"), 
     orderBy('displayName'),
@@ -26,6 +27,7 @@ const Users = () => {
     setSearchUsers(newUsers);
     setUsersLoading(false);
   }
+
   useEffect(() => {
     ipnutRef.current.focus();
   }, [])
@@ -85,7 +87,7 @@ const Users = () => {
 const Container = styled.View`
 flex-grow: 1;
 background-color: #fff;
-padding-top: 15px;
+padding-top: 25px;
 `
 const HeaderContainer = styled.View`
 flex-direction: row;
