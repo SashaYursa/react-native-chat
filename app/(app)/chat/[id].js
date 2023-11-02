@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, Image, TextInput, TouchableOpacity, ActivityIndicator, PermissionsAndroid, FlatList, Alert } from 'react-native'
+import { View, Text, ScrollView, Image, TextInput, TouchableOpacity, ActivityIndicator, PermissionsAndroid, KeyboardAvoidingView, FlatList, Alert, Platform, SafeAreaView } from 'react-native'
 import React, { createContext, memo, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import styled from 'styled-components'
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router'
@@ -49,10 +49,12 @@ const Chat = () => {
     const unsubscribe = onSnapshot(q, async (snapshot) => {
       const newMessages = await Promise.all(snapshot.docs.map(element => {
         const data = element.data();
-        console.log(chatUsers.find(chatUser => chatUser.id === data.uid)?.image)
+        //console.log(chatUsers.find(chatUser => chatUser.id === data.uid)?.image)
+        //console.log(chatUsers.find(chatUser => chatUser.id === data.uid), ' find user')
         const userImage = chatUsers.find(chatUser => chatUser.id === data.uid)?.image 
-        ? chatUsers.find(chatUser => chatUser.id === element.id)?.image
+        ? chatUsers.find(chatUser => chatUser.id === data.uid).image
         : null
+        console.log(userImage, 'user Image')
         return {
           ...data,
           id: element.id,
@@ -210,11 +212,14 @@ const Chat = () => {
         : <ChatContent messages={messages} setMessages={setMessages}/>
       }
       </ChatCanvas>
-    <BottomContainer>
+    <BottomContainer  
+    behavior={Platform.OS === "ios" ? "padding" : undefined} 
+    keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
+    style={Platform.OS === 'ios' && {marginBottom: 20}}>
       {preloadImages && <PreloadImages images={preloadImages} removeImage={removePreloadImage}/>}
       <NewMessageContainer>
         <NewMessageButton onPress={selectImages}><Image style={{width: 25, height: 25, transform: [{ rotate: '90deg'}]}} source={require('../../../assets/back.png')}/></NewMessageButton>
-        <NewMessageInput value={newMessageText} onChangeText={setNewMessageText} placeholder='Ввеідть повідомлення...'/>
+        <NewMessageInput value={newMessageText} onChangeText={setNewMessageText} placeholder='Введіть повідомлення...'/>
         <NewMessageButton disabled={buttonDisable} style={buttonDisable ? {backgroundColor: 'gray'} : {}} onPress={sendMessage}><NewMessageText>Надіслати</NewMessageText></NewMessageButton>
       </NewMessageContainer>
     </BottomContainer>
@@ -302,7 +307,7 @@ const ChatScroll = styled.FlatList`
 padding: 0 5px;
 flex-direction: column;
 `
-const BottomContainer = styled.View`
+const BottomContainer = styled.KeyboardAvoidingView`
 background-color: #fff;
 padding: 5px;
 `

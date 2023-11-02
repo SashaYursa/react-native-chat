@@ -11,11 +11,14 @@ import { auth } from '../../../../config/firebase';
 import { signOut, updateProfile } from "firebase/auth";
 import { router } from 'expo-router';
 import { Button } from 'react-native-paper';
+import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
+import { fileStorage } from '../../../../config/firebase';
 const Profile = ({}) => {
   const { user } = useContext(AuthUserContext)
   const [loading, setLoading] = useState(true)
   const [displayModal, setDisplayModal] = useState(false)
   const [userData, setUserData] = useState(null)
+  const [uploadImageStatus, setUploadImageStatus] = useState(null)
   useEffect(() => {
     setLoading(true)
     const getUser = async () =>{
@@ -32,29 +35,62 @@ const Profile = ({}) => {
     setDisplayModal(displayModal => !displayModal)
   }
 
+  const uploadUserImage = async (path) => {
+    const fileName = path.split('/').pop();
+    
+    const response = await fetch(path).catch(err => console.log(err))
+    const blobImage = await response.blob();
+    
+    const storageRef = ref(fileStorage, `usersImages/${fileName}`);
+    const uploadTask = uploadBytesResumable(storageRef, blobImage)
+    uploadTask.on("state_changed", (snapshot => {
+      const progress = Math.floor((snapshot.bytesTransferred / snapshot.totalBytes) * 100)
+      setUploadImageStatus({progress})
+    }),
+    (error => console.log('uploadTask.on error --------->', error))
+    )
+    return uploadTask.then(async () => {
+      return await getDownloadURL(uploadTask.snapshot.ref).then(url => url)
+    })
+    .catch(error => console.log('uploadTask error -----> ', error))
+  }
+
   const updateUser = async (updateData) => {
-    console.log('updated', updateData)
-    console.log(userData)
+
+
+    let image = updateData.image;
+    if(updateData.image !== user.photoURL){
+      console.log('updated')
+      image = await uploadUserImage(updateData.image);
+    }
+
+    console.log(image, 'image')
     const userDocRef = doc(database, 'users', user.uid)
+
     await setDoc(userDocRef, {
       ...userData,
-      image: updateData.image,
+      image,
       displayName: updateData.displayName
     })
+
     await updateProfile(auth.currentUser, {
       displayName: updateData.displayName, 
-      photoURL: updateData.image
+      photoURL: image
     })
     .then(() => {
-      console.log(updateData.image)
+      const user = auth.currentUser;
+      console.log(user, 'rereerer')
       setUserData(user => ({
         ...user,
         displayName: updateData.displayName, 
         image: updateData.image
       }))
       setDisplayModal(false)
-    })
+     })
   }
+  useEffect(() => {
+    console.log(uploadImageStatus, 'preload')
+  }, [uploadImageStatus])
 
   const logout = () => {
     signOut(auth).then(()=> {
