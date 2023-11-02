@@ -5,7 +5,6 @@ import { AuthUserContext } from '../_layout'
 import ImageView from "react-native-image-viewing";
 
 const ChatItem = React.memo(({item, selectMessage, index}) => {
-    console.log('---',item?.media)
     const [isOpenedImages, setIsOpenedImages] = useState(false);
     const [selectedImage, setSelectedImage] = useState(0);
     const openImage = (index) => {
@@ -14,12 +13,12 @@ const ChatItem = React.memo(({item, selectMessage, index}) => {
     }
     const {user} = useContext(AuthUserContext);
     const isAuthor = item.uid === user.uid;
-    console.log(item,'item')
+    
     return (
     <MessageOutsideContaier style={isAuthor ? {justifyContent: 'flex-end'} : {justifyContent: 'flex-start'} }>
         { !isAuthor &&
             <CompanionImageContainer>
-                <CompanionImage source={{uri: 'https://cdn.icon-icons.com/icons2/2468/PNG/512/user_icon_149329.png'}}/>
+                <CompanionImage source={item.userImage ? {uri: item.userImage} :require('../../assets/default-user.png')}/>
             </CompanionImageContainer>       
         }
         <MessageDataContainer style={!isAuthor && {backgroundColor: '#4c7873', borderTopLeftRadius: 0, borderTopRightRadius: 12}}>

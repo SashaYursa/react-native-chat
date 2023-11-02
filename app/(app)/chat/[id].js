@@ -23,10 +23,10 @@ import PreloadImages from '../../components/PreloadImages'
 import { fileStorage } from '../../../config/firebase'
 import ChatItem from '../../components/ChatItem'
 
-const ChatContext = createContext({});
+export const ChatContext = createContext({});
 
 const Chat = () => {
-  const [chatData, setChatData] = useState({chat: null, users: null})
+  const [chatData, setChatData] = useState(null)
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [newMessageText, setNewMessageText] = useState('');
@@ -34,7 +34,9 @@ const Chat = () => {
   const {auth, database} = useContext(FirebaseContext);
   const [uploadImageProgress, setUploadImageProgress] = useState(null);
   const { user } = useContext(AuthUserContext);
-  const [selectedUser, setSelectedUser] = useState(null);
+  const [chatUsers, setChatUsers] = useState([]);
+  const [chatUsersIsLoading, setChatUsersIsLoading] = useState(true);
+  const [selectedUser, setSelectedUser] = useState({id: 123, displayName: '123'});
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const navigation = useNavigation();
@@ -42,57 +44,74 @@ const Chat = () => {
   const buttonDisable = preloadImages?.length > 5 || !preloadImages?.length && newMessageText === '';
   
   useEffect(() => {
-    console.log('rere')
+    if(!chatUsersIsLoading){
     const q = query(collection(database, 'messages', String(id), 'message'), orderBy('createdAt', 'asc'))
     const unsubscribe = onSnapshot(q, async (snapshot) => {
       const newMessages = await Promise.all(snapshot.docs.map(element => {
+        const data = element.data();
+        console.log(chatUsers.find(chatUser => chatUser.id === data.uid)?.image)
+        const userImage = chatUsers.find(chatUser => chatUser.id === data.uid)?.image 
+        ? chatUsers.find(chatUser => chatUser.id === element.id)?.image
+        : null
         return {
-          ...element.data(),
+          ...data,
           id: element.id,
-          selected: false
+          selected: false,
+          userImage
         }
       }))
       setLoading(false)
       setMessages(newMessages.reverse())
     })
     return () => unsubscribe();
-  }, [])
+    }
+  }, [chatUsersIsLoading])
 
-  useLayoutEffect(() => {
-    if(!chatData?.chat){
+  useEffect(() => {
+    const loadData = async () => {
+      if(chatData === null){
       getChat();
     }
     else{
-      if(chatData.chat.type === "private"){
-        if(selectedUser === null){
-          getUser(chatData.chat.users.find(id => id !== user.uid))
-        }
-        else{
-          navigation.setOptions({
-            headerTitle: () => (
-              <TouchableOpacity onPress={() => {router.push(`user/${selectedUser.id}`)}} style={{flexDirection: 'row', alignItems: 'center', gap: 10}}>
-                <Image style={{width: 35, height: 35, borderRadius: 50, overflow: 'hidden', backgroundColor: "#eaeaea"}} source={selectedUser.image === null ? require('../../../assets/default-chat-image.png') : {uri: selectedUser.image}} />
-                <Text style={{fontSize: 18, fontWeight: 700}}>{selectedUser.displayName}</Text>
-              </TouchableOpacity>
-            )
-          })
+      setChatUsersIsLoading(true)
+      const chatUsers = [];
+      for(const id of chatData.users){
+        if(user.uid !== id){
+          chatUsers.push(await getUser(id))
         }
       }
+      setChatUsers(chatUsers);
+      setChatUsersIsLoading(false)
     }
-  }, [chatData.chat, selectedUser])
+    }
+    loadData();
+  }, [chatData])
+
+  useLayoutEffect(() => {
+    if(!chatUsersIsLoading){
+      const user = chatUsers[0];
+      navigation.setOptions({
+        headerTitle: () => (
+          <TouchableOpacity onPress={() => {router.push(`user/${user.id}`)}} style={{flexDirection: 'row', alignItems: 'center', gap: 10}}>
+            <Image style={{width: 35, height: 35, borderRadius: 50, overflow: 'hidden', backgroundColor: "#eaeaea"}} source={user.image === null ? require('../../../assets/default-chat-image.png') : {uri: user.image}} />
+            <Text style={{fontSize: 18, fontWeight: 700}}>{user.displayName}</Text>
+          </TouchableOpacity>
+        )
+      })
+    }
+  }, [chatUsersIsLoading])
 
 
   const getChat = async () => {
     const qChat = doc(database, "chats", id);
     let chat = await getDoc(qChat);
-    setChatData(chatData => ({...chatData, chat: chat.data()}));
+    setChatData(chat.data());
   } 
   const getUser = async (id) => {
-    console.log(id, 'id')
     const qUser = query(collection(database, "users"), where("id", "==", id))
     let res = await getDocs(qUser);
     res = await Promise.all(res.docs.map(item => item.data()))
-    setSelectedUser(await res[0]);
+    return await res[0]
   }
   
   const selectImages = async () => {
@@ -206,7 +225,7 @@ const Chat = () => {
 const ChatContent = React.memo(({messages, setMessages}) => {
   const {user} = useContext(AuthUserContext);
   useEffect(() => {
-    console.log('data upd')
+
   }, [user])
   const openImage = (imageId) => {
     console.log('openedImage: ', imageId)
