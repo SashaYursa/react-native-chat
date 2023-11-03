@@ -8,7 +8,6 @@ import { AuthUserContext } from '../_layout'
 const AuthLayout = () => {
   const router = useRouter();
   const {user} = useContext(AuthUserContext)
-  console.log('auth')
   if(user) return <Redirect href='(drawer)/chats'/>
   return (
     <Stack>

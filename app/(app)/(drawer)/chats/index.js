@@ -40,7 +40,9 @@ const Chats = () => {
                 userData: userData
             }  
         }))
-        setChats(newChats);
+        setChats(newChats.sort((a, b) => {
+            return b.message.createdAt.seconds - a.message.createdAt.seconds
+        }));
         setRefresh(false);
         } 
 
@@ -64,8 +66,8 @@ const Chats = () => {
                 }>
             <Container>
                 <ChatsList>
-                    {chats.length > 0 && chats.map(chat=> (
-                    <ChatLink key={chat.id} onPress={()=>moveToChat(chat.id, chat.name ? chat.name : chat.userData.displayName, chat.image ? chat.image : chat.userData.image)}>
+                    {chats.length > 0 && chats.map(chat => (
+                    <ChatLink key={chat.id} onPress={() => moveToChat(chat.id, chat.name ? chat.name : chat.userData.displayName, chat.image ? chat.image : chat.userData.image)}>
                         <ChatListItem item={{image: chat.image ? chat.image : chat.userData.image, name: chat.name ? chat.name : chat.userData.displayName, data: chat?.message?.text !== undefined ? chat.message.text : 'Повідомлень немає' , time: chat?.message?.createdAt?.seconds ? chat.message.createdAt.seconds : null}}/>
                     </ChatLink>
                     ))}

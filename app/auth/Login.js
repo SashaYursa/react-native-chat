@@ -9,7 +9,7 @@ import { router } from 'expo-router';
 const Login = () => {
   const { user, setUser }  = useContext(AuthUserContext)
   // useEffect(() => {
-  //   loginUser('rebenok@gmail.com', '123456')
+  //   loginUser('middle@gmail.com', '123456')
   // }, [])
   const loginUser = (email, password) => {
     signInWithEmailAndPassword(auth, email, password)

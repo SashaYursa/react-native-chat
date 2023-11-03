@@ -54,7 +54,6 @@ const Chat = () => {
         const userImage = chatUsers.find(chatUser => chatUser.id === data.uid)?.image 
         ? chatUsers.find(chatUser => chatUser.id === data.uid).image
         : null
-        console.log(userImage, 'user Image')
         return {
           ...data,
           id: element.id,

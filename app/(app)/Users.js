@@ -6,7 +6,7 @@ import { ActivityIndicator, TextInput } from 'react-native-paper';
 import useDebounce from '../../hooks/useDebounce'
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router'
 import BackButton from '../components/Buttons/BackButton'
-import { addDoc, collection, endAt, getDocs, orderBy, query, startAt, where } from 'firebase/firestore';
+import { addDoc, collection, endAt, getDocs, orderBy, query, serverTimestamp, startAt, where } from 'firebase/firestore';
 const Users = () => {
   const {database} = useContext(FirebaseContext)
   const {user} = useContext(AuthUserContext)
@@ -52,9 +52,11 @@ const Users = () => {
       router.push(`chat/${chats[0].id}`)
     }
     else{
+      const lastSeen = new Date();
       await addDoc(collection(database, 'chats'),{
         name: null,
         users: [user.uid, userId],
+        usersInfo: [{id: user.uid, lastSeen}, {id: userId, lastSeen}],
         type: 'private'
       })
     }
