@@ -12,7 +12,8 @@ import {
   doc,
   getDoc,
   where,
-  getDocs
+  getDocs,
+  setDoc
 } from 'firebase/firestore'
 import { getDownloadURL, ref, uploadBytes, uploadBytesResumable } from 'firebase/storage'
 import "firebase/compat/auth";
@@ -69,50 +70,138 @@ const Chat = () => {
   }, [chatUsersIsLoading])
 
   useEffect(() => {
-    const loadData = async () => {
-      if(chatData === null){
-      getChat();
+    if(chatUsers[0]?.id){
+    const qProfile = doc(database, 'users', chatUsers[0].id);
+    let timeout = setTimeout(() => {
+      console.log('he not in chat')
+    }, 7000);
+    const unsubscribe = onSnapshot(qProfile, { includeMetadataChanges: true }, async (data) => {
+      //console.log('user is updated self')
+      clearTimeout(timeout);
+      timeout = setTimeout(() => {
+        console.log('he is out')
+      }, 7000);
+    })
+    return () => unsubscribe()
     }
-    else{
-      setChatUsersIsLoading(true)
-      const chatUsers = [];
-      for(const id of chatData.users){
-        if(user.uid !== id){
-          chatUsers.push(await getUser(id))
+    //return () => unsubscribe(); 
+  }, [chatUsers])
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const qUser = doc(database, 'users', user.uid)
+      const selectedUser = await getDoc(qUser)
+      return selectedUser.data();
+    }
+    const updateOwnUser = async () => {
+    const ownUser = await fetchUser();
+    const interval = setInterval(async () => {
+      setDoc(doc(database, 'users', user.uid), {
+        ...ownUser,
+        lastCheckedStatus: new Date()
+      })
+    }, 5000);
+    return interval;
+    }
+    const int = updateOwnUser();
+    return () => clearInterval(int)
+  }, [])
+  
+  //fetching chat data and set lastSeen to online status to user (in chat only), 
+  //on leave set lastSeen to current time
+  useEffect(() => {
+   // console.log('here' ,id)
+    const qChat = doc(database, "chats", id);
+    const unsubscribe = onSnapshot(qChat, { includeMetadataChanges: true }, async (data) => {
+      const chat = data.data();
+      let currentUserInfo = null;
+      chat.usersInfo.forEach((currentUser, index) => {
+        if(currentUser.id === user.uid){
+          currentUserInfo = {info: {...currentUser, lastSeen: 'online'}, index};
         }
+      })
+      if(chat.usersInfo[currentUserInfo.index].lastSeen !== 'online'){
+        chat.usersInfo[currentUserInfo.index] = currentUserInfo.info;
+        await setDoc(doc(database, "chats", id), chat);
       }
-      setChatUsers(chatUsers);
-      setChatUsersIsLoading(false)
+      setChatData(chat);
+    })
+    return async () => {
+      unsubscribe();
+      console.log('leave')
+      let chat = await getDoc(qChat)
+      chat = chat.data();
+      const leaveUserChatInfo =  chat.usersInfo.map(userInfo => {
+        if(userInfo.id === user.uid){
+          return {
+            ...userInfo,
+            lastSeen: new Date()
+          }
+        }
+        return userInfo
+      })
+      chat.usersInfo = leaveUserChatInfo;
+      setDoc(doc(database, "chats", id), chat)
     }
+    
+  }, [id])
+
+  useEffect(() => {
+    if(user.uid === 'Q9pmbzaWCMOd4w9JM89UEF1PToh2'){
+      console.log('iphone rerender')
     }
-    loadData();
+    if(chatData !== null && chatUsersIsLoading){
+      getUsers(chatData.users)
+    }
   }, [chatData])
 
   useLayoutEffect(() => {
     if(!chatUsersIsLoading){
       const user = chatUsers[0];
+      const userLastSeen = chatData.usersInfo.find(userInfo => userInfo.id === user.id).lastSeen;
+      const userIsOnline = userLastSeen === 'online' && user.status !== 'offline';
+      console.log(user.status, '----> status')
       navigation.setOptions({
         headerTitle: () => (
           <TouchableOpacity onPress={() => {router.push(`user/${user.id}`)}} style={{flexDirection: 'row', alignItems: 'center', gap: 10}}>
             <Image style={{width: 35, height: 35, borderRadius: 50, overflow: 'hidden', backgroundColor: "#eaeaea"}} source={user.image === null ? require('../../../assets/default-chat-image.png') : {uri: user.image}} />
             <Text style={{fontSize: 18, fontWeight: 700}}>{user.displayName}</Text>
+            <View style={{flexDirection: 'row', gap: 5, alignItems: 'center'}}>
+              {userIsOnline 
+            ? 
+              <>
+                <View style={{width: 15, height: 15, borderRadius: 15, backgroundColor: 'green'}}></View>
+                <Text>Зараз в чаті</Text>
+              </>
+            : 
+              <>
+                <View style={{width: 15, height: 15, borderRadius: 15, backgroundColor: 'gray'}}></View>
+                <Text>Не онлайн</Text>
+              </>
+            }
+            </View>
           </TouchableOpacity>
         )
       })
     }
-  }, [chatUsersIsLoading])
+  }, [chatUsersIsLoading, chatData])
 
 
-  const getChat = async () => {
-    const qChat = doc(database, "chats", id);
-    let chat = await getDoc(qChat);
-    setChatData(chat.data());
-  } 
-  const getUser = async (id) => {
-    const qUser = query(collection(database, "users"), where("id", "==", id))
-    let res = await getDocs(qUser);
-    res = await Promise.all(res.docs.map(item => item.data()))
-    return await res[0]
+  const getUsers = async (ids) => {
+    setChatUsersIsLoading(true)
+    const chatUsers = [];
+    for(const id of ids){
+      if(user.uid !== id){
+        const qUser = query(collection(database, "users"), where("id", "==", id))
+        let res = await getDocs(qUser);
+        res = await Promise.all(res.docs.map(item => item.data()))
+        //return await res[0]
+      //  console.log(res[0])
+        chatUsers.push(await res[0])
+      }
+    }
+    setChatUsers(chatUsers);
+    setChatUsersIsLoading(false)
   }
   
   const selectImages = async () => {
