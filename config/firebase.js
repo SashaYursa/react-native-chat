@@ -14,7 +14,8 @@ const firebaseConfig = {
   projectId: "native-chat-app-6abf9",
   storageBucket: "native-chat-app-6abf9.appspot.com",
   messagingSenderId: "483586509108",
-  appId: "1:483586509108:web:2e179a8ec371cdc0e2bd61"
+  appId: "1:483586509108:web:2e179a8ec371cdc0e2bd61",
+  databaseURL: 'https://native-chat-app-6abf9-default-rtdb.europe-west1.firebasedatabase.app'
 };
 
 // Initialize Firebase

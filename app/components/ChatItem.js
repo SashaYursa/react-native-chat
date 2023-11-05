@@ -3,7 +3,7 @@ import React, { useContext, useState } from 'react'
 import styled from 'styled-components'
 import { AuthUserContext } from '../_layout'
 import ImageView from "react-native-image-viewing";
-
+import CachedImage from './CachedImage';
 const ChatItem = React.memo(({item, selectMessage, index}) => {
     const [isOpenedImages, setIsOpenedImages] = useState(false);
     const [selectedImage, setSelectedImage] = useState(0);
@@ -18,7 +18,7 @@ const ChatItem = React.memo(({item, selectMessage, index}) => {
     <MessageOutsideContaier style={isAuthor ? {justifyContent: 'flex-end'} : {justifyContent: 'flex-start'} }>
         { !isAuthor &&
             <CompanionImageContainer>
-                <CompanionImage source={item.userImage ? {uri: item.userImage} :require('../../assets/default-user.png')}/>
+                <CachedImage url={item.userImage} style={{width: 30, height: 30, borderRadius: 15,backgroundColor: 'gray'}} />
             </CompanionImageContainer>       
         }
         <MessageDataContainer style={!isAuthor && {backgroundColor: '#4c7873', borderTopLeftRadius: 0, borderTopRightRadius: 12}}>
@@ -26,7 +26,7 @@ const ChatItem = React.memo(({item, selectMessage, index}) => {
                 <MessageImagesContainer>
                     {item.media.map((image, index) => (
                         <MessageImageButton style={item.media.length > 1 && {width: '49%'}} key={image} onPress={()=>{openImage(index)}} onLongPress={() => {selectMessage(index)}} delayLongPress={300 } activeOpacity={1}>
-                            <MessageImage source={{uri: image}}/>
+                            <CachedImage style={{width: '100%', height: '100%', objectFit: 'cover'}} url={image}/>
                         </MessageImageButton>
                     ))}
                 </MessageImagesContainer>
@@ -95,9 +95,7 @@ z-index: 3;
 `
 
 const MessageImage = styled.Image`
-width: 100%;
-height: 100%;
-object-fit: cover;
+
 `
 
 const MessageText = styled.Text`

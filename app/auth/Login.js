@@ -5,6 +5,7 @@ import { auth } from '../../config/firebase'
 import { useContext, useEffect } from 'react';
 import { AuthUserContext } from '../_layout';
 import { router } from 'expo-router';
+import { getDatabase, ref, onValue, set, onDisconnect, off } from "firebase/database";
 
 const Login = () => {
   const { user, setUser }  = useContext(AuthUserContext)

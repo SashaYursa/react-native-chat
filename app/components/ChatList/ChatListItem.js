@@ -1,6 +1,7 @@
 import { View, Text, Image } from 'react-native'
 import React from 'react'
 import styled from 'styled-components'
+import CachedImage from '../CachedImage'
 const ChatListItem = ({item}) => {
     const getTime = (time) => {
         const dayjs = require("dayjs");
@@ -14,7 +15,10 @@ const ChatListItem = ({item}) => {
   return (
     <Container>
         <ImageContainer>
-            <ChatImage source={item.image === null ? require('../../../assets/default-chat-image.png') : {uri:item.image}}/>
+            { item.image === null
+                ? <ChatImage source={require('../../../assets/default-chat-image.png')}/>
+                : <CachedImage url={item.image} style={{width: 50, height: 50,objectFit: 'cover', borderRadius: 50}}/>
+            }
         </ImageContainer>
         <ChatData>
             <UserName numberOfLines={1}>

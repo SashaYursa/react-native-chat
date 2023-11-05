@@ -13,22 +13,25 @@ import {
   getDoc,
   where,
   getDocs,
-  setDoc
+  setDoc,
+  limit
 } from 'firebase/firestore'
 import { getDownloadURL, ref, uploadBytes, uploadBytesResumable } from 'firebase/storage'
 import "firebase/compat/auth";
 import "firebase/compat/firestore";
 import { AuthUserContext, FirebaseContext } from '../../_layout'
-import * as ImagePicker from 'expo-image-picker';
+import * as ImagePicker from 'expo-image-picker'
 import PreloadImages from '../../components/PreloadImages'
 import { fileStorage } from '../../../config/firebase'
 import ChatItem from '../../components/ChatItem'
+import CachedImage from '../../components/CachedImage'
 
 export const ChatContext = createContext({});
 
 const Chat = () => {
   const [chatData, setChatData] = useState(null)
   const [messages, setMessages] = useState([]);
+  const [unhandledMessages, setUnhandledMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [newMessageText, setNewMessageText] = useState('');
   const [preloadImages, setPreloadImages] = useState(null);
@@ -43,74 +46,12 @@ const Chat = () => {
   const navigation = useNavigation();
   const preloadImagesCountError = preloadImages?.length > 4 ? true : false;
   const buttonDisable = preloadImages?.length > 5 || !preloadImages?.length && newMessageText === '';
-  
-  useEffect(() => {
-    if(!chatUsersIsLoading){
-    const q = query(collection(database, 'messages', String(id), 'message'), orderBy('createdAt', 'asc'))
-    const unsubscribe = onSnapshot(q, async (snapshot) => {
-      const newMessages = await Promise.all(snapshot.docs.map(element => {
-        const data = element.data();
-        //console.log(chatUsers.find(chatUser => chatUser.id === data.uid)?.image)
-        //console.log(chatUsers.find(chatUser => chatUser.id === data.uid), ' find user')
-        const userImage = chatUsers.find(chatUser => chatUser.id === data.uid)?.image 
-        ? chatUsers.find(chatUser => chatUser.id === data.uid).image
-        : null
-        return {
-          ...data,
-          id: element.id,
-          selected: false,
-          userImage
-        }
-      }))
-      setLoading(false)
-      setMessages(newMessages.reverse())
-    })
-    return () => unsubscribe();
-    }
-  }, [chatUsersIsLoading])
 
+  //--------- виконується 1
+  //--------- завантаження даних поточного чату
+  //--------- встановлення поля lastSeen для залогіненого юзера в табл. chats значення - online
+  //--------- при виході з чату в поле встановлюється значення new Date()
   useEffect(() => {
-    if(chatUsers[0]?.id){
-    const qProfile = doc(database, 'users', chatUsers[0].id);
-    let timeout = setTimeout(() => {
-      console.log('he not in chat')
-    }, 7000);
-    const unsubscribe = onSnapshot(qProfile, { includeMetadataChanges: true }, async (data) => {
-      //console.log('user is updated self')
-      clearTimeout(timeout);
-      timeout = setTimeout(() => {
-        console.log('he is out')
-      }, 7000);
-    })
-    return () => unsubscribe()
-    }
-    //return () => unsubscribe(); 
-  }, [chatUsers])
-
-  useEffect(() => {
-    const fetchUser = async () => {
-      const qUser = doc(database, 'users', user.uid)
-      const selectedUser = await getDoc(qUser)
-      return selectedUser.data();
-    }
-    const updateOwnUser = async () => {
-    const ownUser = await fetchUser();
-    const interval = setInterval(async () => {
-      setDoc(doc(database, 'users', user.uid), {
-        ...ownUser,
-        lastCheckedStatus: new Date()
-      })
-    }, 5000);
-    return interval;
-    }
-    const int = updateOwnUser();
-    return () => clearInterval(int)
-  }, [])
-  
-  //fetching chat data and set lastSeen to online status to user (in chat only), 
-  //on leave set lastSeen to current time
-  useEffect(() => {
-   // console.log('here' ,id)
     const qChat = doc(database, "chats", id);
     const unsubscribe = onSnapshot(qChat, { includeMetadataChanges: true }, async (data) => {
       const chat = data.data();
@@ -143,28 +84,31 @@ const Chat = () => {
       chat.usersInfo = leaveUserChatInfo;
       setDoc(doc(database, "chats", id), chat)
     }
-    
   }, [id])
 
+  //------ виконується 2
+  //------ завантаження користувачів чату
+  //------ виконується після завантаження чату
+  //------ отрмання всіх користувачів чату, які є в даному чаті по айді
   useEffect(() => {
-    if(user.uid === 'Q9pmbzaWCMOd4w9JM89UEF1PToh2'){
-      console.log('iphone rerender')
-    }
     if(chatData !== null && chatUsersIsLoading){
       getUsers(chatData.users)
     }
   }, [chatData])
 
+  //----- виконується 3
+  //----- встановлення даних про співрозмовника в хедері чату
+  //----- виконується після завантаження користувачів чату
   useLayoutEffect(() => {
     if(!chatUsersIsLoading){
       const user = chatUsers[0];
       const userLastSeen = chatData.usersInfo.find(userInfo => userInfo.id === user.id).lastSeen;
       const userIsOnline = userLastSeen === 'online' && user.status !== 'offline';
-      console.log(user.status, '----> status')
+
       navigation.setOptions({
         headerTitle: () => (
           <TouchableOpacity onPress={() => {router.push(`user/${user.id}`)}} style={{flexDirection: 'row', alignItems: 'center', gap: 10}}>
-            <Image style={{width: 35, height: 35, borderRadius: 50, overflow: 'hidden', backgroundColor: "#eaeaea"}} source={user.image === null ? require('../../../assets/default-chat-image.png') : {uri: user.image}} />
+            <UserImage style={{width: 35, height: 35, borderRadius: 50, overflow: 'hidden', backgroundColor: "#eaeaea"}} imageUrl={user.image} />
             <Text style={{fontSize: 18, fontWeight: 700}}>{user.displayName}</Text>
             <View style={{flexDirection: 'row', gap: 5, alignItems: 'center'}}>
               {userIsOnline 
@@ -186,7 +130,90 @@ const Chat = () => {
     }
   }, [chatUsersIsLoading, chatData])
 
+  // ----------- виконується 3
+  // ----------- виконується після завантаження всіх користувачів в чаті 
+  // ----------- оримує повідомлення чату і стежить за їх обновленнями
+  useEffect(() => {
+    if(!chatUsersIsLoading){
+    const q = query(collection(database, 'messages', String(id), 'message'), orderBy('createdAt', 'desc'), limit(50))
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+      const newMessages = await Promise.all(snapshot.docs.map(element => {
+        const data = element.data();
+        const userImage = chatUsers.find(chatUser => chatUser.id === data.uid)?.image 
+        ? chatUsers.find(chatUser => chatUser.id === data.uid).image
+        : null
+        return {
+          ...data,
+          id: element.id,
+          userImage,
+          selected: false
+        }
+      }))
+      setLoading(false)
+      setMessages(newMessages)
+    })
+    return () => unsubscribe();
+    }
+  }, [chatUsersIsLoading])
 
+  // //----- виконується 4 
+  // //----- обробка повідомлень, завантаження фотографій з локального сховища
+  // useEffect(() => {
+  //   const messages = [];
+  //   if(unhandledMessages.length > 0){
+  //     unhandledMessages.forEach(unhandledMessage => {
+  //       ex
+  //     })
+
+  //   }
+  // }, [unhandledMessages])
+
+    //--------------- отримує залогіненого юзера і обновляє поле users.lastCheckedStatus
+    //--------------- потрібна для відстеження онлайн статусу
+  // useEffect(() => {
+  //   const fetchUser = async () => {
+  //     const qUser = doc(database, 'users', user.uid)
+  //     const selectedUser = await getDoc(qUser)
+  //     return selectedUser.data();
+  //   }
+  //   const updateOwnUser = async () => {
+  //   const ownUser = await fetchUser();
+  //   const interval = setInterval(async () => {
+  //     setDoc(doc(database, 'users', user.uid), {
+  //       ...ownUser,
+  //       lastCheckedStatus: new Date()
+  //     })
+  //   }, 5000);
+  //   return interval;
+  //   }
+  //   const int = updateOwnUser();
+  //   return () => clearInterval(int)
+  // }, [])
+
+    //--------------- отримує користувача з яким спілкується залогінений користувач із таблиці users,
+    //--------------- слідкує за тим, чи користувач знаходиться в чаті
+    //--------------- чи користувач оновив свій час останнього відвідування(викликається кожні 5 сек)
+  // useEffect(() => {
+  //   if(chatUsers[0]?.id){
+  //   const qProfile = doc(database, 'users', chatUsers[0].id);
+  //   let timeout = setTimeout(() => {
+  //     console.log('he not in chat')
+  //     //TODO викликати функцію, яка задасть статус користувача з яким спілкуються - не онлайн
+  //   }, 7000);
+  //   const unsubscribe = onSnapshot(qProfile, { includeMetadataChanges: true }, async (data) => {
+  //     clearTimeout(timeout);
+  //     timeout = setTimeout(() => {
+  //       console.log('he is out')
+  //     }, 7000);
+  //   })
+  //   return () => unsubscribe()
+  //   }
+  //   //return () => unsubscribe(); 
+  // }, [chatUsers])
+
+  //------- вибірка даних всіх користувачів в даному чаті,
+  //------- встановлення їх в змінну chatUsers
+  //------- встановлення в chatUsersIsLoading - false
   const getUsers = async (ids) => {
     setChatUsersIsLoading(true)
     const chatUsers = [];
@@ -195,8 +222,6 @@ const Chat = () => {
         const qUser = query(collection(database, "users"), where("id", "==", id))
         let res = await getDocs(qUser);
         res = await Promise.all(res.docs.map(item => item.data()))
-        //return await res[0]
-      //  console.log(res[0])
         chatUsers.push(await res[0])
       }
     }
@@ -242,6 +267,27 @@ const Chat = () => {
     }
   }
 
+  const sendMessage = async () => {
+    if(!preloadImagesCountError){    
+    let mediaItems = null;
+    if(preloadImages?.length){
+       mediaItems = await Promise.all(await preloadImages.map(async image => {
+        return await uploadChatMedia(image.path)
+      }))
+    }
+    const newText = newMessageText === '' ? null : newMessageText
+    const data = {
+       uid: user.uid,
+      text: newText,
+      media: mediaItems,
+      createdAt: serverTimestamp()
+    }
+    setNewMessageText('');
+    setPreloadImages(null)
+    await addDoc(collection(database, 'messages', String(id), 'message'),data)
+    }
+  }  
+
   const uploadChatMedia = async (path) => {
     const fileName = path.split('/').pop();
     
@@ -265,27 +311,6 @@ const Chat = () => {
       return await getDownloadURL(uploadTask.snapshot.ref).then(url => url)
     })
     .catch(error => console.log('uploadTask error -----> ', error))
-  }
-
-  const sendMessage = async () => {
-    if(!preloadImagesCountError){    
-    let mediaItems = null;
-    if(preloadImages?.length){
-       mediaItems = await Promise.all(await preloadImages.map(async image => {
-        return await uploadChatMedia(image.path)
-      }))
-    }
-    const newText = newMessageText === '' ? null : newMessageText
-    const data = {
-       uid: user.uid,
-      text: newText,
-      media: mediaItems,
-      createdAt: serverTimestamp()
-    }
-    setNewMessageText('');
-    setPreloadImages(null)
-    await addDoc(collection(database, 'messages', String(id), 'message'),data)
-    }
   }
 
   return (
@@ -313,7 +338,20 @@ const Chat = () => {
     </BottomContainer>
     </ChatContext.Provider>
   )
+  // return(
+  //   <View>
+  //     <Text>
+  //       Chat
+  //     </Text>
+  //   </View>
+  // )
 }
+export const UserImage = React.memo(({imageUrl, style}) => {
+  return imageUrl === null 
+  ? <Image source={require('../../../assets/default-chat-image.png')} style={style}/> 
+  :  <CachedImage style={style} url={imageUrl}/>
+ 
+})
 
 const ChatContent = React.memo(({messages, setMessages}) => {
   const {user} = useContext(AuthUserContext);

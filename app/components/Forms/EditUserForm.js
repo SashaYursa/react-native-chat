@@ -16,7 +16,7 @@ const EditUserForm = ({userData, updateUser}) => {
         const options = {
             mediaTypes: ImagePicker.MediaTypeOptions.All,
             aspect: [4, 3],
-            quality: .4,
+            quality: .1,
             selectionLimit: 1,
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
             allowsMultipleSelection: false
