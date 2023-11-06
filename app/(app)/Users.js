@@ -7,6 +7,7 @@ import useDebounce from '../../hooks/useDebounce'
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router'
 import BackButton from '../components/Buttons/BackButton'
 import { addDoc, collection, endAt, getDocs, orderBy, query, serverTimestamp, startAt, where } from 'firebase/firestore';
+import CachedImage from '../components/CachedImage';
 const Users = () => {
   const {database} = useContext(FirebaseContext)
   const {user} = useContext(AuthUserContext)
@@ -76,7 +77,10 @@ const Users = () => {
           && searchUsers.length > 0
             ? searchUsers.map(user => (
               <UserItem key={user.id} activeOpacity={.6} onPress={() => createChat(user.id)}>
-                <UserImage source={user.image ? {uri: user.image} : require('../../assets/default-user.png')}/>
+                {user.image 
+                  ? <CachedImage style={{width: 40, height: 40, borderRadius: 20, backgroundColor: '#fff'}} url={user.image}/>
+                  : <UserImage source={require('../../assets/default-user.png')}/>
+                }
                 <UserName>{user.displayName}</UserName>
               </UserItem>
             ))

@@ -1,10 +1,12 @@
-import { View, Text, Image, TouchableOpacity } from 'react-native'
+import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native'
 import { TextInput, Button } from 'react-native-paper';
-import React from 'react'
+import React, {memo} from 'react'
 import { Formik } from 'formik'
 import styled from 'styled-components'
 import * as ImagePicker from 'expo-image-picker';
+import CachedImage from '../CachedImage';
 const EditUserForm = ({userData, updateUser}) => {
+    console.log('here re')
     //const imageSource = user.image ? {uri: user.image} : require('../../assets/default-user-big.png')
     const userImageHandleImage = require('../../../assets/remove-item.png')
     const initValues = {
@@ -42,7 +44,11 @@ const EditUserForm = ({userData, updateUser}) => {
             {({ handleChange, setFieldValue, handleSubmit, values }) => (
                 <View>
                     <ImageContainer>
-                    <ImagePreview source={values.image ? {uri: values.image} : require('../../../assets/default-user-big.png')}/>
+                    { values.image
+                        ?   <CachedImage url={values.image} style={styles.imagePreview} />
+                        :   <Image source={require('../../../assets/default-user-big.png')} style={styles.imagePreview}/>
+                    }
+                    
                     { values.image !== null &&
                     <RemoveImageButton onPress={() => setFieldValue('image', null)}>
                         <Image style={{width: '100%', height: '100%'}} source={userImageHandleImage} />
@@ -68,6 +74,15 @@ const EditUserForm = ({userData, updateUser}) => {
         </Formik>
     )
 }
+
+const styles = StyleSheet.create({
+    imagePreview: {
+        backgroundColor: '#eaeaea',
+        width: '100%',
+        height: '100%',
+    }
+})
+
 const ImageContainer = styled.View`
 position: relative;
 width:  60%;
@@ -75,11 +90,7 @@ height: 260px;
 background-color: red;
 margin: 20px auto;
 `
-const ImagePreview = styled.Image`
-background-color: #eaeaea;
-width: 100%;
-height: 100%;
-`
+
 const ImageSelectButton = styled.TouchableOpacity`
 position: absolute;
 bottom: -10px;
@@ -110,4 +121,8 @@ background-color: #fff;
 `
 
 
-export default EditUserForm
+export default React.memo(EditUserForm, (prevProps, nextProps) => {
+        console.log(prevProps, 'prev')
+        console.log( nextProps, 'next')
+    }
+)

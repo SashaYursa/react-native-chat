@@ -8,7 +8,7 @@ import { collection, doc, getDoc, getDocs, limit, limitToLast, orderBy, query, w
 import { AuthUserContext } from '../../../_layout'
 import { database } from '../../../../config/firebase'
 import { setParams } from 'expo-router/src/global-state/routing'
-import { getUserData } from '../../_layout'
+import { checkUserStatus, getUserData } from '../../_layout'
 const Chats = () => {
     const { user } = useContext(AuthUserContext);
     const [chats, setChats] = useState([]);
@@ -34,14 +34,37 @@ const Chats = () => {
                 : users[0]
             const messages = await getLastMessage(doc.id);
             const userData = await getUserData(database, selectedUserID)
+            checkUserStatus(database, userData.id, (data)=>{
+             //   console.log(data, 'dat')
+                setChats(chats => {
+                    return chats.map(chat => {
+                        if(chat.userData.id === userData.id){
+                       //     console.log('find userData')
+                            return {
+                                ...chat,
+                                userData: {
+                                    ...chat.userData,
+                                    status: data.status,
+                                    lastCheckedStatus: data.lastCheckedStatus
+                                }
+                            }
+                        }
+                        return chat;
+                        })
+                })
+            })
             return {
                 ...chat,
                 message: messages,
                 userData: userData
             }  
         }))
+        //console.log(newChats[0].message, typeof newChats)
         setChats(newChats.sort((a, b) => {
-            return b.message.createdAt.seconds - a.message.createdAt.seconds
+            if(!b.message){
+                return -1  
+            }
+            return b.message?.createdAt?.seconds - a.message?.createdAt?.seconds
         }));
         setRefresh(false);
         } 
@@ -50,8 +73,19 @@ const Chats = () => {
         fetchData();
     }, [user])
     const router = useRouter();
-    const moveToChat = (id, name, image) => {
-        router.push({pathname: `chat/${id}`, params: name, image});
+
+    const hadnleChatClick = (chat) => {
+        //console.log(chat)
+
+        moveToChat(chat.id)
+    }
+
+    const updateLastSeenChat = (chatId) => {
+
+    }
+
+    const moveToChat = (id) => {
+        router.push(`chat/${id}`);
     }
 
     const onRefresh = () => {
@@ -67,8 +101,8 @@ const Chats = () => {
             <Container>
                 <ChatsList>
                     {chats.length > 0 && chats.map(chat => (
-                    <ChatLink key={chat.id} onPress={() => moveToChat(chat.id, chat.name ? chat.name : chat.userData.displayName, chat.image ? chat.image : chat.userData.image)}>
-                        <ChatListItem item={{image: chat.image ? chat.image : chat.userData.image, name: chat.name ? chat.name : chat.userData.displayName, data: chat?.message?.text !== undefined ? chat.message.text : 'Повідомлень немає' , time: chat?.message?.createdAt?.seconds ? chat.message.createdAt.seconds : null}}/>
+                    <ChatLink key={chat.id} onPress={() => hadnleChatClick(chat)}>
+                        <ChatListItem item={{image: chat.image ? chat.image : chat.userData.image,userData: chat.userData, name: chat.name ? chat.name : chat.userData.displayName, data: chat?.message?.text !== undefined ? chat.message.text : 'Повідомлень немає' , time: chat?.message?.createdAt?.seconds ? chat.message.createdAt.seconds : null}}/>
                     </ChatLink>
                     ))}
                 </ChatsList>

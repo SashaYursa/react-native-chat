@@ -156,39 +156,9 @@ const Chat = () => {
     }
   }, [chatUsersIsLoading])
 
-  // //----- виконується 4 
-  // //----- обробка повідомлень, завантаження фотографій з локального сховища
-  // useEffect(() => {
-  //   const messages = [];
-  //   if(unhandledMessages.length > 0){
-  //     unhandledMessages.forEach(unhandledMessage => {
-  //       ex
-  //     })
-
-  //   }
-  // }, [unhandledMessages])
-
-    //--------------- отримує залогіненого юзера і обновляє поле users.lastCheckedStatus
+    //--------------- обновляє поле users.lastCheckedStatus в таблиці chats за user.uid
     //--------------- потрібна для відстеження онлайн статусу
-  // useEffect(() => {
-  //   const fetchUser = async () => {
-  //     const qUser = doc(database, 'users', user.uid)
-  //     const selectedUser = await getDoc(qUser)
-  //     return selectedUser.data();
-  //   }
-  //   const updateOwnUser = async () => {
-  //   const ownUser = await fetchUser();
-  //   const interval = setInterval(async () => {
-  //     setDoc(doc(database, 'users', user.uid), {
-  //       ...ownUser,
-  //       lastCheckedStatus: new Date()
-  //     })
-  //   }, 5000);
-  //   return interval;
-  //   }
-  //   const int = updateOwnUser();
-  //   return () => clearInterval(int)
-  // }, [])
+
 
     //--------------- отримує користувача з яким спілкується залогінений користувач із таблиці users,
     //--------------- слідкує за тим, чи користувач знаходиться в чаті

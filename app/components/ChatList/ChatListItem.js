@@ -3,6 +3,8 @@ import React from 'react'
 import styled from 'styled-components'
 import CachedImage from '../CachedImage'
 const ChatListItem = ({item}) => {
+
+   // console.log(item)
     const getTime = (time) => {
         const dayjs = require("dayjs");
         const relativeTime = require("dayjs/plugin/relativeTime");
@@ -14,10 +16,15 @@ const ChatListItem = ({item}) => {
     }
   return (
     <Container>
+        {item.userData.status === "online"
+            ? <View style={{width: 30, height: 30, borderRadius: 30, borderColor: '#000', borderWidth: 1, backgroundColor: 'green'}}></View>
+            : <View></View>
+        }
         <ImageContainer>
+            
             { item.image === null
                 ? <ChatImage source={require('../../../assets/default-chat-image.png')}/>
-                : <CachedImage url={item.image} style={{width: 50, height: 50,objectFit: 'cover', borderRadius: 50}}/>
+                : <CachedImage url={item.image} style={{width: 50, height: 50, objectFit: 'cover', borderRadius: 50}}/>
             }
         </ImageContainer>
         <ChatData>
@@ -30,7 +37,7 @@ const ChatListItem = ({item}) => {
         </ChatData>
         <ChatInfo>
             <InfoTime>
-                {item.time ? getTime(item.time) : 'No time'}
+                {item.time && getTime(item.time)}
             </InfoTime>
         </ChatInfo>
     </Container>

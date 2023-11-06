@@ -1,9 +1,10 @@
-import { View, Text, ScrollView, TouchableOpacity, Image, Animated, Button, FadeInUp, FadeOutDown } from 'react-native'
+import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, Animated, Button, FadeInUp, FadeOutDown } from 'react-native'
 import React, { useContext, useEffect, useState } from 'react'
 import styled from 'styled-components'
 import { collection, getDocs, query, where } from 'firebase/firestore'
 import { ActivityIndicator } from 'react-native-paper'
 import { database } from '../../config/firebase'
+import CachedImage from './CachedImage'
 const User = ({ user, children }) => {
     const [displayFullInfo, setDisplayFullInfo] = useState(true)
     return (
@@ -22,7 +23,10 @@ const User = ({ user, children }) => {
           >
             <UserInfoContainer>
               <UserImageContainer>
-                <UserImage source={user.image ? {uri: user.image} : require('../../assets/default-user-big.png')}/>
+                {user.image 
+                  ? <CachedImage url={user.image} style={styles.userImage}/>
+                  : <Image style={styles.userImage} source={require('../../assets/default-user-big.png')}/>
+                }
               </UserImageContainer>
               <UserDataContainer>
                 <UserDataItem>
@@ -44,6 +48,20 @@ const User = ({ user, children }) => {
         </Container>  
     )
 }
+
+const styles= StyleSheet.create({
+  userImage: {
+    position: 'absolute',
+    top: 0,
+    zIndex: -2,
+    right: 0,
+    left: 0,
+    bottom: 0,
+    objectFit: 'cover',
+    height: '100%',
+    width: '100%',
+  }
+})
     
     const SmallUserWindow = ({displayName, email, image}) => {
       return (

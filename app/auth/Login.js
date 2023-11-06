@@ -6,12 +6,12 @@ import { useContext, useEffect } from 'react';
 import { AuthUserContext } from '../_layout';
 import { router } from 'expo-router';
 import { getDatabase, ref, onValue, set, onDisconnect, off } from "firebase/database";
-
+import * as FileSystem from 'expo-file-system'
 const Login = () => {
   const { user, setUser }  = useContext(AuthUserContext)
-  // useEffect(() => {
-  //   loginUser('middle@gmail.com', '123456')
-  // }, [])
+  useEffect(() => {
+    loginUser('middle@gmail.com', '123456')
+  }, [])
   const loginUser = (email, password) => {
     signInWithEmailAndPassword(auth, email, password)
     .then(data => { 

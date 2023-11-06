@@ -1,5 +1,5 @@
 import { View, Text, Image, TouchableOpacity, Modal, Pressable, ActivityIndicator } from 'react-native'
-import React, { useContext, useEffect, useState } from 'react'
+import React, { useCallback, useContext, useEffect, useState } from 'react'
 import { AuthUserContext } from '../../../_layout'
 import User from '../../../components/User';
 import styled from 'styled-components';
@@ -55,9 +55,7 @@ const Profile = ({}) => {
     .catch(error => console.log('uploadTask error -----> ', error))
   }
 
-  const updateUser = async (updateData) => {
-
-
+  const updateUser = useCallback(async (updateData) => {
     let image = updateData.image;
     if(updateData.image !== user.photoURL){
       console.log('updated')
@@ -87,7 +85,7 @@ const Profile = ({}) => {
       }))
       setDisplayModal(false)
      })
-  }
+  }, [user])
   useEffect(() => {
     console.log(uploadImageStatus, 'preload')
   }, [uploadImageStatus])
@@ -97,12 +95,10 @@ const Profile = ({}) => {
       router.push('auth/Login')
     })
   }
-
-  
   if(displayModal){
     return (
       <Modal animationType='slide'>
-          <EditUser user={userData} updateUser={updateUser}/>
+        <EditUser setDisplayModal={setDisplayModal} user={userData} updateUser={updateUser}/>
       </Modal>
     )
   }
@@ -114,6 +110,7 @@ const Profile = ({}) => {
   )
   : (
     <SafeArea>
+    <Container>
     <TopButtonsContainer>
       <TopButton>
         <DrawerToggleButton tintColor='#fff' backgroundColor="#000"/>
@@ -133,12 +130,18 @@ const Profile = ({}) => {
       </Button>
     </ActionContainer>
     </User>
+    </Container>
     </SafeArea>
   )
 }
 
 const SafeArea = styled.View`
-margin-top: 5px;
+padding: 15px 0;
+overflow: hidden;
+background-color: #fff;
+`
+const Container = styled.View`
+position: relative;
 `
 const TopButtonsContainer = styled.View`
 flex-direction: row;

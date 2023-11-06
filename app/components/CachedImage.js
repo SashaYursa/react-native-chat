@@ -10,7 +10,6 @@ const CachedImage = ({url, style}) => {
     
     const cached = async () => {
         const name = shorthash.unique(url);
-        
         const path = `${FileSystem.cacheDirectory}${name}`;
 
         const image = await FileSystem.getInfoAsync(path);
@@ -19,6 +18,7 @@ const CachedImage = ({url, style}) => {
             setUri(image.uri);
             return;
         }
+        console.log('selected from browser')
         const newImage = await FileSystem.downloadAsync(url, path);
         setUri(newImage.uri);
     }

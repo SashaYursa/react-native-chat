@@ -33,7 +33,7 @@ const Layout = () => {
         />
         <Drawer.Screen name='chats' options={{
             title: "Чати",
-            headerLeft: () => <DrawerToggleButton/>,
+            headerLeft: () => <DrawerToggleButton tintColor='#000'/>,
             headerRight: () => <UsersButton activeOpacity={.5} onPress={() => router.push('Users')}><UserImage source={require('../../../assets/users.png')}/></UsersButton>
         }} />
     </Drawer>

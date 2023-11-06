@@ -3,15 +3,12 @@ import React from 'react'
 import { useRouter } from 'expo-router'
 import styled from 'styled-components';
 
-const BackButton = () => {
+const BackButton = ({onPress}) => {
     const router = useRouter();
-
-    const goBackAction = () => {
-        router.back();
-    }
+    const pressAction = () => onPress ? onPress() : router.back()
 
     return (
-        <BackButtonContainer onPress={goBackAction}>
+        <BackButtonContainer onPress={() => pressAction()}>
             <BackImage source={require('../../../assets/back.png')} />
         </BackButtonContainer>
     )
