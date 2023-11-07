@@ -17,30 +17,34 @@ import {
   limit
 } from 'firebase/firestore'
 import { getDownloadURL, ref, uploadBytes, uploadBytesResumable } from 'firebase/storage'
+import {ref as realRef} from 'firebase/database'
 import "firebase/compat/auth";
 import "firebase/compat/firestore";
 import { AuthUserContext, FirebaseContext } from '../../_layout'
 import * as ImagePicker from 'expo-image-picker'
 import PreloadImages from '../../components/PreloadImages'
-import { fileStorage } from '../../../config/firebase'
+import { fileStorage, rDatabase } from '../../../config/firebase'
 import ChatItem from '../../components/ChatItem'
 import CachedImage from '../../components/CachedImage'
+import { onValue } from 'firebase/database'
+import dayjs from 'dayjs'
+import relativeTime from 'dayjs/plugin/relativeTime';
+import ualocal from 'dayjs/locale/uk';
 
 export const ChatContext = createContext({});
 
 const Chat = () => {
+  dayjs.extend(relativeTime);
+  dayjs.locale(ualocal)
   const [chatData, setChatData] = useState(null)
   const [messages, setMessages] = useState([]);
-  const [unhandledMessages, setUnhandledMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [newMessageText, setNewMessageText] = useState('');
   const [preloadImages, setPreloadImages] = useState(null);
-  const {auth, database} = useContext(FirebaseContext);
-  const [uploadImageProgress, setUploadImageProgress] = useState(null);
+  const { database } = useContext(FirebaseContext);
   const { user } = useContext(AuthUserContext);
   const [chatUsers, setChatUsers] = useState([]);
   const [chatUsersIsLoading, setChatUsersIsLoading] = useState(true);
-  const [selectedUser, setSelectedUser] = useState({id: 123, displayName: '123'});
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const navigation = useNavigation();
@@ -55,34 +59,10 @@ const Chat = () => {
     const qChat = doc(database, "chats", id);
     const unsubscribe = onSnapshot(qChat, { includeMetadataChanges: true }, async (data) => {
       const chat = data.data();
-      let currentUserInfo = null;
-      chat.usersInfo.forEach((currentUser, index) => {
-        if(currentUser.id === user.uid){
-          currentUserInfo = {info: {...currentUser, lastSeen: 'online'}, index};
-        }
-      })
-      if(chat.usersInfo[currentUserInfo.index].lastSeen !== 'online'){
-        chat.usersInfo[currentUserInfo.index] = currentUserInfo.info;
-        await setDoc(doc(database, "chats", id), chat);
-      }
       setChatData(chat);
     })
     return async () => {
       unsubscribe();
-      console.log('leave')
-      let chat = await getDoc(qChat)
-      chat = chat.data();
-      const leaveUserChatInfo =  chat.usersInfo.map(userInfo => {
-        if(userInfo.id === user.uid){
-          return {
-            ...userInfo,
-            lastSeen: new Date()
-          }
-        }
-        return userInfo
-      })
-      chat.usersInfo = leaveUserChatInfo;
-      setDoc(doc(database, "chats", id), chat)
     }
   }, [id])
 
@@ -91,9 +71,14 @@ const Chat = () => {
   //------ виконується після завантаження чату
   //------ отрмання всіх користувачів чату, які є в даному чаті по айді
   useEffect(() => {
-    if(chatData !== null && chatUsersIsLoading){
-      getUsers(chatData.users)
+    const loadUsers = async () => {
+      if(chatData !== null && chatUsersIsLoading){
+        const users = await getUsers(chatData.users)
+        setChatUsers(users);
+        setChatUsersIsLoading(false)
+      }
     }
+    loadUsers();
   }, [chatData])
 
   //----- виконується 3
@@ -102,33 +87,34 @@ const Chat = () => {
   useLayoutEffect(() => {
     if(!chatUsersIsLoading){
       const user = chatUsers[0];
-      const userLastSeen = chatData.usersInfo.find(userInfo => userInfo.id === user.id).lastSeen;
-      const userIsOnline = userLastSeen === 'online' && user.status !== 'offline';
-
+      let dateNow = dayjs();
+      const userLastSeen = dateNow.from(new Date(user.lastSeen), true);
       navigation.setOptions({
         headerTitle: () => (
           <TouchableOpacity onPress={() => {router.push(`user/${user.id}`)}} style={{flexDirection: 'row', alignItems: 'center', gap: 10}}>
             <UserImage style={{width: 35, height: 35, borderRadius: 50, overflow: 'hidden', backgroundColor: "#eaeaea"}} imageUrl={user.image} />
+            <View >
             <Text style={{fontSize: 18, fontWeight: 700}}>{user.displayName}</Text>
             <View style={{flexDirection: 'row', gap: 5, alignItems: 'center'}}>
-              {userIsOnline 
+              {user.onlineStatus 
             ? 
               <>
                 <View style={{width: 15, height: 15, borderRadius: 15, backgroundColor: 'green'}}></View>
-                <Text>Зараз в чаті</Text>
+                <Text>Зараз онлайн</Text>
               </>
             : 
               <>
                 <View style={{width: 15, height: 15, borderRadius: 15, backgroundColor: 'gray'}}></View>
-                <Text>Не онлайн</Text>
+                <Text>Онлайн - {userLastSeen} тому</Text>
               </>
             }
+            </View>
             </View>
           </TouchableOpacity>
         )
       })
     }
-  }, [chatUsersIsLoading, chatData])
+  }, [chatUsers])
 
   // ----------- виконується 3
   // ----------- виконується після завантаження всіх користувачів в чаті 
@@ -156,30 +142,36 @@ const Chat = () => {
     }
   }, [chatUsersIsLoading])
 
-    //--------------- обновляє поле users.lastCheckedStatus в таблиці chats за user.uid
-    //--------------- потрібна для відстеження онлайн статусу
-
-
-    //--------------- отримує користувача з яким спілкується залогінений користувач із таблиці users,
-    //--------------- слідкує за тим, чи користувач знаходиться в чаті
-    //--------------- чи користувач оновив свій час останнього відвідування(викликається кожні 5 сек)
-  // useEffect(() => {
-  //   if(chatUsers[0]?.id){
-  //   const qProfile = doc(database, 'users', chatUsers[0].id);
-  //   let timeout = setTimeout(() => {
-  //     console.log('he not in chat')
-  //     //TODO викликати функцію, яка задасть статус користувача з яким спілкуються - не онлайн
-  //   }, 7000);
-  //   const unsubscribe = onSnapshot(qProfile, { includeMetadataChanges: true }, async (data) => {
-  //     clearTimeout(timeout);
-  //     timeout = setTimeout(() => {
-  //       console.log('he is out')
-  //     }, 7000);
-  //   })
-  //   return () => unsubscribe()
-  //   }
-  //   //return () => unsubscribe(); 
-  // }, [chatUsers])
+  //--------------- виокнується 4 
+  //--------------- Отримує статус кожного користувача чату і стежить за його оновленнями
+  //--------------- стежить за даними з realtime firebase database, 
+  //--------------- містить колбек, який спрацьовує коли користувач від'єднався від програми
+  useEffect(() => {
+    let unsubs = [];
+    if(!loading){
+      unsubs = chatUsers.map(chatUser => {
+         const unsub = onValue(realRef(rDatabase, '/status/' + chatUser.id), (snapShot) => {
+            const value = snapShot.val();
+            setChatUsers(chats => {
+                return chats.map(u => {
+                    if(chatUser.id === u.id){
+                        return {
+                            ...u,
+                            onlineStatus: value.isOnline,
+                            lastSeen: value.timeStamp
+                        }
+                    }
+                    return u;
+                })
+            })
+         })
+        return unsub;
+      })
+    }
+    return () => unsubs.forEach(unsub => {
+      unsub();    
+    });
+  }, [loading])
 
   //------- вибірка даних всіх користувачів в даному чаті,
   //------- встановлення їх в змінну chatUsers
@@ -192,11 +184,14 @@ const Chat = () => {
         const qUser = query(collection(database, "users"), where("id", "==", id))
         let res = await getDocs(qUser);
         res = await Promise.all(res.docs.map(item => item.data()))
-        chatUsers.push(await res[0])
+        chatUsers.push(await {
+          ...res[0],
+          onlineStatus: false,
+          lastSeen: null
+        })
       }
     }
-    setChatUsers(chatUsers);
-    setChatUsersIsLoading(false)
+    return chatUsers
   }
   
   const selectImages = async () => {
@@ -308,13 +303,6 @@ const Chat = () => {
     </BottomContainer>
     </ChatContext.Provider>
   )
-  // return(
-  //   <View>
-  //     <Text>
-  //       Chat
-  //     </Text>
-  //   </View>
-  // )
 }
 export const UserImage = React.memo(({imageUrl, style}) => {
   return imageUrl === null 

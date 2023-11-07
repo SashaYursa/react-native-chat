@@ -2,26 +2,25 @@ import { View, Text, Image } from 'react-native'
 import React from 'react'
 import styled from 'styled-components'
 import CachedImage from '../CachedImage'
-const ChatListItem = ({item}) => {
+import dayjs from 'dayjs'
+import relativeTime from 'dayjs/plugin/relativeTime';
+import ualocal from 'dayjs/locale/uk';
 
-   // console.log(item)
+const ChatListItem = ({item}) => {
+    dayjs.extend(relativeTime);
+    dayjs.locale(ualocal)
     const getTime = (time) => {
-        const dayjs = require("dayjs");
-        const relativeTime = require("dayjs/plugin/relativeTime");
-        dayjs.extend(relativeTime);
-        
         let dateNow = dayjs();
         let blogDate = new Date(time * 1000);
         return dateNow.from(blogDate, true);
     }
   return (
     <Container>
-        {item.userData.status === "online"
-            ? <View style={{width: 30, height: 30, borderRadius: 30, borderColor: '#000', borderWidth: 1, backgroundColor: 'green'}}></View>
-            : <View></View>
-        }
+        
         <ImageContainer>
-            
+            {
+            item.onlineStatus && <OnlineIndicator/>
+            }
             { item.image === null
                 ? <ChatImage source={require('../../../assets/default-chat-image.png')}/>
                 : <CachedImage url={item.image} style={{width: 50, height: 50, objectFit: 'cover', borderRadius: 50}}/>
@@ -37,7 +36,7 @@ const ChatListItem = ({item}) => {
         </ChatData>
         <ChatInfo>
             <InfoTime>
-                {item.time && getTime(item.time)}
+                {item.time && `${getTime(item.time)} тому`} 
             </InfoTime>
         </ChatInfo>
     </Container>
@@ -58,6 +57,7 @@ overflow: hidden;
 const ImageContainer = styled.View`
 padding: 10px 0;
 overflow: hidden;
+position: relative;
 ` 
 const ChatImage = styled.Image`
 width: 50px;
@@ -91,6 +91,16 @@ const InfoTime = styled.Text`
 color: #000;
 font-weight: 400;
 font-size: 12px;
+`
+const OnlineIndicator = styled.View`
+border-radius: 30px;
+position: absolute;
+width: 15px;
+height: 15px;
+bottom: 10;
+right: 0;
+background-color: green;
+z-index: 2;
 `
 
 export default ChatListItem

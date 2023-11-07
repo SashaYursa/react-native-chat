@@ -6,9 +6,10 @@ import { DrawerLayoutAndroid, TouchableOpacity } from 'react-native-gesture-hand
 import { Link, useRouter } from 'expo-router'
 import { collection, doc, getDoc, getDocs, limit, limitToLast, orderBy, query, where } from 'firebase/firestore'
 import { AuthUserContext } from '../../../_layout'
-import { database } from '../../../../config/firebase'
+import { database, rDatabase } from '../../../../config/firebase'
 import { setParams } from 'expo-router/src/global-state/routing'
 import { checkUserStatus, getUserData } from '../../_layout'
+import { onValue, ref } from 'firebase/database'
 const Chats = () => {
     const { user } = useContext(AuthUserContext);
     const [chats, setChats] = useState([]);
@@ -34,35 +35,17 @@ const Chats = () => {
                 : users[0]
             const messages = await getLastMessage(doc.id);
             const userData = await getUserData(database, selectedUserID)
-            checkUserStatus(database, userData.id, (data)=>{
-             //   console.log(data, 'dat')
-                setChats(chats => {
-                    return chats.map(chat => {
-                        if(chat.userData.id === userData.id){
-                       //     console.log('find userData')
-                            return {
-                                ...chat,
-                                userData: {
-                                    ...chat.userData,
-                                    status: data.status,
-                                    lastCheckedStatus: data.lastCheckedStatus
-                                }
-                            }
-                        }
-                        return chat;
-                        })
-                })
-            })
+            
             return {
                 ...chat,
                 message: messages,
-                userData: userData
+                userData: userData,
+                onlineStatus: false
             }  
         }))
-        //console.log(newChats[0].message, typeof newChats)
         setChats(newChats.sort((a, b) => {
             if(!b.message){
-                return -1  
+                return -1;  
             }
             return b.message?.createdAt?.seconds - a.message?.createdAt?.seconds
         }));
@@ -72,16 +55,39 @@ const Chats = () => {
     useEffect(() => {
         fetchData();
     }, [user])
+
+    useEffect(() => {
+        let unsubs = [];
+        if(!refresh){
+            unsubs = chats.map(chat => {
+                const unsub = onValue(ref(rDatabase, '/status/' + chat.userData.id), (snapShot) => {
+                    const value = snapShot.val();
+                    setChats(chats => {
+                        return chats.map(chatItem => {
+                            if(chat.userData.id === chatItem.userData.id){
+                                return {
+                                    ...chatItem,
+                                    onlineStatus: value.isOnline
+                                }
+                            }
+                            return chatItem;
+                        })
+                    })
+                })
+                return unsub;
+            })
+        }
+        return () => unsubs.forEach(unsub => {
+            unsub();    
+            });
+    }, [refresh])
     const router = useRouter();
 
     const hadnleChatClick = (chat) => {
-        //console.log(chat)
-
         moveToChat(chat.id)
     }
 
     const updateLastSeenChat = (chatId) => {
-
     }
 
     const moveToChat = (id) => {
@@ -92,6 +98,19 @@ const Chats = () => {
         setRefresh(true);
         fetchData()
     }
+    const ChatItem = (itemData) => {
+        const item = {
+            image: itemData.image ? itemData.image : itemData.userData.image,
+            userData: itemData.userData,
+            name: itemData.name ? itemData.name : itemData.userData.displayName,
+            data: itemData?.message?.text !== undefined ? itemData.message.text : 'Повідомлень немає',
+            time: itemData?.message?.createdAt?.seconds ? itemData.message.createdAt.seconds : null,
+            onlineStatus: itemData.onlineStatus
+        }
+        return(
+            <ChatListItem item={item} />
+        )
+    } 
 
     return (
          <ScrollView
@@ -102,7 +121,9 @@ const Chats = () => {
                 <ChatsList>
                     {chats.length > 0 && chats.map(chat => (
                     <ChatLink key={chat.id} onPress={() => hadnleChatClick(chat)}>
-                        <ChatListItem item={{image: chat.image ? chat.image : chat.userData.image,userData: chat.userData, name: chat.name ? chat.name : chat.userData.displayName, data: chat?.message?.text !== undefined ? chat.message.text : 'Повідомлень немає' , time: chat?.message?.createdAt?.seconds ? chat.message.createdAt.seconds : null}}/>
+                       {
+                        ChatItem(chat)
+                       }
                     </ChatLink>
                     ))}
                 </ChatsList>

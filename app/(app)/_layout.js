@@ -51,37 +51,7 @@ const AppLayout = () => {
             })
         return () => unsub();
     }, [user])
-
-    useEffect(() => {
-        let fetchedUser = null
-        const interval = setInterval(() => {
-          if(user){
-            updateOwnUser();
-          }
-        }, 5000);
     
-        const fetchUser = async () => {
-          const qUser = doc(database, 'users', user.uid)
-          const selectedUser = await getDoc(qUser)
-          return selectedUser.data();
-        }
-        const updateOwnUser = async () => {
-            if(fetchedUser === null){
-                fetchedUser =  await fetchUser();
-            }
-            else{
-                setDoc(doc(database, 'users', user.uid), {
-                    ...fetchedUser,
-                    lastCheckedStatus: new Date(),
-                    status: 'online'
-                })
-            }
-        }
-        return () => {
-          clearInterval(interval)
-        }
-      }, [user])
-
     if (!user) {
         return (
            <Redirect href='auth' />
