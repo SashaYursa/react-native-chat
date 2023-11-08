@@ -2,6 +2,7 @@ import { View, Text, Image } from 'react-native'
 import React, { useEffect, useState } from 'react'
 import * as FileSystem from 'expo-file-system'
 import shorthash from 'shorthash'
+
 const CachedImage = ({url, style}) => {
     useEffect(() => {
         cached();

@@ -6,12 +6,12 @@ import styled from 'styled-components'
 import * as ImagePicker from 'expo-image-picker';
 import CachedImage from '../CachedImage';
 const EditUserForm = ({userData, updateUser}) => {
-    console.log('here re')
-    //const imageSource = user.image ? {uri: user.image} : require('../../assets/default-user-big.png')
     const userImageHandleImage = require('../../../assets/remove-item.png')
+    const defaultUserImage = require('../../../assets/default-user-big.png');
     const initValues = {
         displayName: userData.displayName,
-        image: userData.image
+        image: userData.image,
+        uploadedImage: null
     }
 
     const selectUserImage = async (setValue) => {
@@ -30,7 +30,8 @@ const EditUserForm = ({userData, updateUser}) => {
                 return item.uri
             }
             })
-            setValue('image', images[0])
+            console.log(images[0])
+            setValue('uploadedImage', images[0])
         }
     }
 
@@ -44,21 +45,26 @@ const EditUserForm = ({userData, updateUser}) => {
             {({ handleChange, setFieldValue, handleSubmit, values }) => (
                 <View>
                     <ImageContainer>
-                    { values.image
-                        ?   <CachedImage url={values.image} style={styles.imagePreview} />
-                        :   <Image source={require('../../../assets/default-user-big.png')} style={styles.imagePreview}/>
+                    { 
+                     values.uploadedImage 
+                     ? <Image source={{uri: values.uploadedImage}} style={styles.imagePreview}/>
+                     : values.image 
+                        ? <CachedImage url={values.image} style={styles.imagePreview} />
+                        : <Image source={defaultUserImage} style={styles.imagePreview}/>
                     }
                     
-                    { values.image !== null &&
-                    <RemoveImageButton onPress={() => setFieldValue('image', null)}>
+                    { values.uploadedImage !== null &&
+                    <RemoveImageButton onPress={() => setFieldValue('uploadedImage', null)}>
                         <Image style={{width: '100%', height: '100%'}} source={userImageHandleImage} />
                     </RemoveImageButton>
                     }
-                    <ImageSelectButton onPress={() => {
+                    { values.uploadedImage === null &&
+                        <ImageSelectButton onPress={() => {
                         selectUserImage(setFieldValue)
-                    }}>
+                        }}>
                         <Image style={{width: '100%', height: '100%'}} source={userImageHandleImage} />
                     </ImageSelectButton>
+                    }
                 </ImageContainer>
                 <TextFields>
                     <TextInput label='UserName' mode='outlined'
@@ -121,8 +127,4 @@ background-color: #fff;
 `
 
 
-export default React.memo(EditUserForm, (prevProps, nextProps) => {
-        console.log(prevProps, 'prev')
-        console.log( nextProps, 'next')
-    }
-)
+export default EditUserForm;
