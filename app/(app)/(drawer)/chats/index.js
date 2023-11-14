@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react'
-import { View, Text, RefreshControl, ScrollView } from 'react-native'
+import { View, Text, RefreshControl, ScrollView, Platform } from 'react-native'
 import styled from 'styled-components'
 import ChatListItem from '../../../components/ChatList/ChatListItem'
 import { DrawerLayoutAndroid, TouchableOpacity } from 'react-native-gesture-handler'
@@ -12,7 +12,10 @@ import { checkUserStatus, getUserData } from '../../_layout'
 import { onValue, ref } from 'firebase/database'
 const Chats = () => {
     const { user } = useContext(AuthUserContext);
+    console.log('reload')
     const [chats, setChats] = useState([]);
+    const [usersOnlineStatus, setUsersOnlineStatus] = useState(null);
+    console.log(usersOnlineStatus)
     const [refresh, setRefresh] = useState(false);
     const getLastMessage = async (chatId) => {
         const qMessages = query(collection(database, "messages", String(chatId), "message"), orderBy('createdAt', 'desc'), limit(1));
@@ -48,7 +51,7 @@ const Chats = () => {
                 return -1;  
             }
             return b.message?.createdAt?.seconds - a.message?.createdAt?.seconds
-        }));
+        }))
         setRefresh(false);
         } 
 
@@ -57,30 +60,42 @@ const Chats = () => {
     }, [user])
 
     useEffect(() => {
+        console.log('i work')
         let unsubs = [];
         if(!refresh){
             unsubs = chats.map(chat => {
                 const unsub = onValue(ref(rDatabase, '/status/' + chat.userData.id), (snapShot) => {
                     const value = snapShot.val();
-                    setChats(chats => {
-                        return chats.map(chatItem => {
-                            if(chat.userData.id === chatItem.userData.id){
-                                return {
-                                    ...chatItem,
-                                    onlineStatus: value.isOnline
-                                }
+                    setUsersOnlineStatus(usersOnlineStatus =>{
+                        if(usersOnlineStatus === null){
+                            return {
+                                [chat.userData.id]: value.isOnline 
                             }
-                            return chatItem;
-                        })
+                        }
+                        return {
+                            ...usersOnlineStatus,
+                            [chat.userData.id]: value.isOnline
+                        }
                     })
+                    // setChats(chats => {
+                    //     return chats.map(chatItem => {
+                    //         if(chat.userData.id === chatItem.userData.id){
+                    //             return {
+                    //                 ...chatItem,
+                    //                 onlineStatus: value.isOnline
+                    //             }
+                    //         }
+                    //         return chatItem;
+                    //     })
+                    // })
                 })
                 return unsub;
             })
         }
         return () => unsubs.forEach(unsub => {
             unsub();    
-            });
-    }, [refresh])
+        });
+    }, [chats])
     const router = useRouter();
 
     const hadnleChatClick = (chat) => {
@@ -105,7 +120,7 @@ const Chats = () => {
             name: itemData.name ? itemData.name : itemData.userData.displayName,
             data: itemData?.message?.text !== undefined ? itemData.message.text : 'Повідомлень немає',
             time: itemData?.message?.createdAt?.seconds ? itemData.message.createdAt.seconds : null,
-            onlineStatus: itemData.onlineStatus
+            onlineStatus: usersOnlineStatus ? usersOnlineStatus[itemData.userData.id] : false
         }
         return(
             <ChatListItem item={item} />

@@ -97,7 +97,7 @@ border-radius: 30px;
 position: absolute;
 width: 15px;
 height: 15px;
-bottom: 10;
+bottom: 10px;
 right: 0;
 background-color: green;
 z-index: 2;

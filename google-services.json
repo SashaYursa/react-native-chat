@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "483586509108",
+    "firebase_url": "https://native-chat-app-6abf9-default-rtdb.europe-west1.firebasedatabase.app",
+    "project_id": "native-chat-app-6abf9",
+    "storage_bucket": "native-chat-app-6abf9.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:483586509108:android:111646e13f99e299e2bd61",
+        "android_client_info": {
+          "package_name": "com.chatapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBYAubCgCdfBlDRftDTK8ikqmKx-N1uDbA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
