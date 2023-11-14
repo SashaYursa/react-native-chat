@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react'
 import * as FileSystem from 'expo-file-system'
 import shorthash from 'shorthash'
 
-const CachedImage = ({url, style}) => {
+const CachedImage = ({url, style, blurRadius = 0}) => {
     useEffect(() => {
         cached();
     }, [])
@@ -25,7 +25,7 @@ const CachedImage = ({url, style}) => {
     }
 
     return (
-        <Image style={style} source={{uri}} />
+        <Image style={style} source={{uri}} blurRadius={blurRadius} />
     )
 }
 

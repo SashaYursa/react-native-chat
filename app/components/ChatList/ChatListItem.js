@@ -1,4 +1,4 @@
-import { View, Text, Image } from 'react-native'
+import { View, Text, Image, Platform } from 'react-native'
 import React from 'react'
 import styled from 'styled-components'
 import CachedImage from '../CachedImage'
@@ -7,6 +7,7 @@ import relativeTime from 'dayjs/plugin/relativeTime';
 import ualocal from 'dayjs/locale/uk';
 
 const ChatListItem = ({item}) => {
+    console.log(item, 'data')
     dayjs.extend(relativeTime);
     dayjs.locale(ualocal)
     const getTime = (time) => {
@@ -27,12 +28,21 @@ const ChatListItem = ({item}) => {
             }
         </ImageContainer>
         <ChatData>
-            <UserName numberOfLines={1}>
+            <UserName numberOfLines={2}>
                 {item.name ? item.name : 'No data'}
             </UserName>
-            <MessageData numberOfLines={2}>
-                {item.data ? item.data : 'No message'}
-            </MessageData>
+            <MessageContainer>
+                {item.media &&
+                item.media.map(image => (
+                <MessageImageContainer key={image}>
+                     <CachedImage style={{width: '100%', height: '100%'}} url={image}/> 
+                </MessageImageContainer>
+                ))
+                }
+                <MessageData numberOfLines={1}>
+                    {item.data ? item.data : 'No message'}
+                </MessageData>
+            </MessageContainer>
         </ChatData>
         <ChatInfo>
             <InfoTime>
@@ -80,6 +90,21 @@ font-size: 18px;
 font-weight: 700;
 color: #000;
 `
+const MessageContainer = styled.View`
+flex-direction: row;
+gap: 5px;
+justify-content: flex-start;
+align-items: center;
+`
+
+const MessageImageContainer = styled.View`
+width: 20px;
+height: 20px;
+border-radius: 6px;
+overflow: hidden;
+background-color: #eaeaea;
+`
+
 const MessageData = styled.Text`
 font-size: 16px;
 font-weight: 400;

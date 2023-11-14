@@ -4,7 +4,7 @@ import styled from 'styled-components'
 import ChatListItem from '../../../components/ChatList/ChatListItem'
 import { DrawerLayoutAndroid, TouchableOpacity } from 'react-native-gesture-handler'
 import { Link, useRouter } from 'expo-router'
-import { collection, doc, getDoc, getDocs, limit, limitToLast, orderBy, query, where } from 'firebase/firestore'
+import { collection, doc, getDoc, getDocs, limit, limitToLast, onSnapshot, orderBy, query, where } from 'firebase/firestore'
 import { AuthUserContext } from '../../../_layout'
 import { database, rDatabase } from '../../../../config/firebase'
 import { setParams } from 'expo-router/src/global-state/routing'
@@ -12,10 +12,9 @@ import { checkUserStatus, getUserData } from '../../_layout'
 import { onValue, ref } from 'firebase/database'
 const Chats = () => {
     const { user } = useContext(AuthUserContext);
-    console.log('reload')
     const [chats, setChats] = useState([]);
     const [usersOnlineStatus, setUsersOnlineStatus] = useState(null);
-    console.log(usersOnlineStatus)
+    const [chatsLastMessages, setChatsLastMessages] = useState(null);
     const [refresh, setRefresh] = useState(false);
     const getLastMessage = async (chatId) => {
         const qMessages = query(collection(database, "messages", String(chatId), "message"), orderBy('createdAt', 'desc'), limit(1));
@@ -59,8 +58,8 @@ const Chats = () => {
         fetchData();
     }, [user])
 
+    // observing users status
     useEffect(() => {
-        console.log('i work')
         let unsubs = [];
         if(!refresh){
             unsubs = chats.map(chat => {
@@ -77,17 +76,6 @@ const Chats = () => {
                             [chat.userData.id]: value.isOnline
                         }
                     })
-                    // setChats(chats => {
-                    //     return chats.map(chatItem => {
-                    //         if(chat.userData.id === chatItem.userData.id){
-                    //             return {
-                    //                 ...chatItem,
-                    //                 onlineStatus: value.isOnline
-                    //             }
-                    //         }
-                    //         return chatItem;
-                    //     })
-                    // })
                 })
                 return unsub;
             })
@@ -96,6 +84,55 @@ const Chats = () => {
             unsub();    
         });
     }, [chats])
+
+    // observing users messages
+    useEffect(() => {
+        let unsubs = [];
+        unsubs = chats.map(chat => {
+            const qMessages = query(collection(database, "messages", String(chat.id), "message"), orderBy('createdAt', 'desc'), limit(1));
+            const unsubscribe = onSnapshot(qMessages, async (snapShot) => {
+                snapShot.docs.forEach(async e => { 
+                setChatsLastMessages(lastMessages => {
+                    const data = e.data();
+                    const message = {
+                        images: data.media === null ? null : data.media,
+                        text: data.text ? data.text : data.media !== null ? 'Фото' : 'Повідомлень немає',
+                        createdAt: data.createdAt?.seconds
+                    }
+                    if(lastMessages == null){
+                        return {
+                            [chat.id]: message
+                        }
+                    }
+                    return {
+                        ...lastMessages,
+                        [chat.id]: message
+                    }
+                })
+            });
+            })
+            return unsubscribe;
+            // const unsub = onValue(ref(rDatabase, '/status/' + chat.userData.id), (snapShot) => {
+            //     const value = snapShot.val();
+            //     setUsersOnlineStatus(usersOnlineStatus =>{
+            //         if(usersOnlineStatus === null){
+            //             return {
+            //                 [chat.userData.id]: value.isOnline 
+            //             }
+            //         }
+            //         return {
+            //             ...usersOnlineStatus,
+            //             [chat.userData.id]: value.isOnline
+            //         }
+            //     })
+            // })
+            
+        })
+        return () => unsubs.forEach(unsub => {
+            unsub();    
+        });
+    }, [chats])
+
     const router = useRouter();
 
     const hadnleChatClick = (chat) => {
@@ -114,12 +151,19 @@ const Chats = () => {
         fetchData()
     }
     const ChatItem = (itemData) => {
+        const message = chatsLastMessages?.[itemData.id] ? chatsLastMessages[itemData.id] : {
+            images: null,
+            text: 'Повідомлень немає',
+            createdAt: null
+        }  
+        console.log(message, 'message')
         const item = {
             image: itemData.image ? itemData.image : itemData.userData.image,
             userData: itemData.userData,
             name: itemData.name ? itemData.name : itemData.userData.displayName,
-            data: itemData?.message?.text !== undefined ? itemData.message.text : 'Повідомлень немає',
-            time: itemData?.message?.createdAt?.seconds ? itemData.message.createdAt.seconds : null,
+            data: message.text,
+            time: message.createdAt,
+            media: message.images,
             onlineStatus: usersOnlineStatus ? usersOnlineStatus[itemData.userData.id] : false
         }
         return(
