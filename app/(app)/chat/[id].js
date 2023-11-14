@@ -45,11 +45,15 @@ const Chat = () => {
   const { user } = useContext(AuthUserContext);
   const [chatUsers, setChatUsers] = useState([]);
   const [chatUsersIsLoading, setChatUsersIsLoading] = useState(true);
+  const [displaySelectedAction, setDisplaySelectedAction] = useState(false);
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const navigation = useNavigation();
   const preloadImagesCountError = preloadImages?.length > 4 ? true : false;
   const buttonDisable = preloadImages?.length > 5 || !preloadImages?.length && newMessageText === '';
+
+  const selectedMessages = messages.filter(message => message.selected === true);
+  console.log(selectedMessages)
 
   //--------- виконується 1
   //--------- завантаження даних поточного чату
@@ -91,6 +95,7 @@ const Chat = () => {
       const userLastSeen = dateNow.from(new Date(user.lastSeen), true);
       navigation.setOptions({
         headerTitle: () => (
+          <View style={{flexDirection: 'row', width: '90%', justifyContent: 'space-between'}}>
           <TouchableOpacity onPress={() => {router.push(`user/${user.id}`)}} style={{flexDirection: 'row', alignItems: 'center', gap: 10}}>
             <UserImage style={{width: 35, height: 35, borderRadius: 50, overflow: 'hidden', backgroundColor: "#eaeaea"}} imageUrl={user.image} />
             <View >
@@ -110,11 +115,23 @@ const Chat = () => {
             }
             </View>
             </View>
+            
           </TouchableOpacity>
+          {selectedMessages.length > 0 &&
+            <TouchableOpacity onPress={() => setDisplaySelectedAction(action => !action)} style={{alignItems: 'center', justifyContent: 'center', position: 'relative'}}>
+              <Image style={{width: 30, height: 30}} source={require('../../../assets/selected.png')} />
+              <View style={{position: 'absolute', top: -3, right: -3, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 8, backgroundColor: 'blue'}}>
+                <Text style={{fontWeight: 700, color: '#fff', fontSize: 12}}>
+                  {selectedMessages.length}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          }
+          </View>
         )
       })
     }
-  }, [chatUsers])
+  }, [chatUsers, messages])
 
   // ----------- виконується 3
   // ----------- виконується після завантаження всіх користувачів в чаті 

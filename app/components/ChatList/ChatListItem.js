@@ -7,7 +7,6 @@ import relativeTime from 'dayjs/plugin/relativeTime';
 import ualocal from 'dayjs/locale/uk';
 
 const ChatListItem = ({item}) => {
-    console.log(item, 'data')
     dayjs.extend(relativeTime);
     dayjs.locale(ualocal)
     const getTime = (time) => {

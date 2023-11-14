@@ -24,7 +24,7 @@ const ChatItem = React.memo(({item, selectMessage, index}) => {
         <MessageDataContainer style={!isAuthor && {backgroundColor: '#4c7873', borderTopLeftRadius: 0, borderTopRightRadius: 12}}>
             {item?.media?.length &&
                 <MessageImagesContainer>
-                    {item.media.map((image, index) => (
+                    {item.media.map(image => (
                         <MessageImageButton style={item.media.length > 1 && {width: '49%'}} key={image} onPress={()=>{openImage(index)}} onLongPress={() => {selectMessage(index)}} delayLongPress={300 } activeOpacity={1}>
                             <CachedImage style={{width: '100%', height: '100%', objectFit: 'cover'}} url={image}/>
                         </MessageImageButton>

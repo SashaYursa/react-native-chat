@@ -111,22 +111,7 @@ const Chats = () => {
                 })
             });
             })
-            return unsubscribe;
-            // const unsub = onValue(ref(rDatabase, '/status/' + chat.userData.id), (snapShot) => {
-            //     const value = snapShot.val();
-            //     setUsersOnlineStatus(usersOnlineStatus =>{
-            //         if(usersOnlineStatus === null){
-            //             return {
-            //                 [chat.userData.id]: value.isOnline 
-            //             }
-            //         }
-            //         return {
-            //             ...usersOnlineStatus,
-            //             [chat.userData.id]: value.isOnline
-            //         }
-            //     })
-            // })
-            
+            return unsubscribe;  
         })
         return () => unsubs.forEach(unsub => {
             unsub();    
@@ -156,7 +141,6 @@ const Chats = () => {
             text: 'Повідомлень немає',
             createdAt: null
         }  
-        console.log(message, 'message')
         const item = {
             image: itemData.image ? itemData.image : itemData.userData.image,
             userData: itemData.userData,
