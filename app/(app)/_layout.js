@@ -5,7 +5,6 @@ import { Redirect, Stack } from 'expo-router';
 import { onAuthStateChanged, onUserChanged } from 'firebase/auth';
 import { auth, database } from '../../config/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-
 export const getUserData = async (database, uid) => {
     const qUser = doc(database, "users", String(uid))
     return await getDoc(qUser)
@@ -58,23 +57,23 @@ const AppLayout = () => {
         )
     }
     return (
-        <Stack screenOptions={{
-            headerShown: false
-        }}>
-            <Stack.Screen options={({route}) =>{
-            return ({
-                headerShown: true,
-                headerTitle: "Chat"
-            })}
-            } name='chat/[id]'/>
-            <Stack.Screen name='(drawer)'/>
-            <Stack.Screen name='Users' options={{
+            <Stack screenOptions={{
                 headerShown: false
-            }}/>
-            <Stack.Screen name='user/[userId]' options={{
-                headerShown: false
-            }}/>
-        </Stack>
+            }}>
+                <Stack.Screen options={({route}) =>{
+                return ({
+                    headerShown: true,
+                    headerTitle: "Chat"
+                })}
+                } name='chat/[id]'/>
+                <Stack.Screen name='(drawer)'/>
+                <Stack.Screen name='Users' options={{
+                    headerShown: false
+                }}/>
+                <Stack.Screen name='user/[userId]' options={{
+                    headerShown: false
+                }}/>
+            </Stack>
     )
 }
 

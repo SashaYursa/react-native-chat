@@ -14,7 +14,8 @@ import {
   where,
   getDocs,
   setDoc,
-  limit
+  limit,
+  deleteDoc
 } from 'firebase/firestore'
 import { getDownloadURL, ref, uploadBytes, uploadBytesResumable } from 'firebase/storage'
 import {ref as realRef} from 'firebase/database'
@@ -30,6 +31,7 @@ import { onValue } from 'firebase/database'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime';
 import ualocal from 'dayjs/locale/uk';
+import ChatItemContainer from '../../components/ChatItemContainer'
 
 export const ChatContext = createContext({});
 
@@ -38,6 +40,7 @@ const Chat = () => {
   dayjs.locale(ualocal)
   const [chatData, setChatData] = useState(null)
   const [messages, setMessages] = useState([]);
+  const [selectedMessages, setSelectedMessages] = useState([])
   const [loading, setLoading] = useState(true);
   const [newMessageText, setNewMessageText] = useState('');
   const [preloadImages, setPreloadImages] = useState(null);
@@ -45,15 +48,13 @@ const Chat = () => {
   const { user } = useContext(AuthUserContext);
   const [chatUsers, setChatUsers] = useState([]);
   const [chatUsersIsLoading, setChatUsersIsLoading] = useState(true);
-  const [displaySelectedAction, setDisplaySelectedAction] = useState(false);
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const navigation = useNavigation();
   const preloadImagesCountError = preloadImages?.length > 4 ? true : false;
   const buttonDisable = preloadImages?.length > 5 || !preloadImages?.length && newMessageText === '';
 
-  const selectedMessages = messages.filter(message => message.selected === true);
-  console.log(selectedMessages)
+  //console.log(selectedMessages)
 
   //--------- виконується 1
   //--------- завантаження даних поточного чату
@@ -118,8 +119,8 @@ const Chat = () => {
             
           </TouchableOpacity>
           {selectedMessages.length > 0 &&
-            <TouchableOpacity onPress={() => setDisplaySelectedAction(action => !action)} style={{alignItems: 'center', justifyContent: 'center', position: 'relative'}}>
-              <Image style={{width: 30, height: 30}} source={require('../../../assets/selected.png')} />
+            <TouchableOpacity onPress={() => deleteMessages(selectedMessages)} style={{alignItems: 'center', justifyContent: 'center', position: 'relative'}}>
+              <Image style={{width: 30, height: 30}} source={require('../../../assets/delete.png')} />
               <View style={{position: 'absolute', top: -3, right: -3, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 8, backgroundColor: 'blue'}}>
                 <Text style={{fontWeight: 700, color: '#fff', fontSize: 12}}>
                   {selectedMessages.length}
@@ -131,7 +132,7 @@ const Chat = () => {
         )
       })
     }
-  }, [chatUsers, messages])
+  }, [chatUsers, selectedMessages])
 
   // ----------- виконується 3
   // ----------- виконується після завантаження всіх користувачів в чаті 
@@ -210,6 +211,22 @@ const Chat = () => {
     }
     return chatUsers
   }
+
+  const deleteMessages = (messagesForDelete) => {
+    setMessages(messages => messages.filter(m => {
+      const deleteMessage = messagesForDelete.find(forDelete => forDelete === m.id)
+      if(deleteMessage) return false
+      return true
+    }))
+    messagesForDelete.forEach(message => {
+      setSelectedMessages(messages => {
+        return messages.filter(m => m !== message)
+      })
+      console.log(message)
+      deleteDoc(doc(database, 'messages', id, 'message', message));
+    })
+  }
+
   
   const selectImages = async () => {
     if(preloadImagesCountError){
@@ -304,7 +321,7 @@ const Chat = () => {
         ? <View>
             <Text>No data</Text>
           </View>
-        : <ChatContent messages={messages} setMessages={setMessages}/>
+        : <ChatItemContainer messages={messages} selectedMessages={selectedMessages} setSelectedMessages={setSelectedMessages}/>
       }
       </ChatCanvas>
     <BottomContainer  
@@ -328,58 +345,6 @@ export const UserImage = React.memo(({imageUrl, style}) => {
  
 })
 
-const ChatContent = React.memo(({messages, setMessages}) => {
-  const {user} = useContext(AuthUserContext);
-  useEffect(() => {
-
-  }, [user])
-  const openImage = (imageId) => {
-    console.log('openedImage: ', imageId)
-  }
-  const selectMessage = (index) => {
-    setMessages(messages => {
-      const newMessages = Array.from(messages);
-      newMessages[index].selected = !messages[index].selected
-      return newMessages;
-    })
-  }
-  
-  const rerenderItem = useCallback(({ item, index }) => {
-    const selected = item.selected ? {
-      backgroundColor: '#85aded'
-    }
-    : {
-
-    }
-    return(
-      <MessagesContainer 
-      delayLongPress={300} 
-      onLongPress={() => {selectMessage(index)}} 
-      activeOpacity={1} 
-      style={item.uid == user.uid 
-      ? {justifyContent: 'flex-end', ...selected} 
-      : {justifyContent: 'flex-start', ...selected} }>
-        <ChatItem item={item} index={index} openImage={openImage} selectMessage={selectMessage} />
-      </MessagesContainer>
-      )
-  }, [])
-  
-  return (
-    <ChatScroll contentContainerStyle={{paddingVertical: 10}} 
-                inverted showsVerticalScrollIndicator={false} 
-                data={messages} 
-                renderItem={rerenderItem} />
-  )
-})
-
-const MessagesContainer = styled.TouchableOpacity`
-flex-direction: row;
-align-items: flex-end;
-width: 100%;
-gap: 10px;
-padding: 2.5px 0;
-position: relative;
-`
 const CompanionMessages = styled.View`
 background-color: #296314;
 padding: 5px ;
@@ -404,10 +369,7 @@ background-color: #eaeaea;
 flex-shrink: 1;
 flex-grow: 1;
 `
-const ChatScroll = styled.FlatList`
-padding: 0 5px;
-flex-direction: column;
-`
+
 const BottomContainer = styled.KeyboardAvoidingView`
 background-color: #fff;
 padding: 5px;
