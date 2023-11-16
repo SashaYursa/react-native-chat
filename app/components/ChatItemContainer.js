@@ -1,11 +1,21 @@
 import { View, Text, TouchableOpacity, FlatList } from 'react-native'
-import React, { useCallback, useContext, useEffect } from 'react'
+import React, { useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { AuthUserContext } from '../_layout';
 import styled from 'styled-components';
 import ChatItem from './ChatItem';
 
 
-const ChatItemContainer = React.memo(({messages, selectedMessages, setSelectedMessages}) => {
+const ChatItemContainer = React.memo(({messages, selectedMessages, setSelectedMessages, loadPreviousMessages}) => {
+    const [endReached, setEndReached] = useState(false);
+    const [allowSetEndReached, setAllowSetEndReached] = useState(false);
+    const scrollRef = useRef();
+    useEffect(() => {
+      if(endReached){
+        loadPreviousMessages()
+        console.log('me work')
+        setEndReached(false)
+      }
+    }, [scrollRef, endReached])
     const {user} = useContext(AuthUserContext);
     useEffect(() => {
   
@@ -52,7 +62,16 @@ const ChatItemContainer = React.memo(({messages, selectedMessages, setSelectedMe
     }, [selectedMessages])
     
     return (
-      <ChatScroll contentContainerStyle={{paddingVertical: 10}} 
+      <ChatScroll contentContainerStyle={{paddingVertical: 10}}
+                  ref={scrollRef}
+                  onEndReached={(props) => {
+                    if(allowSetEndReached){
+                      setEndReached(true)
+                    }
+                  }}
+                  onMomentumScrollBegin={() => {
+                    setAllowSetEndReached(true)
+                  }}
                   inverted showsVerticalScrollIndicator={false} 
                   data={messages} 
                   renderItem={rerenderItem} />

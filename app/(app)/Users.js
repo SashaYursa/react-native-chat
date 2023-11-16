@@ -18,27 +18,39 @@ const Users = () => {
   const ipnutRef = useRef();
   const router = useRouter();
   
-  const fetchUsers = async (userName) => {
-    const qUsers = query(collection(database, "users"), 
-    orderBy('displayName'),
-    startAt(userName),
-    endAt(userName + "\uf8ff"));
-    const users = await getDocs(qUsers);
+  const fetchUsers = async (query) => {
+    const users = await getDocs(query);
     const newUsers = users.docs.map(res => res.data()).filter(item => item.id !== user.uid)
     setSearchUsers(newUsers);
     setUsersLoading(false);
   }
 
+
   useEffect(() => {
     ipnutRef.current.focus();
+    getLastUsers();
   }, [])
+
   useEffect(() => {
     const value = debouncedSearchValue.trim();
     if(value.length > 0){
       setUsersLoading(true);
-      fetchUsers(value);
+      const qUsers = query(collection(database, "users"), 
+        orderBy('displayName'),
+        startAt(value),
+        endAt(value + "\uf8ff"));
+      fetchUsers(qUsers);
+    }
+    else{
+      setUsersLoading(true);
+      getLastUsers();
     }
   }, [debouncedSearchValue])
+
+  const getLastUsers = () => {
+    const qUsers = query(collection(database, "users"), orderBy("lastCheckedStatus", "desc"));
+    fetchUsers(qUsers)
+  }
 
   const createChat = async (userId) => {
     const qChats = query(collection(database, "chats"), 

@@ -15,7 +15,9 @@ import {
   getDocs,
   setDoc,
   limit,
-  deleteDoc
+  deleteDoc,
+  startAfter,
+  startAt,
 } from 'firebase/firestore'
 import * as FileSystem from 'expo-file-system'
 import { getDownloadURL, ref, getStorage, deleteObject, uploadBytesResumable } from 'firebase/storage'
@@ -50,6 +52,7 @@ const Chat = () => {
   const { user } = useContext(AuthUserContext);
   const [chatUsers, setChatUsers] = useState([]);
   const [chatUsersIsLoading, setChatUsersIsLoading] = useState(true);
+  const [loadedMessages, setLoadedMessages] = useState(30);
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const navigation = useNavigation();
@@ -139,7 +142,7 @@ const Chat = () => {
   // ----------- оримує повідомлення чату і стежить за їх обновленнями
   useEffect(() => {
     if(!chatUsersIsLoading){
-    const q = query(collection(database, 'messages', String(id), 'message'), orderBy('createdAt', 'desc'), limit(50))
+    const q = query(collection(database, 'messages', String(id), 'message'), orderBy('createdAt', 'desc'), limit(30))
     const unsubscribe = onSnapshot(q, async (snapshot) => {
       const newMessages = await Promise.all(snapshot.docs.map(element => {
         const data = element.data();
@@ -210,6 +213,52 @@ const Chat = () => {
     }
     return chatUsers
   }
+
+  const loadPreviousMessages = () => {
+    setLoadedMessages(loadedMessages => loadedMessages + 30)
+  }
+
+  useEffect(() => {
+    const fetcMessages = async () => {
+      const lastDoc = messages[messages.length - 1]
+      const docSnap = await getDoc(doc(database, "messages", id, "message", lastDoc.id));
+     console.log(docSnap.data())
+      const q = query(collection(database, 'messages', String(id), 'message'), orderBy('createdAt', 'desc'), limit(30), startAt(docSnap))
+      getDocs(q).then(data => {
+        const newMessages = data.docs.map(element => {
+              const data = element.data();
+              const userImage = chatUsers.find(chatUser => chatUser.id === data.uid)?.image 
+              ? chatUsers.find(chatUser => chatUser.id === data.uid).image
+              : null
+              return {
+                ...data,
+                id: element.id,
+                userImage
+              }
+            })
+            newMessages.shift()
+            setMessages(messages => [...messages, ...newMessages])
+      })
+      // await getDocs(q)
+        // .then(docs => {
+        //   const newMessages = docs.map(element => {
+        //     const data = element.data();
+        //     const userImage = chatUsers.find(chatUser => chatUser.id === data.uid)?.image 
+        //     ? chatUsers.find(chatUser => chatUser.id === data.uid).image
+        //     : null
+        //     return {
+        //       ...data,
+        //       id: element.id,
+        //       userImage
+        //     }
+        //   })
+        //   console.log(newMessages)
+        // })
+    }
+    if(loadedMessages > 30){
+      fetcMessages()
+    }
+  }, [loadedMessages])
 
   const deleteMessages = (messagesForDelete) => {
     messagesForDelete.forEach(message => {
@@ -310,7 +359,7 @@ const Chat = () => {
     }
     setNewMessageText('');
     setPreloadImages(null)
-    await addDoc(collection(database, 'messages', String(id), 'message'),data)
+    await addDoc(collection(database, 'messages', String(id), 'message'), data)
     }
   }  
 
@@ -348,7 +397,7 @@ const Chat = () => {
         ? <View>
             <Text>No data</Text>
           </View>
-        : <ChatItemContainer messages={messages} selectedMessages={selectedMessages} setSelectedMessages={setSelectedMessages}/>
+        : <ChatItemContainer messages={messages} selectedMessages={selectedMessages} setSelectedMessages={setSelectedMessages} loadPreviousMessages={loadPreviousMessages}/>
       }
       </ChatCanvas>
     <BottomContainer  
