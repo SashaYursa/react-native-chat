@@ -17,7 +17,8 @@ import {
   limit,
   deleteDoc
 } from 'firebase/firestore'
-import { getDownloadURL, ref, uploadBytes, uploadBytesResumable } from 'firebase/storage'
+import * as FileSystem from 'expo-file-system'
+import { getDownloadURL, ref, getStorage, deleteObject, uploadBytesResumable } from 'firebase/storage'
 import {ref as realRef} from 'firebase/database'
 import "firebase/compat/auth";
 import "firebase/compat/firestore";
@@ -32,6 +33,7 @@ import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime';
 import ualocal from 'dayjs/locale/uk';
 import ChatItemContainer from '../../components/ChatItemContainer'
+import shorthash from 'shorthash'
 
 export const ChatContext = createContext({});
 
@@ -147,8 +149,7 @@ const Chat = () => {
         return {
           ...data,
           id: element.id,
-          userImage,
-          selected: false
+          userImage
         }
       }))
       setLoading(false)
@@ -211,17 +212,46 @@ const Chat = () => {
   }
 
   const deleteMessages = (messagesForDelete) => {
-    setMessages(messages => messages.filter(m => {
+    messagesForDelete.forEach(message => {
+      const selectedMessage = messages.find(m => m.id === message)
+      if(selectedMessage.media){
+        const storage = getStorage();
+        selectedMessage.media.forEach(mediaItem => {
+          const mediaParam = mediaItem.split("/media%2F")[1];
+          const name = mediaParam.split("?")[0];
+          const desertRef = ref(storage, `media/${name}`);
+          deleteObject(desertRef)
+          .then(res => {
+            const name = shorthash.unique(mediaItem);
+            const path = `${FileSystem.cacheDirectory}${name}`;
+            FileSystem.deleteAsync(path);
+            deleteDoc(doc(database, 'messages', id, 'message', message));
+          })
+          .catch((error) => {
+            Alert.alert('File not delete, try again',`${error}`, [
+              {
+                text: 'OK',
+                onPress: () => {
+                  addDoc(collection(database, 'errors', ), {error: `File not delete: ${error}`, platform: `${Platform.OS}, ${Platform.Version}`})
+                  console.log('Cancel Pressed')
+                },
+              }
+            ]);
+          });
+        }) 
+      }
+      else{
+        deleteDoc(doc(database, 'messages', id, 'message', message));
+      }
+      setSelectedMessages(messages => {
+        return messages.filter(m => m !== message)
+      })
+    })
+     setMessages(messages => messages.filter(m => {
       const deleteMessage = messagesForDelete.find(forDelete => forDelete === m.id)
       if(deleteMessage) return false
       return true
     }))
-    messagesForDelete.forEach(message => {
-      setSelectedMessages(messages => {
-        return messages.filter(m => m !== message)
-      })
-      deleteDoc(doc(database, 'messages', id, 'message', message));
-    })
   }
 
   

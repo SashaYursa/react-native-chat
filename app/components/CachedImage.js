@@ -19,7 +19,6 @@ const CachedImage = ({url, style, blurRadius = 0}) => {
             setUri(image.uri);
             return;
         }
-        console.log('selected from browser')
         const newImage = await FileSystem.downloadAsync(url, path);
         setUri(newImage.uri);
     }
