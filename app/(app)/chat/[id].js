@@ -54,8 +54,6 @@ const Chat = () => {
   const preloadImagesCountError = preloadImages?.length > 4 ? true : false;
   const buttonDisable = preloadImages?.length > 5 || !preloadImages?.length && newMessageText === '';
 
-  //console.log(selectedMessages)
-
   //--------- виконується 1
   //--------- завантаження даних поточного чату
   //--------- встановлення поля lastSeen для залогіненого юзера в табл. chats значення - online
@@ -222,7 +220,6 @@ const Chat = () => {
       setSelectedMessages(messages => {
         return messages.filter(m => m !== message)
       })
-      console.log(message)
       deleteDoc(doc(database, 'messages', id, 'message', message));
     })
   }

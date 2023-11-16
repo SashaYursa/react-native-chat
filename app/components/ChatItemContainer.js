@@ -11,7 +11,6 @@ const ChatItemContainer = React.memo(({messages, selectedMessages, setSelectedMe
   
     }, [user])
     const openImage = (imageId) => {
-      console.log('openedImage: ', imageId)
     }
     const selectMessage = (selectedMessage) => {
         const messageId = selectedMessage.id;
@@ -19,12 +18,10 @@ const ChatItemContainer = React.memo(({messages, selectedMessages, setSelectedMe
                 setSelectedMessages(selectedMessages => {
                 const findMessage = selectedMessages.find(id => id === messageId)
                 if(findMessage){
-                    console.log('find')
                     return [
                         ...selectedMessages.filter(id => id !== messageId)
                     ]
                 }
-                console.log('not find')
                 return [
                     ...selectedMessages,
                     messageId

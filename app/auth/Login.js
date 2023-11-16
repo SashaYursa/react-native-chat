@@ -7,14 +7,24 @@ import { AuthUserContext } from '../_layout';
 import { router } from 'expo-router';
 import { getDatabase, ref, onValue, set, onDisconnect, off, serverTimestamp } from "firebase/database";
 import * as FileSystem from 'expo-file-system'
+import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
+
 const Login = () => {
   const { user, setUser }  = useContext(AuthUserContext)
-  useEffect(() => {
-    loginUser('middle@gmail.com', '123456')
-  }, [])
+  ReactNativeAsyncStorage.getItem("email").then(email => {
+      if(email){
+        ReactNativeAsyncStorage.getItem("password").then(password => {
+          if(password){
+            loginUser(email, password)
+          }
+        })
+      }
+  })
   const loginUser = (email, password) => {
     signInWithEmailAndPassword(auth, email, password)
-    .then(data => { 
+    .then(data => {
+      ReactNativeAsyncStorage.setItem("email", email)
+      ReactNativeAsyncStorage.setItem("password", password)
       setUser(data)
       const rUserRef = ref(rDatabase, '/status/' + data.user.uid);
             onDisconnect(rUserRef)
@@ -24,7 +34,7 @@ const Login = () => {
       });
       router.push('/');
     })
-    .catch(error => console.log(error))
+    .catch(error => console.log('failed login ---->',error))
   }
   return (
     <AuthContainer>
