@@ -121,14 +121,17 @@ const Chat = () => {
             </View>
             
           </TouchableOpacity>
-          {selectedMessages.length > 0 &&
-            <TouchableOpacity onPress={() => deleteMessages(selectedMessages)} style={{alignItems: 'center', justifyContent: 'center', position: 'relative'}}>
+          {selectedMessages.length > 0 
+            ? <TouchableOpacity onPress={() => deleteMessages(selectedMessages)} style={{alignItems: 'center', justifyContent: 'center', position: 'relative'}}>
               <Image style={{width: 30, height: 30}} source={require('../../../assets/delete.png')} />
               <View style={{position: 'absolute', top: -3, right: -3, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 8, backgroundColor: 'blue'}}>
                 <Text style={{fontWeight: 700, color: '#fff', fontSize: 12}}>
                   {selectedMessages.length}
                 </Text>
               </View>
+            </TouchableOpacity>
+            : <TouchableOpacity onPress={openChatInfo}>
+              <View style={{width: 30, height: 30, backgroundColor: 'red'}}/>
             </TouchableOpacity>
           }
           </View>
@@ -142,6 +145,7 @@ const Chat = () => {
   // ----------- оримує повідомлення чату і стежить за їх обновленнями
   useEffect(() => {
     if(!chatUsersIsLoading){
+    console.log('w')
     const q = query(collection(database, 'messages', String(id), 'message'), orderBy('createdAt', 'desc'), limit(30))
     const unsubscribe = onSnapshot(q, async (snapshot) => {
       const newMessages = await Promise.all(snapshot.docs.map(element => {
@@ -156,7 +160,15 @@ const Chat = () => {
         }
       }))
       setLoading(false)
-      setMessages(newMessages)
+      setMessages(messages => {
+        if(messages.length) return [...newMessages.filter(newMsg => {
+        const dublicate = messages.find(m => m?.id === newMsg?.id)
+        console.log(dublicate, 'dublicate')
+        if(dublicate) return false 
+        return true
+      }), ...messages]
+      return newMessages
+    })
     })
     return () => unsubscribe();
     }
@@ -214,15 +226,19 @@ const Chat = () => {
     return chatUsers
   }
 
+  const openChatInfo = () => {
+    router.push('chat/info')
+  }
+
   const loadPreviousMessages = () => {
     setLoadedMessages(loadedMessages => loadedMessages + 30)
   }
-
   useEffect(() => {
     const fetcMessages = async () => {
+      setLoading(true)
       const lastDoc = messages[messages.length - 1]
       const docSnap = await getDoc(doc(database, "messages", id, "message", lastDoc.id));
-     console.log(docSnap.data())
+   //  console.log(docSnap.data())
       const q = query(collection(database, 'messages', String(id), 'message'), orderBy('createdAt', 'desc'), limit(30), startAt(docSnap))
       getDocs(q).then(data => {
         const newMessages = data.docs.map(element => {
@@ -230,6 +246,7 @@ const Chat = () => {
               const userImage = chatUsers.find(chatUser => chatUser.id === data.uid)?.image 
               ? chatUsers.find(chatUser => chatUser.id === data.uid).image
               : null
+              setLoading(false)
               return {
                 ...data,
                 id: element.id,
@@ -239,21 +256,6 @@ const Chat = () => {
             newMessages.shift()
             setMessages(messages => [...messages, ...newMessages])
       })
-      // await getDocs(q)
-        // .then(docs => {
-        //   const newMessages = docs.map(element => {
-        //     const data = element.data();
-        //     const userImage = chatUsers.find(chatUser => chatUser.id === data.uid)?.image 
-        //     ? chatUsers.find(chatUser => chatUser.id === data.uid).image
-        //     : null
-        //     return {
-        //       ...data,
-        //       id: element.id,
-        //       userImage
-        //     }
-        //   })
-        //   console.log(newMessages)
-        // })
     }
     if(loadedMessages > 30){
       fetcMessages()
@@ -391,14 +393,17 @@ const Chat = () => {
   return (
     <ChatContext.Provider value={{chatData}}>
     <ChatCanvas>
-      { loading 
-      ? <ActivityIndicator style={{alignSelf: 'center'}} color={'blue'} size={'large'}/>
-      : messages.length === 0
+      
+      <> 
+      { loading && <ActivityIndicator style={{alignSelf: 'center'}} color={'blue'} size={'large'}/>}
+      {messages.length === 0 
         ? <View>
             <Text>No data</Text>
           </View>
         : <ChatItemContainer messages={messages} selectedMessages={selectedMessages} setSelectedMessages={setSelectedMessages} loadPreviousMessages={loadPreviousMessages}/>
       }
+      </>
+      
       </ChatCanvas>
     <BottomContainer  
     behavior={Platform.OS === "ios" ? "padding" : undefined} 

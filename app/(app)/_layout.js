@@ -21,8 +21,6 @@ export const checkUserStatus = async (database, uid, callback) => {
             currentDate.setSeconds(currentDate.getSeconds() - 20);
             const date = new Date();
             if(new Date(user.lastCheckedStatus).getTime() < currentDate.getTime()){
-                console.log('123')
-                console.log('need to set offline')
                 setDoc(doc(database, 'users', uid), {
                     ...user,
                     lastCheckedStatus: date,
@@ -67,6 +65,9 @@ const AppLayout = () => {
                     headerTitle: "Chat"
                 })}
                 } name='chat/[id]'/>
+                <Stack.Screen name="chat/info" options={{
+                    presentation: 'modal'
+                }}/>
                 <Stack.Screen name='(drawer)'/>
                 <Stack.Screen name='Users' options={{
                     headerShown: false
