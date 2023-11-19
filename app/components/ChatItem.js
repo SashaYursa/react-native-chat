@@ -46,6 +46,8 @@ const ChatItem = React.memo(({item, selectMessage, index}) => {
         />}
   </MessageOutsideContaier>
   )
+}, (prev, next) => {
+    return prev === next
 })
 
 const MessageOutsideContaier = styled.View`

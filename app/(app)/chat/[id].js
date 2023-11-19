@@ -18,6 +18,7 @@ import {
   deleteDoc,
   startAfter,
   startAt,
+  getCountFromServer,
 } from 'firebase/firestore'
 import * as FileSystem from 'expo-file-system'
 import { getDownloadURL, ref, getStorage, deleteObject, uploadBytesResumable } from 'firebase/storage'
@@ -36,6 +37,7 @@ import relativeTime from 'dayjs/plugin/relativeTime';
 import ualocal from 'dayjs/locale/uk';
 import ChatItemContainer from '../../components/ChatItemContainer'
 import shorthash from 'shorthash'
+import UserImage from '../../components/UserImage'
 
 export const ChatContext = createContext({});
 
@@ -52,7 +54,10 @@ const Chat = () => {
   const { user } = useContext(AuthUserContext);
   const [chatUsers, setChatUsers] = useState([]);
   const [chatUsersIsLoading, setChatUsersIsLoading] = useState(true);
-  const [loadedMessages, setLoadedMessages] = useState(30);
+  const [canLoadedMessages, setCanLoadedMessages] = useState(false); 
+  const [messagesCount, setMessagesCount] = useState(null)
+  const [loadMessagesCount, setLoadMessagesCount] = useState(null)
+  const [loadMessagesStatus, setLoadMessagesStatus] = useState(null)
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const navigation = useNavigation();
@@ -142,33 +147,33 @@ const Chat = () => {
 
   // ----------- виконується 3
   // ----------- виконується після завантаження всіх користувачів в чаті 
-  // ----------- оримує повідомлення чату і стежить за їх обновленнями
+  // ----------- оримує повідомлення чату і стежить за їх оновленнями
   useEffect(() => {
+    const fetchMessages = async () => {
+      const q = query(collection(database, 'messages', String(id), 'message'), orderBy('createdAt', 'desc'), limit(30))
+      const messages = await loadMessages(q);
+      const countMessages = (await getCountFromServer(collection(database, 'messages', id, 'message'))).data().count
+      console.log(countMessages, 'count')
+        setMessages(messages)
+        setLoadMessagesStatus({
+          messagesCount: countMessages,
+          loadedMessagesCount: messages.length,
+          canLoadedMessages: true
+        })
+        console.log('setted')
+    }
     if(!chatUsersIsLoading){
-    console.log('w')
-    const q = query(collection(database, 'messages', String(id), 'message'), orderBy('createdAt', 'desc'), limit(30))
-    const unsubscribe = onSnapshot(q, async (snapshot) => {
-      const newMessages = await Promise.all(snapshot.docs.map(element => {
-        const data = element.data();
-        const userImage = chatUsers.find(chatUser => chatUser.id === data.uid)?.image 
-        ? chatUsers.find(chatUser => chatUser.id === data.uid).image
-        : null
-        return {
-          ...data,
-          id: element.id,
-          userImage
+    fetchMessages();
+    const snapshotQ = query(collection(database, 'messages', String(id), 'message'))
+
+    const unsubscribe = onSnapshot(snapshotQ, async (snapshot) => {
+      snapshot.docChanges().forEach(change => {
+        if(change.type === 'modified'){
+          console.log('modified')
+          const addedMessage = change.doc.data()
+          setMessages(m => [addedMessage, ...m])
         }
-      }))
-      setLoading(false)
-      setMessages(messages => {
-        if(messages.length) return [...newMessages.filter(newMsg => {
-        const dublicate = messages.find(m => m?.id === newMsg?.id)
-        console.log(dublicate, 'dublicate')
-        if(dublicate) return false 
-        return true
-      }), ...messages]
-      return newMessages
-    })
+      })
     })
     return () => unsubscribe();
     }
@@ -230,37 +235,52 @@ const Chat = () => {
     router.push('chat/info')
   }
 
-  const loadPreviousMessages = () => {
-    setLoadedMessages(loadedMessages => loadedMessages + 30)
+  const loadPreviousMessages = useCallback(async () => {
+    fetchPrevMessagess()
+  })
+
+  const fetchPrevMessagess = async () => {
+    console.log(loadMessagesStatus, messagesCount)
+    if(loadMessagesStatus.loadedMessagesCount < loadMessagesStatus.messagesCount){
+    setLoadMessagesStatus(status => ({
+      ...status,
+      canLoadedMessages: false
+    }))
+    setLoading(true)
+    const lastDoc = messages[messages.length - 1]
+    const docSnap = await getDoc(doc(database, "messages", id, "message", lastDoc.id));
+    const q = query(collection(database, 'messages', String(id), 'message'), orderBy('createdAt', 'desc'), limit(30), startAt(docSnap))
+    const newMessages = await loadMessages(q)
+    newMessages.shift();
+    if(newMessages.length === 0) setHasNextMessages(false)
+    else setMessages(m => [...m, ...newMessages])
+    setLoading(false)
+    setLoadMessagesStatus(prevStatus => ({
+      ...prevStatus,
+      loadedMessagesCount: prevStatus.loadedMessagesCount + newMessages.length,
+      canLoadedMessages: true
+    }))
+    }
   }
-  useEffect(() => {
-    const fetcMessages = async () => {
-      setLoading(true)
-      const lastDoc = messages[messages.length - 1]
-      const docSnap = await getDoc(doc(database, "messages", id, "message", lastDoc.id));
-   //  console.log(docSnap.data())
-      const q = query(collection(database, 'messages', String(id), 'message'), orderBy('createdAt', 'desc'), limit(30), startAt(docSnap))
-      getDocs(q).then(data => {
-        const newMessages = data.docs.map(element => {
-              const data = element.data();
-              const userImage = chatUsers.find(chatUser => chatUser.id === data.uid)?.image 
-              ? chatUsers.find(chatUser => chatUser.id === data.uid).image
+
+  const loadMessages = async (query) => {
+    const result = await getDocs(query)
+    const messages = result.docs.map(doc => {
+      const message = doc.data()
+      const userImage = chatUsers.find(chatUser => chatUser.id === message.uid)?.image 
+              ? chatUsers.find(chatUser => chatUser.id === message.uid).image
               : null
               setLoading(false)
               return {
-                ...data,
-                id: element.id,
+                ...message,
+                id: doc.id,
                 userImage
               }
-            })
-            newMessages.shift()
-            setMessages(messages => [...messages, ...newMessages])
-      })
-    }
-    if(loadedMessages > 30){
-      fetcMessages()
-    }
-  }, [loadedMessages])
+     
+    })
+    return messages
+  }
+
 
   const deleteMessages = (messagesForDelete) => {
     messagesForDelete.forEach(message => {
@@ -304,6 +324,24 @@ const Chat = () => {
       return true
     }))
   }
+
+  const updateSelectedMessages = useCallback((selectedMessage) => {
+    const messageId = selectedMessage.id;
+            if(selectedMessage.uid === user.uid) {
+                setSelectedMessages(selectedMessages => {
+                const findMessage = selectedMessages.find(id => id === messageId)
+                if(findMessage){
+                    return [
+                        ...selectedMessages.filter(id => id !== messageId)
+                    ]
+                }
+                return [
+                    ...selectedMessages,
+                    messageId
+                ]
+            })
+        }
+  }, [])
 
   
   const selectImages = async () => {
@@ -400,7 +438,7 @@ const Chat = () => {
         ? <View>
             <Text>No data</Text>
           </View>
-        : <ChatItemContainer messages={messages} selectedMessages={selectedMessages} setSelectedMessages={setSelectedMessages} loadPreviousMessages={loadPreviousMessages}/>
+        : <ChatItemContainer loadMessagesStatus={loadMessagesStatus} messages={messages} selectedMessages={selectedMessages} updateSelectedMessages={updateSelectedMessages} loadPreviousMessages={loadPreviousMessages}/>
       }
       </>
       
@@ -419,12 +457,7 @@ const Chat = () => {
     </ChatContext.Provider>
   )
 }
-export const UserImage = React.memo(({imageUrl, style}) => {
-  return imageUrl === null 
-  ? <Image source={require('../../../assets/default-chat-image.png')} style={style}/> 
-  :  <CachedImage style={style} url={imageUrl}/>
- 
-})
+
 
 const CompanionMessages = styled.View`
 background-color: #296314;

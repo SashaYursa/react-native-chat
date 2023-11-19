@@ -5,61 +5,47 @@ import styled from 'styled-components';
 import ChatItem from './ChatItem';
 
 
-const ChatItemContainer = React.memo(({messages, selectedMessages, setSelectedMessages, loadPreviousMessages}) => {
+const ChatItemContainer = React.memo(({loadMessagesStatus, messages, selectedMessages, updateSelectedMessages, loadPreviousMessages}) => {
     const [endReached, setEndReached] = useState(false);
     const [allowSetEndReached, setAllowSetEndReached] = useState(false);
     const scrollRef = useRef();
+    console.log(loadMessagesStatus, 'ssss')
     useEffect(() => {
       if(endReached){
-        loadPreviousMessages()
-        console.log('me work')
-        setEndReached(false)
+        if(loadMessagesStatus?.canLoadedMessages && loadMessagesStatus?.loadedMessagesCount < loadMessagesStatus?.messagesCount){
+          loadPreviousMessages()
+          setEndReached(false)
+        }
       }
-    }, [scrollRef, endReached])
+    }, [scrollRef, endReached, loadMessagesStatus])
     const {user} = useContext(AuthUserContext);
     useEffect(() => {
   
     }, [user])
     const openImage = (imageId) => {
     }
-    const selectMessage = (selectedMessage) => {
-        const messageId = selectedMessage.id;
-            if(selectedMessage.uid === user.uid) {
-                setSelectedMessages(selectedMessages => {
-                const findMessage = selectedMessages.find(id => id === messageId)
-                if(findMessage){
-                    return [
-                        ...selectedMessages.filter(id => id !== messageId)
-                    ]
-                }
-                return [
-                    ...selectedMessages,
-                    messageId
-                ]
-            })
-        }
-    }
     
-    const rerenderItem = useCallback(({ item, index }) => { 
+    const rerenderItem = ({ item, index }) => { 
+   //   console.log('rerender')
         const is =  selectedMessages.includes(item.id);
-      const selected = is ? {
+      const selected = is && {
         backgroundColor: '#85aded'
-      }
-      : {
-  
       }
       return(
         <MessagesContainer 
         delayLongPress={300} 
-        onLongPress={() => {selectMessage(item)}} 
+        onLongPress={() => {
+          console.log('long')
+          updateSelectedMessages(item)
+        }} 
         activeOpacity={1} 
         style={item.uid == user.uid 
         ? {justifyContent: 'flex-end', ...selected} 
         : {justifyContent: 'flex-start', ...selected} }>
-          <ChatItem item={item} index={index} openImage={openImage} selectMessage={selectMessage} />
+          <ChatItem item={item} index={index} openImage={openImage} selectMessage={updateSelectedMessages} />
         </MessagesContainer>
         )
-    }, [selectedMessages])
+    }
     
     return (
       <ChatScroll contentContainerStyle={{paddingVertical: 10}}
@@ -76,6 +62,10 @@ const ChatItemContainer = React.memo(({messages, selectedMessages, setSelectedMe
                   data={messages} 
                   renderItem={rerenderItem} />
     )
+  }, (prev, next) => {
+    return prev.messages === next.messages 
+    && prev.selectedMessages === next.selectedMessages 
+    && prev.loadMessagesStatus === next.loadMessagesStatus
   })
 
 const MessagesContainer = styled.TouchableOpacity`
