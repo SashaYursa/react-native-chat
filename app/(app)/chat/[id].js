@@ -25,26 +25,19 @@ import { getDownloadURL, ref, getStorage, deleteObject, uploadBytesResumable } f
 import {ref as realRef} from 'firebase/database'
 import "firebase/compat/auth";
 import "firebase/compat/firestore";
-import { AuthUserContext, FirebaseContext } from '../../_layout'
+import { AuthUserContext, FirebaseContext, SelectedChatContext } from '../../_layout'
 import * as ImagePicker from 'expo-image-picker'
 import PreloadImages from '../../components/PreloadImages'
 import { fileStorage, rDatabase } from '../../../config/firebase'
 import ChatItem from '../../components/ChatItem'
 import CachedImage from '../../components/CachedImage'
 import { onValue } from 'firebase/database'
-import dayjs from 'dayjs'
-import relativeTime from 'dayjs/plugin/relativeTime';
-import ualocal from 'dayjs/locale/uk';
 import ChatItemContainer from '../../components/ChatItemContainer'
 import shorthash from 'shorthash'
 import UserImage from '../../components/UserImage'
-
-export const ChatContext = createContext({});
+import TimeAgo from '../../components/TimeAgo'
 
 const Chat = () => {
-  dayjs.extend(relativeTime);
-  dayjs.locale(ualocal)
-  const [chatData, setChatData] = useState(null)
   const [messages, setMessages] = useState([]);
   const [selectedMessages, setSelectedMessages] = useState([])
   const [loading, setLoading] = useState(true);
@@ -52,7 +45,6 @@ const Chat = () => {
   const [preloadImages, setPreloadImages] = useState(null);
   const { database } = useContext(FirebaseContext);
   const { user } = useContext(AuthUserContext);
-  const [chatUsers, setChatUsers] = useState([]);
   const [chatUsersIsLoading, setChatUsersIsLoading] = useState(true);
   const [canLoadedMessages, setCanLoadedMessages] = useState(false); 
   const [messagesCount, setMessagesCount] = useState(null)
@@ -63,7 +55,7 @@ const Chat = () => {
   const navigation = useNavigation();
   const preloadImagesCountError = preloadImages?.length > 4 ? true : false;
   const buttonDisable = preloadImages?.length > 5 || !preloadImages?.length && newMessageText === '';
-
+  const {chatUsers, chatData, setChatUsers, setChatData} = useContext(SelectedChatContext)
   //--------- виконується 1
   //--------- завантаження даних поточного чату
   //--------- встановлення поля lastSeen для залогіненого юзера в табл. chats значення - online
@@ -100,8 +92,7 @@ const Chat = () => {
   useLayoutEffect(() => {
     if(!chatUsersIsLoading){
       const user = chatUsers[0];
-      let dateNow = dayjs();
-      const userLastSeen = dateNow.from(new Date(user.lastSeen), true);
+      console.log(user)
       navigation.setOptions({
         headerTitle: () => (
           <View style={{flexDirection: 'row', width: '90%', justifyContent: 'space-between'}}>
@@ -119,7 +110,7 @@ const Chat = () => {
             : 
               <>
                 <View style={{width: 15, height: 15, borderRadius: 15, backgroundColor: 'gray'}}></View>
-                <Text>Онлайн - {userLastSeen} тому</Text>
+                <TimeAgo date={user.lastSeen} textAfter="тому"/>
               </>
             }
             </View>
@@ -135,8 +126,10 @@ const Chat = () => {
                 </Text>
               </View>
             </TouchableOpacity>
-            : <TouchableOpacity onPress={openChatInfo}>
-              <View style={{width: 30, height: 30, backgroundColor: 'red'}}/>
+            : <TouchableOpacity style={{alignItems: 'center', justifyContent: 'center'}} onPress={openChatInfo}>
+              <View style={{width: 30, height: 30}}>
+                <Image source={require('../../../assets/chat-info.png')} style={{height: '100%', width: '100%'}}/>
+              </View>
             </TouchableOpacity>
           }
           </View>
@@ -195,7 +188,7 @@ const Chat = () => {
                         return {
                             ...u,
                             onlineStatus: value.isOnline,
-                            lastSeen: value.timeStamp
+                            timeStamp: value.timeStamp
                         }
                     }
                     return u;
@@ -429,7 +422,7 @@ const Chat = () => {
   }
 
   return (
-    <ChatContext.Provider value={{chatData}}>
+    <>
     <ChatCanvas>
       
       <> 
@@ -441,7 +434,6 @@ const Chat = () => {
         : <ChatItemContainer loadMessagesStatus={loadMessagesStatus} messages={messages} selectedMessages={selectedMessages} updateSelectedMessages={updateSelectedMessages} loadPreviousMessages={loadPreviousMessages}/>
       }
       </>
-      
       </ChatCanvas>
     <BottomContainer  
     behavior={Platform.OS === "ios" ? "padding" : undefined} 
@@ -454,7 +446,7 @@ const Chat = () => {
         <NewMessageButton disabled={buttonDisable} style={buttonDisable ? {backgroundColor: 'gray'} : {}} onPress={sendMessage}><NewMessageText>Надіслати</NewMessageText></NewMessageButton>
       </NewMessageContainer>
     </BottomContainer>
-    </ChatContext.Provider>
+    </>
   )
 }
 

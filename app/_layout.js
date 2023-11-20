@@ -6,15 +6,22 @@ import { setParams } from 'expo-router/src/global-state/routing';
 import { auth, database } from '../config/firebase';
 export const AuthUserContext = createContext({});
 export const FirebaseContext = createContext({});
+export const SelectedChatContext = createContext({});
+
 const RootLayout = () => {
     const [user, setUser] = useState(null);
+    const [chatData, setChatData] = useState(null)
+    const [chatUsers, setChatUsers] = useState(null)
     return (
         <FirebaseContext.Provider value={{auth, database}}>
-        <AuthUserContext.Provider value={{user, setUser}}>
-            <Stack screenOptions={{headerShown: false}}>
-            </Stack>
-        </AuthUserContext.Provider>
+            <AuthUserContext.Provider value={{user, setUser}}>
+                <SelectedChatContext.Provider value={{chatData, chatUsers, setChatData, setChatUsers}}>
+                    <Stack screenOptions={{headerShown: false}}>
+                    </Stack>
+                </SelectedChatContext.Provider>
+            </AuthUserContext.Provider>
         </FirebaseContext.Provider>
+        
     )
 }
 export default RootLayout

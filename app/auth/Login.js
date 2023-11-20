@@ -35,7 +35,7 @@ const Login = () => {
             onDisconnect(rUserRef)
                 .set({ timeStamp: serverTimestamp(), isOnline: false })
                 .then(async () => {
-                    set(rUserRef, { timeStamp: serverTimestamp(), isOnline: true });
+                  set(rUserRef, { timeStamp: serverTimestamp(), isOnline: true});
       });
       router.push('/');
     })
@@ -46,7 +46,8 @@ const Login = () => {
     const userDocRef = doc(database, 'users', user.id)
         const updatedUser = {
             ...user,
-            lastCheckedStatus: new Date()
+            lastCheckedStatus: new Date(),
+            status: 'online'
           }
 
           setDoc(userDocRef, updatedUser).catch(error => {

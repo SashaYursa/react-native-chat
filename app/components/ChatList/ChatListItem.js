@@ -5,6 +5,8 @@ import CachedImage from '../CachedImage'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime';
 import ualocal from 'dayjs/locale/uk';
+import Date from '../TimeAgo'
+import TimeAgo from '../TimeAgo'
 
 const ChatListItem = ({item}) => {
     dayjs.extend(relativeTime);
@@ -44,9 +46,7 @@ const ChatListItem = ({item}) => {
             </MessageContainer>
         </ChatData>
         <ChatInfo>
-            <InfoTime>
-                {item.time && `${getTime(item.time)} тому`} 
-            </InfoTime>
+            <TimeAgo styleProps={{color: '#000', fontWeight: 400, fontSize: 12}} date={item.time} textAfter="тому"/>
         </ChatInfo>
     </Container>
   )
@@ -110,11 +110,6 @@ font-weight: 400;
 color: #000;
 flex-grow: 1;
 flex-shrink: 1;
-`
-const InfoTime = styled.Text`
-color: #000;
-font-weight: 400;
-font-size: 12px;
 `
 const OnlineIndicator = styled.View`
 border-radius: 30px;

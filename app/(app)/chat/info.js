@@ -1,28 +1,34 @@
-import { View, Text, Image,TouchableOpacity } from 'react-native'
-import React from 'react'
+import { View, Text, Image,TouchableOpacity, Platform, StyleSheet } from 'react-native'
+import React, { useContext } from 'react'
 import styled from 'styled-components'
+import { useLocalSearchParams } from 'expo-router/src/hooks'
+import TimeAgo from '../../components/TimeAgo'
+import CachedImage from '../../components/CachedImage'
+import { AuthUserContext, SelectedChatContext } from '../../_layout'
 
 const Info = () => {
+    const { user } = useContext(AuthUserContext);
+    const {chatData, chatUsers, setChatData, setChatUsers} = useContext(SelectedChatContext)
+    console.log('users in info --------->', chatUsers)
+    const createdAtDate = new Date(chatData.createdAt.seconds * 1000)
+    
+    const createdAt = `${createdAtDate.getFullYear()}-${createdAtDate.getMonth() + 1}-${createdAtDate.getDate()} ${createdAtDate.getHours()}:${createdAtDate.getMinutes()}`
   return (
     <Container>
         <ChatInfoContainer>
             <InfoData>
                 <ChatImageContainer>
-                    <ChatImage source={require('../../../assets/default-chat-image.png')}/>
+                    <ChatImage source={chatData.image ? {uri: chatData.image} : require('../../../assets/default-chat-image.png')}/>
                 </ChatImageContainer>
                 <ChatDataContainer>
                     <ChatDataItem>
                         <PreText>Chat name</PreText>
-                        <ChatDataText>
-                            Empty
-                        </ChatDataText>
+                        <ChatDataText style={!chatData.name && {color: '#FF6C22'}}>{chatData.name ? chatData.name : "Empty"}</ChatDataText>
                     </ChatDataItem>
                     <ChatDataItem>
                         <PreText>Created at</PreText>
-                        <ChatDataText>
-                            Empty
-                        </ChatDataText>
-                    </ChatDataItem>
+                        <ChatDataText>{createdAt}</ChatDataText>
+                        </ChatDataItem>
                 </ChatDataContainer>
             </InfoData>
         </ChatInfoContainer>
@@ -33,31 +39,47 @@ const Info = () => {
             <UserItems contentContainerStyle={{gap: 5}}>
                 <View style={{height: 2}}></View>
                 <UserItem>
-                    <UserItemImage>
-                        <UserImage source={require('../../../assets/default-user.png')}/>
-                    </UserItemImage>
+                <UserImageContainer>
+                        <UserItemImage>
+                            {user.photoURL 
+                                ? <CachedImage url={user.photoURL} style={{width: '100%', height: '100%'}}/>
+                                : <UserImage source={require('../../../assets/default-user.png')}/>
+                            }  
+                        </UserItemImage>
+                        <UserOnlineStatus/>  
+                    </UserImageContainer>
                     <UserDataContainer>
-                        <UserDataText style={{fontWeight: 700}}>
-                            Mi4
+                        <UserDataText style={{fontWeight: 700, color: "#39A7FF"}}>
+                            You
                         </UserDataText>
                         <UserDataText>
-                            Онлайн: 10 хв.
-                        </UserDataText>
-                    </UserDataContainer>
-                </UserItem>  
-                <UserItem>
-                    <UserItemImage>
-                        <UserImage source={require('../../../assets/default-user.png')}/>
-                    </UserItemImage>
-                    <UserDataContainer>
-                        <UserDataText style={{fontWeight: 700}}>
-                            Mi4
-                        </UserDataText>
-                        <UserDataText>
-                            Онлайн: 10 хв.
+                            online
                         </UserDataText>
                     </UserDataContainer>
                 </UserItem>
+                
+                {chatUsers.map(chatUser => (<UserItem key={chatUser.id}>
+                            <UserImageContainer>
+                                <UserItemImage>
+                                    {chatUser.image 
+                                    ? <CachedImage url={chatUser.image} style={{width: '100%', height: '100%'}}/>
+                                    : <UserImage source={require('../../../assets/default-user.png')}/>
+                                    }      
+                                </UserItemImage>
+                                <UserOnlineStatus style={!chatUser.onlineStatus && {backgroundColor: "#828181"}}/>  
+                            </UserImageContainer>
+                            <UserDataContainer>
+                                <UserDataText style={{fontWeight: 700}}>
+                                    Mi4
+                                </UserDataText>
+                                {chatUser.onlineStatus
+                                    ? <UserDataText>online</UserDataText>
+                                    : <TimeAgo date={chatUser.timeStamp} styleProps={{fontSize: 14, color: '#fff'}} textAfter={'тому'}/>
+                                }
+                            </UserDataContainer>
+                        </UserItem>  
+                    )
+                )}
                 <View style={{height: 10}}></View>
             </UserItems>
         </UsersInfoContainer>  
@@ -65,7 +87,7 @@ const Info = () => {
             <ContainerHeader>
                 Actions
             </ContainerHeader>
-            <ActionsContainer>
+            <ActionsContainer contentContainerStyle={{paddingBottom: 10}}>
                 <ActionButton style={{backgroundColor: '#22092C'}}>
                     <ActionButtonText>
                         Add users
@@ -86,7 +108,6 @@ const Info = () => {
     </Container>
   )
 }
-
 const Container = styled.View`
 flex-grow: 1;
 background-color: #739072;
@@ -99,13 +120,14 @@ padding: 10px 5px;
 border-top-width: 0;
 position: relative;
 background-color: #3A4D39;
+height: 18%;
 `
 
 const UsersInfoContainer = styled.View`
 border-radius: 0 32px 0 32px;
 background-color: #fff;
-height: 55%;
 background-color: #3A4D39;
+flex-grow: 1;
 `
 
 const ChatActions = styled.View`
@@ -114,8 +136,7 @@ background-color: #fff;
 border-top-width: 0;
 position: relative;
 background-color: #3A4D39;
-min-height: 100px;
-flex-grow: 1;
+height: 180px;
 `
 
 const InfoData = styled.View`
@@ -144,12 +165,15 @@ width: 100%;
 height: 100%;
 `
 
+
 const ChatDataContainer = styled.View`
 gap: 10px;
 padding: 5px;
 flex-grow: 1;
 height: 100%;
 border-radius: 6px;
+justify-content: center;
+flex-grow: 1;
 `
 
 const ChatDataItem = styled.View`
@@ -160,13 +184,6 @@ border-radius: 6px;
 margin: 0 5px;
 position: relative;
 `
-
-const ChatDataText = styled.Text`
-font-size: 18px;
-font-weight: 700;
-color: #fff;
-padding: 0 5px;
-`
 const PreText = styled.Text`
 position: absolute;
 top: -8px;
@@ -176,11 +193,19 @@ font-weight: 700;
 color: #fff;
 `
 
+const ChatDataText = styled.Text`
+font-weight: 700;
+font-size: 18px;
+font-weight: 700;
+color: #fff;
+padding: 0 5px;
+`
+
 const UserItems = styled.ScrollView`
 margin: 5px 0 15px 0;
 padding: 5px;
 gap: 5px;
-height: 100%;
+flex-grow: 1;
 overflow: hidden;
 border-radius: 24px;
 `
@@ -193,16 +218,32 @@ border-radius: 12px;
 padding: 5px;
 `
 
-const UserItemImage = styled.View`
+const UserImageContainer = styled.View`
 height: 40px;
 width: 40px;
-border-radius: 20px;
+position: relative;
+`
+const UserItemImage = styled.View`
 overflow: hidden;
+border-radius: 20px;
+width: 100%;
+height: 100%;
+`
+
+const UserOnlineStatus = styled.View`
+width: 15px;
+height: 15px;
+position: absolute;
+bottom: -1px;
+right: 0;
+background-color: #23b044;
+border-radius: 10px;
 `
 
 const UserImage = styled.Image`
 width: 100%;
 height: 100%;
+border-radius: 20px;
 `
 
 const UserDataContainer = styled.View`
@@ -213,10 +254,8 @@ const UserDataText = styled.Text`
 font-size: 14px;
 color: #fff;
 `
-const ActionsContainer = styled.View`
-flex-grow: 1;
-justify-content: center;
-margin-bottom: 15px;
+const ActionsContainer = styled.ScrollView`
+height: 90%;
 `
 
 const ActionButton = styled.TouchableOpacity`

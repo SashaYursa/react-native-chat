@@ -71,6 +71,7 @@ const Users = () => {
         users: [user.uid, userId],
         usersInfo: [{id: user.uid, lastSeen}, {id: userId, lastSeen}],
         type: 'private',
+        image: null,
         createdAt: serverTimestamp()
       })
     }

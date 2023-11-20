@@ -1,5 +1,5 @@
-import { View, Text, Image } from 'react-native'
-import React, { useContext, useEffect } from 'react'
+import { View, Text, Image, Platform } from 'react-native'
+import React, { createContext, useContext, useEffect, useState } from 'react'
 import { AuthUserContext } from '../_layout'
 import { Redirect, Stack } from 'expo-router';
 import { onAuthStateChanged, onUserChanged } from 'firebase/auth';
@@ -56,26 +56,34 @@ const AppLayout = () => {
         )
     }
     return (
-            <Stack screenOptions={{
+        <Stack screenOptions={{
+            headerShown: false
+        }}>
+            <Stack.Screen options={({route}) => {
+            return ({
+                headerShown: true,
+                headerTitle: "Chat"
+            })}
+            } name='chat/[id]'/>
+            <Stack.Screen name="chat/info" options={Platform.OS === 'android' 
+            ? {
+                title: 'Info',
+                presentation: 'modal',
+                headerShown: true    
+            }
+            : {
+                presentation: 'modal',
                 headerShown: false
-            }}>
-                <Stack.Screen options={({route}) =>{
-                return ({
-                    headerShown: true,
-                    headerTitle: "Chat"
-                })}
-                } name='chat/[id]'/>
-                <Stack.Screen name="chat/info" options={{
-                    presentation: 'modal'
-                }}/>
-                <Stack.Screen name='(drawer)'/>
-                <Stack.Screen name='Users' options={{
-                    headerShown: false
-                }}/>
-                <Stack.Screen name='user/[userId]' options={{
-                    headerShown: false
-                }}/>
-            </Stack>
+            }
+            }/>
+            <Stack.Screen name='(drawer)'/>
+            <Stack.Screen name='Users' options={{
+                headerShown: false
+            }}/>
+            <Stack.Screen name='user/[userId]' options={{
+                headerShown: false
+            }}/>
+        </Stack>
     )
 }
 
