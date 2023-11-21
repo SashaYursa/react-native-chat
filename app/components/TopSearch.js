@@ -3,10 +3,10 @@ import React from 'react'
 import styled from 'styled-components'
 import BackButton from '../components/Buttons/BackButton'
 import { TextInput } from 'react-native-paper'
-const TopSearch = ({inputRef, searchText, setSearchText}) => {
+const TopSearch = ({inputRef, searchText, setSearchText, hasBack = true}) => {
   return (
     <Container>
-        <BackButton/>
+        {hasBack && <BackButton/>}
         <SearchContainer>
             <TextInput ref={inputRef} mode='outlined' label='Search' style={{flexGrow: 1}} value={searchText} onChangeText={setSearchText}/>
         </SearchContainer>

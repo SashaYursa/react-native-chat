@@ -4,7 +4,6 @@ import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime';
 import ualocal from 'dayjs/locale/uk';
 const TimeAgo = memo(({date, styleProps, textAfter}) => {
-    console.log('time rerender',String(date).length)
     dayjs.extend(relativeTime);
     dayjs.locale(ualocal)
     const getTime = (time) => {

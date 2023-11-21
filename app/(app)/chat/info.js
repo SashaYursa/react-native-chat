@@ -10,9 +10,7 @@ import { router } from 'expo-router'
 const Info = () => {
     const { user } = useContext(AuthUserContext);
     const {chatData, chatUsers, setChatData, setChatUsers} = useContext(SelectedChatContext)
-    console.log('users in info --------->', chatUsers)
     const createdAtDate = new Date(chatData.createdAt.seconds * 1000)
-    
     const createdAt = `${createdAtDate.getFullYear()}-${createdAtDate.getMonth() + 1}-${createdAtDate.getDate()} ${createdAtDate.getHours()}:${createdAtDate.getMinutes()}`
   return (
     <Container>
@@ -89,11 +87,13 @@ const Info = () => {
                 Actions
             </ContainerHeader>
             <ActionsContainer contentContainerStyle={{paddingBottom: 10}}>
+                {chatData.type === 'public' &&
                 <ActionButton onPress={() => router.push('chat/addUsers')} style={{backgroundColor: '#22092C'}}>
                     <ActionButtonText>
                         Add users
                     </ActionButtonText>
                 </ActionButton>
+                }
                 <ActionButton onPress={() => router.push('chat/settings')} style={{backgroundColor: '#22092C'}}>
                     <ActionButtonText>
                         Settings

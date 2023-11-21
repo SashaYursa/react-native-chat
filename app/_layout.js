@@ -9,13 +9,15 @@ export const FirebaseContext = createContext({});
 export const SelectedChatContext = createContext({});
 
 const RootLayout = () => {
+    // console.log('root rerender')
     const [user, setUser] = useState(null);
     const [chatData, setChatData] = useState(null)
     const [chatUsers, setChatUsers] = useState(null)
+    const [messages, setMessages] = useState([])
     return (
         <FirebaseContext.Provider value={{auth, database}}>
             <AuthUserContext.Provider value={{user, setUser}}>
-                <SelectedChatContext.Provider value={{chatData, chatUsers, setChatData, setChatUsers}}>
+                <SelectedChatContext.Provider value={{chatData, chatUsers, messages, setChatData, setChatUsers, setMessages}}>
                     <Stack screenOptions={{headerShown: false}}>
                     </Stack>
                 </SelectedChatContext.Provider>

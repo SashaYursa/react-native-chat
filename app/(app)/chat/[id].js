@@ -36,9 +36,12 @@ import ChatItemContainer from '../../components/ChatItemContainer'
 import shorthash from 'shorthash'
 import UserImage from '../../components/UserImage'
 import TimeAgo from '../../components/TimeAgo'
+import { compareObjects } from '../_layout'
+import ChatNavigationHeaderTitle from '../../components/ChatNavigationHeaderTitle'
 
 const Chat = () => {
-  const [messages, setMessages] = useState([]);
+  // console.log('rerender', Platform.OS)
+  // const [messages, setMessages] = useState([]);
   const [selectedMessages, setSelectedMessages] = useState([])
   const [loading, setLoading] = useState(true);
   const [newMessageText, setNewMessageText] = useState('');
@@ -55,7 +58,7 @@ const Chat = () => {
   const navigation = useNavigation();
   const preloadImagesCountError = preloadImages?.length > 4 ? true : false;
   const buttonDisable = preloadImages?.length > 5 || !preloadImages?.length && newMessageText === '';
-  const {chatUsers, chatData, setChatUsers, setChatData} = useContext(SelectedChatContext)
+  const {chatUsers, chatData, setChatUsers, setChatData, messages, setMessages} = useContext(SelectedChatContext)
   //--------- виконується 1
   //--------- завантаження даних поточного чату
   //--------- встановлення поля lastSeen для залогіненого юзера в табл. chats значення - online
@@ -64,7 +67,14 @@ const Chat = () => {
     const qChat = doc(database, "chats", id);
     const unsubscribe = onSnapshot(qChat, { includeMetadataChanges: true }, async (data) => {
       const chat = data.data();
-      setChatData(chat);
+      const newChatData = {...chat, id: data.id}
+      // if(JSON.stringify(newChatData) !== JSON.stringify(chatData)){
+        if(!compareObjects(newChatData, chatData)){
+          setChatData(newChatData);
+          // console.log('not equals', newChatData, chatData)
+        }
+        // console.log('chat data not equals', JSON.stringify(newChatData), '----------------', JSON.stringify(chatData))
+      // }
     })
     return async () => {
       unsubscribe();
@@ -79,7 +89,9 @@ const Chat = () => {
     const loadUsers = async () => {
       if(chatData !== null && chatUsersIsLoading){
         const users = await getUsers(chatData.users)
-        setChatUsers(users);
+        if(!compareObjects(users, chatUsers)){
+          setChatUsers(users);
+        }
         setChatUsersIsLoading(false)
       }
     }
@@ -92,48 +104,68 @@ const Chat = () => {
   useLayoutEffect(() => {
     if(!chatUsersIsLoading){
       const user = chatUsers[0];
-      console.log(user)
       navigation.setOptions({
-        headerTitle: () => (
-          <View style={{flexDirection: 'row', width: '90%', justifyContent: 'space-between'}}>
-          <TouchableOpacity onPress={() => {router.push(`user/${user.id}`)}} style={{flexDirection: 'row', alignItems: 'center', gap: 10}}>
-            <UserImage style={{width: 35, height: 35, borderRadius: 50, overflow: 'hidden', backgroundColor: "#eaeaea"}} imageUrl={user.image} />
-            <View >
-            <Text style={{fontSize: 18, fontWeight: 700}}>{user.displayName}</Text>
-            <View style={{flexDirection: 'row', gap: 5, alignItems: 'center'}}>
-              {user.onlineStatus 
-            ? 
-              <>
-                <View style={{width: 15, height: 15, borderRadius: 15, backgroundColor: 'green'}}></View>
-                <Text>Зараз онлайн</Text>
-              </>
-            : 
-              <>
-                <View style={{width: 15, height: 15, borderRadius: 15, backgroundColor: 'gray'}}></View>
-                <TimeAgo date={user.timeStamp} textAfter="тому"/>
-              </>
-            }
-            </View>
-            </View>
-            
-          </TouchableOpacity>
-          {selectedMessages.length > 0 
-            ? <TouchableOpacity onPress={() => deleteMessages(selectedMessages)} style={{alignItems: 'center', justifyContent: 'center', position: 'relative'}}>
-              <Image style={{width: 30, height: 30}} source={require('../../../assets/delete.png')} />
-              <View style={{position: 'absolute', top: -3, right: -3, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 8, backgroundColor: 'blue'}}>
-                <Text style={{fontWeight: 700, color: '#fff', fontSize: 12}}>
-                  {selectedMessages.length}
-                </Text>
-              </View>
-            </TouchableOpacity>
-            : <TouchableOpacity style={{alignItems: 'center', justifyContent: 'center'}} onPress={openChatInfo}>
-              <View style={{width: 30, height: 30}}>
-                <Image source={require('../../../assets/chat-info.png')} style={{height: '100%', width: '100%'}}/>
-              </View>
-            </TouchableOpacity>
-          }
-          </View>
-        )
+        headerTitle: () => {
+        if(chatData.type === 'private'){
+          return <ChatNavigationHeaderTitle 
+          contentPressHandle={() => router.push(`user/${user.id}`)} 
+          chatType={chatData.type} 
+          chatImage={user.image}
+          name={user.displayName}
+          online={{onlineStatus: user.onlineStatus, timeStamp: user.timeStamp}}
+          selectedMessagesCount={selectedMessages.length}
+          handleSelectedMessages={() => deleteMessages(selectedMessages)}
+          />
+        }
+        if(chatData.type === 'public'){
+          return <ChatNavigationHeaderTitle 
+          contentPressHandle={() => router.push('chat/info')} 
+          chatType={chatData.type} 
+          chatImage={chatData.image}
+          name={chatData.name}
+          online={chatUsers.map(chatUser => chatUser.onlineStatus)}
+          selectedMessagesCount={selectedMessages.length}
+          handleSelectedMessages={() => deleteMessages(selectedMessages)}
+          />
+        }
+        }
+          // <View style={{flexDirection: 'row', width: '90%', justifyContent: 'space-between'}}>
+          //   <TouchableOpacity onPress={() => {router.push(`user/${user.id}`)}} style={{flexDirection: 'row', alignItems: 'center', gap: 10}}>
+          //     <UserImage style={{width: 35, height: 35, borderRadius: 50, overflow: 'hidden', backgroundColor: "#eaeaea"}} imageUrl={user.image} />
+          //     <View >
+          //       <Text style={{fontSize: 18, fontWeight: 700}}>{user.displayName}</Text>
+          //       <View style={{flexDirection: 'row', gap: 5, alignItems: 'center'}}>
+          //         {user.onlineStatus 
+          //       ? 
+          //         <>
+          //           <View style={{width: 15, height: 15, borderRadius: 15, backgroundColor: 'green'}}></View>
+          //           <Text>Зараз онлайн</Text>
+          //         </>
+          //       : 
+          //         <>
+          //           <View style={{width: 15, height: 15, borderRadius: 15, backgroundColor: 'gray'}}></View>
+          //           <TimeAgo date={user.timeStamp} textAfter="тому"/>
+          //         </>
+          //       }
+          //       </View>
+          //     </View>
+          //   </TouchableOpacity>
+          //   {selectedMessages.length > 0 
+          //     ? <TouchableOpacity onPress={() => deleteMessages(selectedMessages)} style={{alignItems: 'center', justifyContent: 'center', position: 'relative'}}>
+          //       <Image style={{width: 30, height: 30}} source={require('../../../assets/delete.png')} />
+          //       <View style={{position: 'absolute', top: -3, right: -3, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 8, backgroundColor: 'blue'}}>
+          //         <Text style={{fontWeight: 700, color: '#fff', fontSize: 12}}>
+          //           {selectedMessages.length}
+          //         </Text>
+          //       </View>
+          //     </TouchableOpacity>
+          //     : <TouchableOpacity style={{alignItems: 'center', justifyContent: 'center'}} onPress={openChatInfo}>
+          //       <View style={{width: 30, height: 30}}>
+          //         <Image source={require('../../../assets/chat-info.png')} style={{height: '100%', width: '100%'}}/>
+          //       </View>
+          //     </TouchableOpacity>
+          //   }
+          // </View>
       })
     }
   }, [chatUsers, selectedMessages])
@@ -144,16 +176,16 @@ const Chat = () => {
   useEffect(() => {
     const fetchMessages = async () => {
       const q = query(collection(database, 'messages', String(id), 'message'), orderBy('createdAt', 'desc'), limit(30))
-      const messages = await loadMessages(q);
+      const loadedMessages = await loadMessages(q);
       const countMessages = (await getCountFromServer(collection(database, 'messages', id, 'message'))).data().count
-      console.log(countMessages, 'count')
-        setMessages(messages)
+        if(!compareObjects(loadedMessages, messages)){
+          setMessages(loadedMessages)
+        }
         setLoadMessagesStatus({
           messagesCount: countMessages,
-          loadedMessagesCount: messages.length,
+          loadedMessagesCount: loadedMessages.length,
           canLoadedMessages: true
         })
-        console.log('setted')
     }
     if(!chatUsersIsLoading){
     fetchMessages();
@@ -162,7 +194,6 @@ const Chat = () => {
     const unsubscribe = onSnapshot(snapshotQ, async (snapshot) => {
       snapshot.docChanges().forEach(change => {
         if(change.type === 'modified'){
-          console.log('modified')
           const addedMessage = change.doc.data()
           setMessages(m => [addedMessage, ...m])
         }
@@ -208,24 +239,20 @@ const Chat = () => {
   //------- встановлення в chatUsersIsLoading - false
   const getUsers = async (ids) => {
     setChatUsersIsLoading(true)
-    const chatUsers = [];
+    const loadedChatUsers = [];
     for(const id of ids){
       if(user.uid !== id){
         const qUser = query(collection(database, "users"), where("id", "==", id))
         let res = await getDocs(qUser);
         res = await Promise.all(res.docs.map(item => item.data()))
-        chatUsers.push(await {
+        loadedChatUsers.push(await {
           ...res[0],
           onlineStatus: false,
           lastSeen: null
         })
       }
     }
-    return chatUsers
-  }
-
-  const openChatInfo = () => {
-    router.push('chat/info')
+    return loadedChatUsers
   }
 
   const loadPreviousMessages = useCallback(async () => {
@@ -233,7 +260,6 @@ const Chat = () => {
   })
 
   const fetchPrevMessagess = async () => {
-    console.log(loadMessagesStatus, messagesCount)
     if(loadMessagesStatus.loadedMessagesCount < loadMessagesStatus.messagesCount){
     setLoadMessagesStatus(status => ({
       ...status,
@@ -244,10 +270,12 @@ const Chat = () => {
     const docSnap = await getDoc(doc(database, "messages", id, "message", lastDoc.id));
     const q = query(collection(database, 'messages', String(id), 'message'), orderBy('createdAt', 'desc'), limit(30), startAt(docSnap))
     const newMessages = await loadMessages(q)
+    setLoading(false)
     newMessages.shift();
     if(newMessages.length === 0) setHasNextMessages(false)
-    else setMessages(m => [...m, ...newMessages])
-    setLoading(false)
+    else {
+      setMessages(m => [...m, ...newMessages])
+    }
     setLoadMessagesStatus(prevStatus => ({
       ...prevStatus,
       loadedMessagesCount: prevStatus.loadedMessagesCount + newMessages.length,
@@ -263,14 +291,13 @@ const Chat = () => {
       const userImage = chatUsers.find(chatUser => chatUser.id === message.uid)?.image 
               ? chatUsers.find(chatUser => chatUser.id === message.uid).image
               : null
-              setLoading(false)
               return {
                 ...message,
                 id: doc.id,
                 userImage
-              }
-     
-    })
+              }          
+            })
+    setLoading(false)
     return messages
   }
 
@@ -424,7 +451,6 @@ const Chat = () => {
   return (
     <>
     <ChatCanvas>
-      
       <> 
       { loading && <ActivityIndicator style={{alignSelf: 'center'}} color={'blue'} size={'large'}/>}
       {messages.length === 0 

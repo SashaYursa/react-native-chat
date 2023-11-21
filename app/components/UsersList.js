@@ -6,7 +6,7 @@ import CachedImage from './CachedImage'
 import { collection, endAt, getDocs, orderBy, query, startAt } from 'firebase/firestore'
 import { AuthUserContext, FirebaseContext } from '../_layout'
 let i = 0;
-const UsersList = memo(({searchValue, userAction}) => {
+const UsersList = memo(({searchValue, userAction, hideUsers = null}) => {
     console.log( ++i + 'rerender')
     const { user } = useContext(AuthUserContext)
     const {database} = useContext(FirebaseContext)
@@ -25,7 +25,13 @@ const UsersList = memo(({searchValue, userAction}) => {
     }
     const fetchUsers = async (query) => {
         const users = await getDocs(query);
-        const newUsers = users.docs.map(res => res.data()).filter(item => item.id !== user.uid)
+        let newUsers = [];
+        if(hideUsers){
+            newUsers = users.docs.map(res => res.data()).filter(item => item.id !== hideUsers.find(id => id === item.id))
+        }
+        else{
+            newUsers = users.docs.map(res => res.data()).filter(item => item.id !== user.uid)
+        }
         setSearchUsers(newUsers);
         setUsersLoading(false);
     }
