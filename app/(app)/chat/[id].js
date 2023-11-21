@@ -110,7 +110,7 @@ const Chat = () => {
             : 
               <>
                 <View style={{width: 15, height: 15, borderRadius: 15, backgroundColor: 'gray'}}></View>
-                <TimeAgo date={user.lastSeen} textAfter="тому"/>
+                <TimeAgo date={user.timeStamp} textAfter="тому"/>
               </>
             }
             </View>

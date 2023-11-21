@@ -76,6 +76,28 @@ const AppLayout = () => {
                 headerShown: false
             }
             }/>
+            <Stack.Screen name="chat/settings" options={Platform.OS === 'android' 
+            ? {
+                title: 'Settings',
+                presentation: 'modal',
+                headerShown: true    
+            }
+            : {
+                presentation: 'modal',
+                headerShown: false
+            }
+            }/>
+            <Stack.Screen name="chat/addUsers" options={Platform.OS === 'android' 
+            ? {
+                title: 'Add Users',
+                presentation: 'modal',
+                headerShown: true    
+            }
+            : {
+                presentation: 'modal',
+                headerShown: false
+            }
+            }/>
             <Stack.Screen name='(drawer)'/>
             <Stack.Screen name='Users' options={{
                 headerShown: false

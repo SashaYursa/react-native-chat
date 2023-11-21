@@ -46,7 +46,9 @@ const ChatListItem = ({item}) => {
             </MessageContainer>
         </ChatData>
         <ChatInfo>
-            <TimeAgo styleProps={{color: '#000', fontWeight: 400, fontSize: 12}} date={item.time} textAfter="тому"/>
+            {item.time &&
+                <TimeAgo styleProps={{color: '#000', fontWeight: 400, fontSize: 12}} date={item.time} textAfter="тому"/>
+            }   
         </ChatInfo>
     </Container>
   )

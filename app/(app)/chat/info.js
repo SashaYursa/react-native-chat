@@ -5,6 +5,7 @@ import { useLocalSearchParams } from 'expo-router/src/hooks'
 import TimeAgo from '../../components/TimeAgo'
 import CachedImage from '../../components/CachedImage'
 import { AuthUserContext, SelectedChatContext } from '../../_layout'
+import { router } from 'expo-router'
 
 const Info = () => {
     const { user } = useContext(AuthUserContext);
@@ -88,12 +89,12 @@ const Info = () => {
                 Actions
             </ContainerHeader>
             <ActionsContainer contentContainerStyle={{paddingBottom: 10}}>
-                <ActionButton style={{backgroundColor: '#22092C'}}>
+                <ActionButton onPress={() => router.push('chat/addUsers')} style={{backgroundColor: '#22092C'}}>
                     <ActionButtonText>
                         Add users
                     </ActionButtonText>
                 </ActionButton>
-                <ActionButton style={{backgroundColor: '#22092C'}}>
+                <ActionButton onPress={() => router.push('chat/settings')} style={{backgroundColor: '#22092C'}}>
                     <ActionButtonText>
                         Settings
                     </ActionButtonText>
