@@ -1,65 +1,37 @@
 import { View, Text, Image, TouchableOpacity} from 'react-native'
-import React, { useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import React, { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { AuthUserContext, FirebaseContext } from '../_layout'
 import styled from 'styled-components'
 import { ActivityIndicator, TextInput } from 'react-native-paper';
 import useDebounce from '../../hooks/useDebounce'
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router'
-import BackButton from '../components/Buttons/BackButton'
+
 import { addDoc, collection, endAt, getDocs, orderBy, query, serverTimestamp, startAt, where } from 'firebase/firestore';
-import CachedImage from '../components/CachedImage';
+import TopSearch from '../components/TopSearch';
+import UsersList from '../components/UsersList';
+import { SafeAreaView } from 'react-native-safe-area-context';
 const Users = () => {
-  const {database} = useContext(FirebaseContext)
   const {user} = useContext(AuthUserContext)
+  const {database} = useContext(FirebaseContext)
   const [searchText, setSearchText] = useState('')
-  const [searchUsers, setSearchUsers] = useState(null)
   const debouncedSearchValue = useDebounce(searchText, 1000);
-  const [usersLoading, setUsersLoading] = useState(false);
-  const ipnutRef = useRef();
+  const inputRef = useRef();
   const router = useRouter();
   
-  const fetchUsers = async (query) => {
-    const users = await getDocs(query);
-    const newUsers = users.docs.map(res => res.data()).filter(item => item.id !== user.uid)
-    setSearchUsers(newUsers);
-    setUsersLoading(false);
-  }
-
-
   useEffect(() => {
-    ipnutRef.current.focus();
-    getLastUsers();
-  }, [])
-
-  useEffect(() => {
-    const value = debouncedSearchValue.trim();
-    if(value.length > 0){
-      setUsersLoading(true);
-      const qUsers = query(collection(database, "users"), 
-        orderBy('displayName'),
-        startAt(value),
-        endAt(value + "\uf8ff"));
-      fetchUsers(qUsers);
+    if(inputRef.current){
+      inputRef.current.focus();
     }
-    else{
-      setUsersLoading(true);
-      getLastUsers();
-    }
-  }, [debouncedSearchValue])
+  }, [inputRef])
 
-  const getLastUsers = () => {
-    const qUsers = query(collection(database, "users"), orderBy("lastCheckedStatus", "desc"));
-    fetchUsers(qUsers)
-  }
-
-  const createChat = async (userId) => {
+  const createChat = useCallback(async (selectedUser) => {
     const qChats = query(collection(database, "chats"), 
     where("users", "array-contains", user.uid),
     where("type", "==", "private")
     )
     const result = await getDocs(qChats);
     const chats = result.docs.map(chat => ({...chat.data(), id: chat.id})).filter(chat => {
-      return chat.users.includes(userId);
+      return chat.users.includes(selectedUser.id);
     })
     if(chats.length){
       router.push(`chat/${chats[0].id}`)
@@ -68,60 +40,27 @@ const Users = () => {
       const lastSeen = new Date();
       await addDoc(collection(database, 'chats'),{
         name: null,
-        users: [user.uid, userId],
-        usersInfo: [{id: user.uid, lastSeen}, {id: userId, lastSeen}],
+        users: [user.uid, selectedUser.id],
+        usersInfo: [{id: user.uid, lastSeen}, {id: selectedUser.id, lastSeen}],
         type: 'private',
         image: null,
         createdAt: serverTimestamp()
       })
     }
-  }
+  }, [])
   return (
-    <Container>
-      <HeaderContainer>
-       <BackButton/>
-        <SearchContainer>
-          <TextInput ref={ipnutRef} mode='outlined' label='Search' style={{flexGrow: 1}} value={searchText} onChangeText={setSearchText}/>
-        </SearchContainer>
-      </HeaderContainer>
-      <UsersContainer>
-        { usersLoading 
-          ? <ActivityIndicator size={'large'}/>
-          : searchUsers !== null
-          && searchUsers.length > 0
-            ? searchUsers.map(user => (
-              <UserItem key={user.id} activeOpacity={.6} onPress={() => createChat(user.id)}>
-                {user.image 
-                  ? <CachedImage style={{width: 40, height: 40, borderRadius: 20, backgroundColor: '#fff'}} url={user.image}/>
-                  : <UserImage source={require('../../assets/default-user.png')}/>
-                }
-                <UserName>{user.displayName}</UserName>
-              </UserItem>
-            ))
-            : <View><Text>Users not found</Text></View>
-        }
+    <SafeAreaView style={{backgroundColor: '#fff', flex: 1}}>
+      <TopSearch inputRef={inputRef} searchText={searchText} setSearchText={setSearchText}/>
+      <UsersContainer style={{flex: 1}}>
+        <UsersList searchValue={debouncedSearchValue} userAction={createChat}/>
       </UsersContainer>
-    </Container>
+    </SafeAreaView>
   )
 }
-const Container = styled.View`
-flex-grow: 1;
-background-color: #fff;
-padding-top: 25px;
-`
-const HeaderContainer = styled.View`
-flex-direction: row;
-gap: 5px;
-`
-const SearchContainer = styled.View`
-flex-direction: row;
-padding: 10px 5px;
-flex-grow: 1;
-`
+
 const UsersContainer = styled.View`
-flex-grow: 1;
 padding: 2px 5px;
-gap: 5px;
+flex-grow: 1;
 `
 const UserItem = styled.TouchableOpacity`
 display: flex;
