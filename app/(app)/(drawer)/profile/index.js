@@ -13,6 +13,7 @@ import { router } from 'expo-router';
 import { Button } from 'react-native-paper';
 import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
 import { fileStorage } from '../../../../config/firebase';
+import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
 const Profile = ({}) => {
   const { user } = useContext(AuthUserContext)
   const [loading, setLoading] = useState(true)
@@ -46,6 +47,8 @@ const Profile = ({}) => {
   }, [uploadImageStatus])
 
   const logout = () => {
+    ReactNativeAsyncStorage.removeItem("email")
+    ReactNativeAsyncStorage.removeItem("password")
     signOut(auth).then(()=> {
       router.push('auth/Login')
     })

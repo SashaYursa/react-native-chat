@@ -1,6 +1,6 @@
 import { View, Text, Image, TouchableOpacity} from 'react-native'
 import React, { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { AuthUserContext, FirebaseContext } from '../_layout'
+import { AuthUserContext, FirebaseContext, SelectedChatContext, clearChatData } from '../_layout'
 import styled from 'styled-components'
 import { ActivityIndicator, TextInput } from 'react-native-paper';
 import useDebounce from '../../hooks/useDebounce'
@@ -14,6 +14,7 @@ const Users = () => {
   const {user} = useContext(AuthUserContext)
   const {database} = useContext(FirebaseContext)
   const [searchText, setSearchText] = useState('')
+  const {setMessages, setChatUsers, setChatData} = useContext(SelectedChatContext)
   const debouncedSearchValue = useDebounce(searchText, 1000);
   const inputRef = useRef();
   const router = useRouter();
@@ -25,6 +26,7 @@ const Users = () => {
   }, [inputRef])
 
   const createChat = useCallback(async (selectedUser) => {
+    clearChatData(setChatUsers, setMessages, setChatData)
     const qChats = query(collection(database, "chats"), 
     where("users", "array-contains", user.uid),
     where("type", "==", "private")
@@ -37,11 +39,9 @@ const Users = () => {
       router.push(`chat/${chats[0].id}`)
     }
     else{
-      const lastSeen = new Date();
       await addDoc(collection(database, 'chats'),{
         name: null,
         users: [user.uid, selectedUser.id],
-        usersInfo: [{id: user.uid, lastSeen}, {id: selectedUser.id, lastSeen}],
         type: 'private',
         image: null,
         createdAt: serverTimestamp()

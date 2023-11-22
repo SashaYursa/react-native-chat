@@ -4,7 +4,7 @@ import styled from 'styled-components'
 import { AuthUserContext } from '../_layout'
 import ImageView from "react-native-image-viewing";
 import CachedImage from './CachedImage';
-const ChatItem = React.memo(({item, selectMessage, index}) => {
+const ChatItem = React.memo(({userName, isAuthor, userImage, chatType, messageMedia, messageText, messageId, messageCreatedAt, selectMessage}) => {
     const [isOpenedImages, setIsOpenedImages] = useState(false);
     const [selectedImage, setSelectedImage] = useState(0);
     const openImage = (index) => {
@@ -12,34 +12,33 @@ const ChatItem = React.memo(({item, selectMessage, index}) => {
         setIsOpenedImages(true);
     }
     const {user} = useContext(AuthUserContext);
-    const isAuthor = item.uid === user.uid;
-    //console.log(item, 'item')
     return (
     <MessageOutsideContaier style={isAuthor ? {justifyContent: 'flex-end'} : {justifyContent: 'flex-start'} }>
         { !isAuthor &&
             <CompanionImageContainer>
-                <CachedImage url={item.userImage} style={{width: 30, height: 30, borderRadius: 15,backgroundColor: 'gray'}} />
+                <CachedImage url={userImage} style={{width: 30, height: 30, borderRadius: 15,backgroundColor: 'gray'}} />
             </CompanionImageContainer>       
         }
         <MessageDataContainer style={!isAuthor && {backgroundColor: '#4c7873', borderTopLeftRadius: 0, borderTopRightRadius: 12}}>
-            {item?.media?.length &&
+            { (chatType === 'public' && !isAuthor) && <UserName>{userName}</UserName> }
+            {messageMedia &&
                 <MessageImagesContainer>
-                    {item.media.map((image, idx) => (
-                        <MessageImageButton style={item.media.length > 1 && {width: '49%'}} key={image} onPress={()=>{openImage(idx)}} onLongPress={() => {selectMessage(item)}} delayLongPress={300 } activeOpacity={1}>
+                    {messageMedia.map((image, idx) => (
+                        <MessageImageButton style={messageMedia.length > 2 && {width: '49%'}} key={image} onPress={()=>{openImage(idx)}} onLongPress={() => {selectMessage(messageId)}} delayLongPress={300} activeOpacity={1}>
                             <CachedImage style={{width: '100%', height: '100%', objectFit: 'cover'}} url={image}/>
                         </MessageImageButton>
                     ))}
                 </MessageImagesContainer>
             }
-            {item.text !== null &&
+            {messageText !== null &&
                 <MessageText>
-                    {item.text}
+                    {messageText}
                 </MessageText>
             }
         </MessageDataContainer>    
-        {item?.media?.length && 
+        {messageMedia && 
         <ImageView 
-        images={item.media.map(image => ({uri: image}))}
+        images={messageMedia.map(image => ({uri: image}))}
         visible={isOpenedImages}
         imageIndex={selectedImage}
         onRequestClose={() => setIsOpenedImages(false)}
@@ -77,6 +76,12 @@ max-width: 80%;
 position: relative;
 align-items: end;
 justify-self: flex-end;
+`
+
+const UserName = styled.Text`
+font-size: 14px;
+font-weight: 700;
+color: #EBE3D5;
 `
 
 const MessageImagesContainer = styled.View`

@@ -5,29 +5,29 @@ import styled from 'styled-components';
 import ChatItem from './ChatItem';
 
 
-const ChatItemContainer = React.memo(({loadMessagesStatus, messages, selectedMessages, updateSelectedMessages, loadPreviousMessages}) => {
+const ChatItemContainer = React.memo(({messagesCount, messages, chatData, chatUsers, selectedMessages, updateSelectedMessages, loadPreviousMessages}) => {
+    console.log('rerender')
     const [endReached, setEndReached] = useState(false);
     const [allowSetEndReached, setAllowSetEndReached] = useState(false);
     const {user} = useContext(AuthUserContext);
     const scrollRef = useRef();
-    // console.log(loadMessagesStatus, 'ssss')
     useEffect(() => {
       if(endReached){
-        if(loadMessagesStatus?.canLoadedMessages && loadMessagesStatus?.loadedMessagesCount < loadMessagesStatus?.messagesCount){
+        if(messagesCount > messages.length){
           loadPreviousMessages()
           setEndReached(false)
         }
       }
-    }, [scrollRef, endReached, loadMessagesStatus])
-    useEffect(() => {
-  
-    }, [user])
-    const openImage = (imageId) => {
-    }
-    
+    }, [scrollRef, endReached, messagesCount])
     const rerenderItem = ({ item, index }) => { 
-   //   console.log('rerender')
-        const is =  selectedMessages.includes(item.id);
+      let messageUser;
+      if(item.uid !== user.uid){
+        messageUser = chatUsers.find(u => u.id === item.uid);
+      }
+      else{
+        messageUser = user
+      }
+      const is =  selectedMessages.includes(item.id);
       const selected = is && {
         backgroundColor: '#85aded'
       }
@@ -35,17 +35,27 @@ const ChatItemContainer = React.memo(({loadMessagesStatus, messages, selectedMes
         <MessagesContainer 
         delayLongPress={300} 
         onLongPress={() => {
-          console.log('long')
           updateSelectedMessages(item)
         }} 
+        key={item.id}
         activeOpacity={1} 
-        style={item.uid == user.uid 
+        style={item.uid === user.uid 
         ? {justifyContent: 'flex-end', ...selected} 
-        : {justifyContent: 'flex-start', ...selected} }>
-          <ChatItem item={item} index={index} openImage={openImage} selectMessage={updateSelectedMessages} />
+        : {justifyContent: 'flex-start', ...selected} }>  
+
+          <ChatItem userName={messageUser?.displayName}
+            userImage={messageUser.image}
+            messageMedia={item.media}
+            messageText={item.text}
+            messageId={item.id}
+            messageCreatedAt={item.createdAt}
+            isAuthor={item.uid === user.uid}
+            chatType={chatData.type}
+            selectMessage={updateSelectedMessages} />
         </MessagesContainer>
-        )
+      )
     }
+    console.log(chatData.type)
     
     return (
       <ChatScroll contentContainerStyle={{paddingVertical: 10}}
@@ -60,12 +70,16 @@ const ChatItemContainer = React.memo(({loadMessagesStatus, messages, selectedMes
                   }}
                   inverted showsVerticalScrollIndicator={false} 
                   data={messages} 
-                  renderItem={rerenderItem} />
+                  renderItem={rerenderItem} 
+                  initialNumToRender={19}/>
     )
   }, (prev, next) => {
-    return prev.messages === next.messages 
-    && prev.selectedMessages === next.selectedMessages 
-    && prev.loadMessagesStatus === next.loadMessagesStatus
+    return prev.chatUsers === next.chatUsers 
+    && prev.loadPreviousMessages === next.loadPreviousMessages
+    && prev.updateSelectedMessages === next.updateSelectedMessages
+    && prev.selectedMessages === next.selectedMessages
+    && prev.messages === next.messages
+    && prev.messagesCount === next.messagesCount
   })
 
 const MessagesContainer = styled.TouchableOpacity`

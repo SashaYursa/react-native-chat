@@ -8,6 +8,12 @@ export const AuthUserContext = createContext({});
 export const FirebaseContext = createContext({});
 export const SelectedChatContext = createContext({});
 
+export const clearChatData = (setChatUsers, setMessages, setChatData) => {
+    setChatUsers(null)
+    setMessages([])
+    setChatData(null)
+}
+
 const RootLayout = () => {
     // console.log('root rerender')
     const [user, setUser] = useState(null);

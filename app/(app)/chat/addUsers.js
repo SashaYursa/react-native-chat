@@ -11,17 +11,17 @@ import { database } from '../../../config/firebase'
 
 const AddUsers = () => {
 	const [searchText, setSearchText] = useState('')
-	const {chatData, setChatData} = useContext(SelectedChatContext)
+	const {chatData, setChatData, setChatUsers, chatUsers} = useContext(SelectedChatContext)
 	const debouncedSearchValue = useDebounce(searchText, 1000);
 	const inputRef = useRef()
 	useEffect(() => {
-    if(inputRef.current){
-      inputRef.current.focus();
-    }
-  }, [inputRef])
+		if(inputRef.current){
+		inputRef.current.focus();
+		}
+  	}, [inputRef])
 
 	const addUser = useCallback(async (user) => {
-		console.log(chatData)
+		// console.log(chatData)
 		if(chatData.type === 'private'){
 			Alert.alert('Chat type is private', 'For add more users create public chat', [
 				{
@@ -35,27 +35,43 @@ const AddUsers = () => {
 			const findUser = chatDocData.users.find(id => id === user.id)
 			console.log(findUser)
 			if(findUser){
-				Alert.alert('Error', 'User already in chat', [
+				return Alert.alert('Error', 'User already in chat', [
 					{
 						text: "Ok"
 					}
 				])
 			}
-			// setDoc(chatDoc, {
-			// 	...chatDocData, 
-			// 	users: [...chatDocData.users, user.id],
-			// 	usersInfo: [...chatDocData.usersInfo, {id: user.id, lastSeen: new Date()}]
-			// })
-			// .then(res => {
-			// 	console.log('------> update')
-			// })
+			setChatData(chatData => {
+				console.log('chatData, setted ------->')
+				return {
+					...chatData,
+					users: [
+						...chatData.users,
+						user.id
+					]
+				}
+			})
+			setChatUsers(chatUsers => {
+				return [
+					...chatUsers,
+					{
+						...user,
+						onlineStatus: false,
+						timeStamp: null
+					}
+				]
+			})
+			setDoc(chatDoc, {
+				...chatDocData, 
+				users: [...chatDocData.users, user.id]
+			})
 		}
 	})
   return (
     <View style={{paddingTop:Platform.OS === 'android' ? 25 : 5, flex: 1}}>
         <TopSearch inputRef={inputRef} searchText={searchText} setSearchText={setSearchText} hasBack={Platform.OS === 'ios' ? false : true}/>
 				<UsersContainer style={{flex: 1}}>
-        	<UsersList searchValue={debouncedSearchValue} userAction={addUser} hideUsers={[...chatData.users]}/>
+        	<UsersList searchValue={debouncedSearchValue} userAction={addUser} hideUsers={chatData.users}/>
       	</UsersContainer>
     </View>
   )

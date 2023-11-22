@@ -58,7 +58,7 @@ const Chat = () => {
   const navigation = useNavigation();
   const preloadImagesCountError = preloadImages?.length > 4 ? true : false;
   const buttonDisable = preloadImages?.length > 5 || !preloadImages?.length && newMessageText === '';
-  const {chatUsers, chatData, setChatUsers, setChatData, messages, setMessages} = useContext(SelectedChatContext)
+  const {chatUsers, chatData, setChatUsers, setChatData, messages = [], setMessages} = useContext(SelectedChatContext)
   //--------- виконується 1
   //--------- завантаження даних поточного чату
   //--------- встановлення поля lastSeen для залогіненого юзера в табл. chats значення - online
@@ -68,13 +68,9 @@ const Chat = () => {
     const unsubscribe = onSnapshot(qChat, { includeMetadataChanges: true }, async (data) => {
       const chat = data.data();
       const newChatData = {...chat, id: data.id}
-      // if(JSON.stringify(newChatData) !== JSON.stringify(chatData)){
         if(!compareObjects(newChatData, chatData)){
           setChatData(newChatData);
-          // console.log('not equals', newChatData, chatData)
         }
-        // console.log('chat data not equals', JSON.stringify(newChatData), '----------------', JSON.stringify(chatData))
-      // }
     })
     return async () => {
       unsubscribe();
@@ -98,110 +94,79 @@ const Chat = () => {
     loadUsers();
   }, [chatData])
 
-  //----- виконується 3
-  //----- встановлення даних про співрозмовника в хедері чату
-  //----- виконується після завантаження користувачів чату
+  
+  // ----------- виконується 3
+  // ----------- виконується після завантаження всіх користувачів в чаті 
+  // ----------- оримує повідомлення чату і стежить за їх оновленнями
+  useEffect(() => {
+    if(messagesCount){
+    const q = query(collection(database, 'messages', String(id), 'message'), orderBy('createdAt', 'desc'), limit(30))
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+      let newMessages = []
+      snapshot.docs.forEach(doc => {
+          newMessages.push({...doc.data(), id: doc.id})
+        })
+        setFetchedMessages(newMessages)
+    }, 
+    (error) => {console.log(error, '----> firebase onSnapshot messages')})
+    return () => unsubscribe();
+    }
+  }, [messagesCount])
+
+  useEffect(() => {
+    const setCount = async () => {
+      setMessagesCount((await getCountFromServer(collection(database, 'messages', id, 'message'))).data().count)
+    }
+    setCount()
+  }, [])
+
+  const setFetchedMessages = async (fetchedMessages) => {
+    console.log('out')
+    if(!(messages.length === 0 && messagesCount > 1 && fetchedMessages.length < 2)){
+      console.log('in')
+      setMessages(fetchedMessages)
+      setLoadMessagesStatus({
+        messagesCount: messagesCount,
+        loadedMessagesCount: fetchedMessages.length,
+        canLoadedMessages: true
+      })
+    }
+  }
+
+      //----- виконується 3
+      //----- встановлення даних про співрозмовника в хедері чату
+      //----- виконується після завантаження користувачів чату
   useLayoutEffect(() => {
     if(!chatUsersIsLoading){
       const user = chatUsers[0];
       navigation.setOptions({
         headerTitle: () => {
-        if(chatData.type === 'private'){
-          return <ChatNavigationHeaderTitle 
-          contentPressHandle={() => router.push(`user/${user.id}`)} 
-          chatType={chatData.type} 
-          chatImage={user.image}
-          name={user.displayName}
-          online={{onlineStatus: user.onlineStatus, timeStamp: user.timeStamp}}
-          selectedMessagesCount={selectedMessages.length}
-          handleSelectedMessages={() => deleteMessages(selectedMessages)}
-          />
+          if(chatData.type === 'private'){
+            return <ChatNavigationHeaderTitle 
+            contentPressHandle={() => router.push(`user/${user.id}`)} 
+            chatType={chatData.type} 
+            chatImage={user.image}
+            name={user.displayName}
+            online={{onlineStatus: user.onlineStatus, timeStamp: user.timeStamp}}
+            selectedMessagesCount={selectedMessages.length}
+            handleSelectedMessages={() => deleteMessages(selectedMessages)}
+            />
+          }
+          if(chatData.type === 'public'){
+            return <ChatNavigationHeaderTitle 
+            contentPressHandle={() => router.push('chat/info')} 
+            chatType={chatData.type} 
+            chatImage={chatData.image}
+            name={chatData.name}
+            online={chatUsers.map(chatUser => chatUser.onlineStatus)}
+            selectedMessagesCount={selectedMessages.length}
+            handleSelectedMessages={() => deleteMessages(selectedMessages)}
+            />
+          }
         }
-        if(chatData.type === 'public'){
-          return <ChatNavigationHeaderTitle 
-          contentPressHandle={() => router.push('chat/info')} 
-          chatType={chatData.type} 
-          chatImage={chatData.image}
-          name={chatData.name}
-          online={chatUsers.map(chatUser => chatUser.onlineStatus)}
-          selectedMessagesCount={selectedMessages.length}
-          handleSelectedMessages={() => deleteMessages(selectedMessages)}
-          />
-        }
-        }
-          // <View style={{flexDirection: 'row', width: '90%', justifyContent: 'space-between'}}>
-          //   <TouchableOpacity onPress={() => {router.push(`user/${user.id}`)}} style={{flexDirection: 'row', alignItems: 'center', gap: 10}}>
-          //     <UserImage style={{width: 35, height: 35, borderRadius: 50, overflow: 'hidden', backgroundColor: "#eaeaea"}} imageUrl={user.image} />
-          //     <View >
-          //       <Text style={{fontSize: 18, fontWeight: 700}}>{user.displayName}</Text>
-          //       <View style={{flexDirection: 'row', gap: 5, alignItems: 'center'}}>
-          //         {user.onlineStatus 
-          //       ? 
-          //         <>
-          //           <View style={{width: 15, height: 15, borderRadius: 15, backgroundColor: 'green'}}></View>
-          //           <Text>Зараз онлайн</Text>
-          //         </>
-          //       : 
-          //         <>
-          //           <View style={{width: 15, height: 15, borderRadius: 15, backgroundColor: 'gray'}}></View>
-          //           <TimeAgo date={user.timeStamp} textAfter="тому"/>
-          //         </>
-          //       }
-          //       </View>
-          //     </View>
-          //   </TouchableOpacity>
-          //   {selectedMessages.length > 0 
-          //     ? <TouchableOpacity onPress={() => deleteMessages(selectedMessages)} style={{alignItems: 'center', justifyContent: 'center', position: 'relative'}}>
-          //       <Image style={{width: 30, height: 30}} source={require('../../../assets/delete.png')} />
-          //       <View style={{position: 'absolute', top: -3, right: -3, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 8, backgroundColor: 'blue'}}>
-          //         <Text style={{fontWeight: 700, color: '#fff', fontSize: 12}}>
-          //           {selectedMessages.length}
-          //         </Text>
-          //       </View>
-          //     </TouchableOpacity>
-          //     : <TouchableOpacity style={{alignItems: 'center', justifyContent: 'center'}} onPress={openChatInfo}>
-          //       <View style={{width: 30, height: 30}}>
-          //         <Image source={require('../../../assets/chat-info.png')} style={{height: '100%', width: '100%'}}/>
-          //       </View>
-          //     </TouchableOpacity>
-          //   }
-          // </View>
       })
     }
   }, [chatUsers, selectedMessages])
-
-  // ----------- виконується 3
-  // ----------- виконується після завантаження всіх користувачів в чаті 
-  // ----------- оримує повідомлення чату і стежить за їх оновленнями
-  useEffect(() => {
-    const fetchMessages = async () => {
-      const q = query(collection(database, 'messages', String(id), 'message'), orderBy('createdAt', 'desc'), limit(30))
-      const loadedMessages = await loadMessages(q);
-      const countMessages = (await getCountFromServer(collection(database, 'messages', id, 'message'))).data().count
-        if(!compareObjects(loadedMessages, messages)){
-          setMessages(loadedMessages)
-        }
-        setLoadMessagesStatus({
-          messagesCount: countMessages,
-          loadedMessagesCount: loadedMessages.length,
-          canLoadedMessages: true
-        })
-    }
-    if(!chatUsersIsLoading){
-    fetchMessages();
-    const snapshotQ = query(collection(database, 'messages', String(id), 'message'))
-
-    const unsubscribe = onSnapshot(snapshotQ, async (snapshot) => {
-      snapshot.docChanges().forEach(change => {
-        if(change.type === 'modified'){
-          const addedMessage = change.doc.data()
-          setMessages(m => [addedMessage, ...m])
-        }
-      })
-    })
-    return () => unsubscribe();
-    }
-  }, [chatUsersIsLoading])
 
   //--------------- виокнується 4 
   //--------------- Отримує статус кожного користувача чату і стежить за його оновленнями
@@ -211,28 +176,34 @@ const Chat = () => {
     let unsubs = [];
     if(!loading){
       unsubs = chatUsers.map(chatUser => {
-         const unsub = onValue(realRef(rDatabase, '/status/' + chatUser.id), (snapShot) => {
-            const value = snapShot.val();
-            setChatUsers(chats => {
-                return chats.map(u => {
-                    if(chatUser.id === u.id){
-                        return {
-                            ...u,
-                            onlineStatus: value.isOnline,
-                            timeStamp: value.timeStamp
-                        }
+        const unsub = onValue(realRef(rDatabase, '/status/' + chatUser.id), (snapShot) => {
+          const value = snapShot.val();
+          setChatUsers(chats => {
+            return chats.map(u => {
+              if(chatUser.id === u.id){
+                    return {
+                        ...u,
+                        onlineStatus: value.isOnline,
+                        timeStamp: value.timeStamp
                     }
-                    return u;
-                })
+                }
+                return u;
             })
-         })
-        return unsub;
+        })
       })
-    }
-    return () => unsubs.forEach(unsub => {
-      unsub();    
-    });
+    return unsub;
+  })
+  }
+  return () => unsubs.forEach(unsub => {
+  unsub();    
+  });
   }, [loading])
+
+  useEffect(() => {
+    if(chatData && chatUsers && messages){
+      setLoading(false)
+    }
+  }, [chatData, chatUsers, messages])
 
   //------- вибірка даних всіх користувачів в даному чаті,
   //------- встановлення їх в змінну chatUsers
@@ -256,31 +227,22 @@ const Chat = () => {
   }
 
   const loadPreviousMessages = useCallback(async () => {
-    fetchPrevMessagess()
-  })
+    if(!loading){
+      fetchPrevMessagess()
+    }
+  }, [messagesCount, messages, loading])
 
   const fetchPrevMessagess = async () => {
-    if(loadMessagesStatus.loadedMessagesCount < loadMessagesStatus.messagesCount){
-    setLoadMessagesStatus(status => ({
-      ...status,
-      canLoadedMessages: false
-    }))
+    console.log(messages.length, messagesCount)
+    if(messages.length < messagesCount){
     setLoading(true)
-    const lastDoc = messages[messages.length - 1]
+    const lastDoc = messages[messages?.length - 1]
     const docSnap = await getDoc(doc(database, "messages", id, "message", lastDoc.id));
     const q = query(collection(database, 'messages', String(id), 'message'), orderBy('createdAt', 'desc'), limit(30), startAt(docSnap))
     const newMessages = await loadMessages(q)
     setLoading(false)
     newMessages.shift();
-    if(newMessages.length === 0) setHasNextMessages(false)
-    else {
-      setMessages(m => [...m, ...newMessages])
-    }
-    setLoadMessagesStatus(prevStatus => ({
-      ...prevStatus,
-      loadedMessagesCount: prevStatus.loadedMessagesCount + newMessages.length,
-      canLoadedMessages: true
-    }))
+    setMessages(prev => [...prev, ...newMessages])
     }
   }
 
@@ -288,19 +250,14 @@ const Chat = () => {
     const result = await getDocs(query)
     const messages = result.docs.map(doc => {
       const message = doc.data()
-      const userImage = chatUsers.find(chatUser => chatUser.id === message.uid)?.image 
-              ? chatUsers.find(chatUser => chatUser.id === message.uid).image
-              : null
               return {
                 ...message,
-                id: doc.id,
-                userImage
+                id: doc.id
               }          
             })
-    setLoading(false)
+    
     return messages
   }
-
 
   const deleteMessages = (messagesForDelete) => {
     messagesForDelete.forEach(message => {
@@ -363,7 +320,6 @@ const Chat = () => {
         }
   }, [])
 
-  
   const selectImages = async () => {
     if(preloadImagesCountError){
       Alert.alert('Error', 'Max count images is 5', [
@@ -394,7 +350,7 @@ const Chat = () => {
   }
 
   const removePreloadImage = (image) => {
-    if(preloadImages.length === 1){
+    if(preloadImages?.length === 1){
       setPreloadImages(null);
     }
     else{
@@ -412,7 +368,7 @@ const Chat = () => {
     }
     const newText = newMessageText === '' ? null : newMessageText
     const data = {
-       uid: user.uid,
+      uid: user.uid,
       text: newText,
       media: mediaItems,
       createdAt: serverTimestamp()
@@ -448,16 +404,20 @@ const Chat = () => {
     .catch(error => console.log('uploadTask error -----> ', error))
   }
 
+  if(!chatUsers || !messages || !chatData){
+    return <ActivityIndicator size='large'/>
+  }
+
   return (
     <>
     <ChatCanvas>
       <> 
-      { loading && <ActivityIndicator style={{alignSelf: 'center'}} color={'blue'} size={'large'}/>}
-      {messages.length === 0 
+      {loading && <ActivityIndicator style={{alignSelf: 'center'}} color={'blue'} size={'large'}/>}
+      {!messages.length
         ? <View>
             <Text>No data</Text>
           </View>
-        : <ChatItemContainer loadMessagesStatus={loadMessagesStatus} messages={messages} selectedMessages={selectedMessages} updateSelectedMessages={updateSelectedMessages} loadPreviousMessages={loadPreviousMessages}/>
+        : <ChatItemContainer messagesCount={messagesCount} chatData={chatData} chatUsers={chatUsers} messages={messages} selectedMessages={selectedMessages} updateSelectedMessages={updateSelectedMessages} loadPreviousMessages={loadPreviousMessages}/>
       }
       </>
       </ChatCanvas>

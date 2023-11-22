@@ -5,9 +5,7 @@ import UserImage from './UserImage'
 import CachedImage from './CachedImage'
 import { collection, endAt, getDocs, orderBy, query, startAt } from 'firebase/firestore'
 import { AuthUserContext, FirebaseContext } from '../_layout'
-let i = 0;
 const UsersList = memo(({searchValue, userAction, hideUsers = null}) => {
-    console.log( ++i + 'rerender')
     const { user } = useContext(AuthUserContext)
     const {database} = useContext(FirebaseContext)
     const [usersLoading, setUsersLoading] = useState(true);
@@ -17,7 +15,33 @@ const UsersList = memo(({searchValue, userAction, hideUsers = null}) => {
         if(Keyboard.isVisible()){
             Keyboard.dismiss()
         }
-    }
+    }    
+
+    useEffect(() => {
+        getLastUsers();
+    }, [])
+
+    useEffect(() => {
+        const value = searchValue.trim();
+        if(value.length > 0){
+            setUsersLoading(true);
+            const qUsers = query(collection(database, "users"), 
+            orderBy('displayName'),
+            startAt(value),
+            endAt(value + "\uf8ff"));
+            fetchUsers(qUsers);
+        }
+        else{
+            setUsersLoading(true);
+            getLastUsers();
+        }
+    }, [searchValue])
+
+    useEffect(() => {
+        if(hideUsers?.length && searchUsers){
+            setSearchUsers(searchU => searchU.filter(s => s.id !== hideUsers.find(hide => hide === s.id)))
+        }
+    }, [hideUsers])
 
     const getLastUsers = () => {
         const qUsers = query(collection(database, "users"), orderBy("lastCheckedStatus", "desc"));
@@ -36,26 +60,6 @@ const UsersList = memo(({searchValue, userAction, hideUsers = null}) => {
         setUsersLoading(false);
     }
 
-    useEffect(() => {
-        getLastUsers();
-      }, [])
-    
-    useEffect(() => {
-    const value = searchValue.trim();
-    if(value.length > 0){
-        setUsersLoading(true);
-        const qUsers = query(collection(database, "users"), 
-        orderBy('displayName'),
-        startAt(value),
-        endAt(value + "\uf8ff"));
-        fetchUsers(qUsers);
-    }
-    else{
-        setUsersLoading(true);
-        getLastUsers();
-    }
-    }, [searchValue])
-
     const renderItem = ({item}) => {
         return (
             <UserItem activeOpacity={.6} onPress={() => userAction(item)}>
@@ -65,8 +69,7 @@ const UsersList = memo(({searchValue, userAction, hideUsers = null}) => {
         )
     }
     
-
-  return usersLoading
+    return usersLoading
     ?  (<ActivityIndicator size={'large'}/>)
     : searchUsers.length > 0 
         ? (<FlatList contentContainerStyle={{gap: 5, paddingBottom: 10}}

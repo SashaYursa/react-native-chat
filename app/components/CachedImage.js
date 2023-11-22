@@ -5,7 +5,9 @@ import shorthash from 'shorthash'
 
 const CachedImage = ({url, style, blurRadius = 0}) => {
     useEffect(() => {
-        cached();
+        if(url){
+            cached();
+        }
     }, [])
     const [uri, setUri] = useState(null);
     
@@ -23,6 +25,11 @@ const CachedImage = ({url, style, blurRadius = 0}) => {
         setUri(newImage.uri);
     }
 
+    if(!url){
+        return (
+            <Image style={style} source={require('../../assets/default-user.png')} blurRadius={blurRadius} />
+        )
+    }
     return (
         <Image style={style} source={{uri}} blurRadius={blurRadius} />
     )

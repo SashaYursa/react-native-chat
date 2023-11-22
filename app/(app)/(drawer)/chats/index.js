@@ -5,7 +5,7 @@ import ChatListItem from '../../../components/ChatList/ChatListItem'
 import { DrawerLayoutAndroid, TouchableOpacity } from 'react-native-gesture-handler'
 import { Link, useRouter } from 'expo-router'
 import { collection, doc, getDoc, getDocs, limit, limitToLast, onSnapshot, orderBy, query, where } from 'firebase/firestore'
-import { AuthUserContext } from '../../../_layout'
+import { AuthUserContext, SelectedChatContext, clearChatData } from '../../../_layout'
 import { database, rDatabase } from '../../../../config/firebase'
 import { setParams } from 'expo-router/src/global-state/routing'
 import { checkUserStatus, getUserData } from '../../_layout'
@@ -16,6 +16,7 @@ const Chats = () => {
     const [usersOnlineStatus, setUsersOnlineStatus] = useState(null);
     const [chatsLastMessages, setChatsLastMessages] = useState(null);
     const [refresh, setRefresh] = useState(false);
+    const {setMessages, setChatUsers, setChatData} = useContext(SelectedChatContext)
     const getLastMessage = async (chatId) => {
         const qMessages = query(collection(database, "messages", String(chatId), "message"), orderBy('createdAt', 'desc'), limit(1));
         const data = await getDocs(qMessages)
@@ -121,6 +122,7 @@ const Chats = () => {
     const router = useRouter();
 
     const hadnleChatClick = (chat) => {
+        clearChatData(setChatUsers, setMessages, setChatData)
         moveToChat(chat.id)
     }
 

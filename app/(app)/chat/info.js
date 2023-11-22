@@ -69,7 +69,9 @@ const Info = () => {
                             </UserImageContainer>
                             <UserDataContainer>
                                 <UserDataText style={{fontWeight: 700}}>
-                                    Mi4
+                                    {
+                                        chatUser.displayName
+                                    }
                                 </UserDataText>
                                 {chatUser.onlineStatus
                                     ? <UserDataText>online</UserDataText>
