@@ -5,7 +5,7 @@ import styled from 'styled-components';
 import ChatItem from './ChatItem';
 
 
-const ChatItemContainer = React.memo(({messagesCount, messages, chatData, chatUsers, selectedMessages, updateSelectedMessages, loadPreviousMessages}) => {
+const ChatItemContainer = React.memo(({messagesCount, messages, chatData, chatUsers, selectedMessages, updateSelectedMessages, loadPreviousMessages}) => {  
     console.log('rerender')
     const [endReached, setEndReached] = useState(false);
     const [allowSetEndReached, setAllowSetEndReached] = useState(false);
@@ -19,6 +19,43 @@ const ChatItemContainer = React.memo(({messagesCount, messages, chatData, chatUs
         }
       }
     }, [scrollRef, endReached, messagesCount])
+    const checkDate = (date) => {
+      function isYesterday(date) {
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+      
+        // 👇️ Yesterday's date
+        console.log(date);
+      
+        if (yesterday.toDateString() === date.toDateString()) {
+          return true;
+        }
+      
+        return false;
+      }
+      function isToday(date) {
+        const today = new Date();
+      
+        // 👇️ Today's date
+        console.log(today);
+      
+        if (today.toDateString() === date.toDateString()) {
+          return true;
+        }
+      
+        return false;
+      }
+
+      if(isToday(date)){
+        return "today"
+      }else if(isYesterday(date)){
+        return "yesterday"
+      }
+      else{
+        return "not yesterday"
+      }
+    }
+
     const rerenderItem = ({ item, index }) => { 
       let messageUser;
       if(item.uid !== user.uid){
@@ -32,6 +69,10 @@ const ChatItemContainer = React.memo(({messagesCount, messages, chatData, chatUs
         backgroundColor: '#85aded'
       }
       return(
+        <>
+        {/* <DateSplitter>
+          <DateSplitterText>today</DateSplitterText>
+        </DateSplitter> */}
         <MessagesContainer 
         delayLongPress={300} 
         onLongPress={() => {
@@ -48,11 +89,12 @@ const ChatItemContainer = React.memo(({messagesCount, messages, chatData, chatUs
             messageMedia={item.media}
             messageText={item.text}
             messageId={item.id}
-            messageCreatedAt={item.createdAt}
+            messageCreatedAt={item.createdAt.seconds}
             isAuthor={item.uid === user.uid}
             chatType={chatData.type}
             selectMessage={updateSelectedMessages} />
         </MessagesContainer>
+        </>
       )
     }
     console.log(chatData.type)
@@ -94,6 +136,17 @@ position: relative;
 const ChatScroll = styled.FlatList`
 padding: 0 5px;
 flex-direction: column;
+`
+
+const DateSplitter = styled.View`
+padding: 5px 10px;
+border-radius: 24px;
+background-color: #0F0F0F;
+align-self: center;
+`
+const DateSplitterText = styled.Text`
+font-size: 12px;
+color: #fff;
 `
 
 export default ChatItemContainer

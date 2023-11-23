@@ -12,6 +12,8 @@ const ChatItem = React.memo(({userName, isAuthor, userImage, chatType, messageMe
         setIsOpenedImages(true);
     }
     const {user} = useContext(AuthUserContext);
+    const date = new Date(messageCreatedAt * 1000)
+    const dateText = String(date.getHours() < 10 ? `0${date.getHours()}` : date.getHours()) + ":" + String(date.getMinutes() < 10 ? `0${date.getMinutes()}` : date.getMinutes()); 
     return (
     <MessageOutsideContaier style={isAuthor ? {justifyContent: 'flex-end'} : {justifyContent: 'flex-start'} }>
         { !isAuthor &&
@@ -35,6 +37,9 @@ const ChatItem = React.memo(({userName, isAuthor, userImage, chatType, messageMe
                     {messageText}
                 </MessageText>
             }
+            <MessageInfo>
+                <MessageCreatedAt>{dateText}</MessageCreatedAt>
+            </MessageInfo>
         </MessageDataContainer>    
         {messageMedia && 
         <ImageView 
@@ -110,6 +115,19 @@ font-size: 14px;
 font-weight: 400;
 color: #fff;
 padding: 2px 5px;
+`
+
+const MessageCreatedAt = styled.Text`
+font-size: 10px;
+font-weight: 400;
+color: #fff;
+
+`
+
+const MessageInfo = styled.View`
+flex-direction: row;
+align-self: flex-end;
+margin: 2px 2px 0 2px;
 `
 
 export default ChatItem
