@@ -6,43 +6,39 @@ import ChatItem from './ChatItem';
 
 
 const ChatItemContainer = React.memo(({messagesCount, messages, chatData, chatUsers, selectedMessages, updateSelectedMessages, loadPreviousMessages}) => {  
-    console.log('rerender')
     const [endReached, setEndReached] = useState(false);
     const [allowSetEndReached, setAllowSetEndReached] = useState(false);
     const {user} = useContext(AuthUserContext);
     const scrollRef = useRef();
     useEffect(() => {
       if(endReached){
-        if(messagesCount > messages.length){
-          loadPreviousMessages()
+        let messagesLenght = 0;
+        for (const key in messages) {
+          messagesLenght += messages[key].length
+        }
+        console.log(messagesCount, '---', messagesLenght)
+        if(messagesCount > messagesLenght){
+          console.log(messagesLenght, 'len')
+          loadPreviousMessages(messagesLenght)
           setEndReached(false)
         }
       }
     }, [scrollRef, endReached, messagesCount])
+
     const checkDate = (date) => {
-      function isYesterday(date) {
+      function isYesterday() {
         const yesterday = new Date();
         yesterday.setDate(yesterday.getDate() - 1);
-      
-        // 👇️ Yesterday's date
-        console.log(date);
-      
         if (yesterday.toDateString() === date.toDateString()) {
           return true;
         }
-      
         return false;
       }
       function isToday(date) {
         const today = new Date();
-      
-        // 👇️ Today's date
-        console.log(today);
-      
         if (today.toDateString() === date.toDateString()) {
           return true;
         }
-      
         return false;
       }
 
@@ -52,53 +48,59 @@ const ChatItemContainer = React.memo(({messagesCount, messages, chatData, chatUs
         return "yesterday"
       }
       else{
-        return "not yesterday"
+        return date.getDate() + "-" + (date.getMonth() + 1) + "-" + date.getFullYear(); 
       }
     }
 
-    const rerenderItem = ({ item, index }) => { 
-      let messageUser;
-      if(item.uid !== user.uid){
-        messageUser = chatUsers.find(u => u.id === item.uid);
-      }
-      else{
-        messageUser = user
-      }
-      const is =  selectedMessages.includes(item.id);
-      const selected = is && {
-        backgroundColor: '#85aded'
-      }
+    const rerenderItem = ({ item }) => {
+      const splitDate =  item.split('_');
+      const date = new Date(splitDate[0], splitDate[1], splitDate[2])
+      const dateString = checkDate(date);
       return(
-        <>
-        {/* <DateSplitter>
-          <DateSplitterText>today</DateSplitterText>
-        </DateSplitter> */}
-        <MessagesContainer 
+         <>
+        {messages[item].map(itemData => {
+                let messageUser;
+                if(itemData.uid !== user.uid){
+                  messageUser = chatUsers.find(u => u.id === itemData.uid);
+                }
+                else{
+                  messageUser = user
+                }
+                const is =  selectedMessages.includes(itemData.id);
+                const selected = is && {
+                  backgroundColor: '#85aded'
+                }
+          return(
+            <MessagesContainer 
         delayLongPress={300} 
         onLongPress={() => {
-          updateSelectedMessages(item)
+          updateSelectedMessages(itemData)
         }} 
-        key={item.id}
+        key={itemData.id}
         activeOpacity={1} 
-        style={item.uid === user.uid 
+        style={itemData.uid === user.uid 
         ? {justifyContent: 'flex-end', ...selected} 
         : {justifyContent: 'flex-start', ...selected} }>  
 
           <ChatItem userName={messageUser?.displayName}
             userImage={messageUser.image}
-            messageMedia={item.media}
-            messageText={item.text}
-            messageId={item.id}
-            messageCreatedAt={item.createdAt.seconds}
-            isAuthor={item.uid === user.uid}
+            messageMedia={itemData.media}
+            messageText={itemData.text}
+            messageId={itemData.id}
+            messageCreatedAt={itemData.createdAt.seconds}
+            isAuthor={itemData.uid === user.uid}
             chatType={chatData.type}
             selectMessage={updateSelectedMessages} />
         </MessagesContainer>
+          )
+        })}
+        <DateSplitter>
+          <DateSplitterText>{dateString}</DateSplitterText>
+        </DateSplitter>
         </>
       )
     }
-    console.log(chatData.type)
-    
+
     return (
       <ChatScroll contentContainerStyle={{paddingVertical: 10}}
                   ref={scrollRef}
@@ -111,7 +113,7 @@ const ChatItemContainer = React.memo(({messagesCount, messages, chatData, chatUs
                     setAllowSetEndReached(true)
                   }}
                   inverted showsVerticalScrollIndicator={false} 
-                  data={messages} 
+                  data={Object.keys(messages)} 
                   renderItem={rerenderItem} 
                   initialNumToRender={19}/>
     )
