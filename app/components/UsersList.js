@@ -63,7 +63,7 @@ const UsersList = memo(({searchValue, userAction, hideUsers = null}) => {
     const renderItem = ({item}) => {
         return (
             <UserItem activeOpacity={.6} onPress={() => userAction(item)}>
-                <UserImage imageUrl={item.image} style={{width: 40, height: 40, borderRadius: 20, backgroundColor: '#fff'}} source={require('../../assets/default-user.png')}/>
+                <UserImage imageUrl={item.image} style={{width: 40, height: 40, borderRadius: 20, backgroundColor: '#fff'}}/>
                 <UserName>{item.displayName}</UserName>
             </UserItem>
         )
