@@ -1,5 +1,5 @@
-import { View, Text, ScrollView, Image, TextInput, TouchableOpacity, ActivityIndicator, PermissionsAndroid, KeyboardAvoidingView, FlatList, Alert, Platform, SafeAreaView } from 'react-native'
-import React, { createContext, memo, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { View, Text, Alert, Platform, ActivityIndicator} from 'react-native'
+import React, { useCallback, useContext, useEffect, useLayoutEffect, useState } from 'react'
 import styled from 'styled-components'
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router'
 import {
@@ -8,57 +8,47 @@ import {
   onSnapshot,
   query,
   orderBy,
-  serverTimestamp,
   doc,
   getDoc,
   where,
   getDocs,
-  setDoc,
   limit,
   deleteDoc,
-  startAfter,
   startAt,
   getCountFromServer,
 } from 'firebase/firestore'
 import * as FileSystem from 'expo-file-system'
-import { getDownloadURL, ref, getStorage, deleteObject, uploadBytesResumable } from 'firebase/storage'
+import { ref, getStorage, deleteObject } from 'firebase/storage'
 import {ref as realRef} from 'firebase/database'
 import "firebase/compat/auth";
 import "firebase/compat/firestore";
 import { AuthUserContext, FirebaseContext, SelectedChatContext } from '../../_layout'
-import * as ImagePicker from 'expo-image-picker'
-import PreloadImages from '../../components/PreloadImages'
-import { fileStorage, rDatabase } from '../../../config/firebase'
-import ChatItem from '../../components/ChatItem'
-import CachedImage from '../../components/CachedImage'
+import { rDatabase } from '../../../config/firebase'
 import { onValue } from 'firebase/database'
 import ChatItemContainer from '../../components/ChatItemContainer'
 import shorthash from 'shorthash'
-import UserImage from '../../components/UserImage'
-import TimeAgo from '../../components/TimeAgo'
 import { compareObjects } from '../_layout'
 import ChatNavigationHeaderTitle from '../../components/ChatNavigationHeaderTitle'
+import ChatActions from '../../components/ChatActions'
 
 const Chat = () => {
   // console.log('rerender', Platform.OS)
   // const [messages, setMessages] = useState([]);
   const [selectedMessages, setSelectedMessages] = useState([])
   const [loading, setLoading] = useState(true);
-  const [newMessageText, setNewMessageText] = useState('');
-  const [preloadImages, setPreloadImages] = useState(null);
   const { database } = useContext(FirebaseContext);
   const { user } = useContext(AuthUserContext);
   const [chatUsersIsLoading, setChatUsersIsLoading] = useState(true);
-  const [canLoadedMessages, setCanLoadedMessages] = useState(false); 
   const [messagesCount, setMessagesCount] = useState(null)
+  const [canFetched, setCanFetched] = useState(false)
+  const [canSnapshot, setCanSnapshot] = useState(false)
   const [lastLoadedId, setLastLoadedId] = useState(null)
   const [loadMessagesStatus, setLoadMessagesStatus] = useState(null)
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const navigation = useNavigation();
-  const preloadImagesCountError = preloadImages?.length > 4 ? true : false;
-  const buttonDisable = preloadImages?.length > 5 || !preloadImages?.length && newMessageText === '';
-  const {chatUsers, chatData, setChatUsers, setChatData, messages = [], setMessages} = useContext(SelectedChatContext)
+  // const [messages, setMessages] = useState({});
+  const {chatUsers, chatData, setChatUsers, setChatData, messages = {}, setMessages} = useContext(SelectedChatContext)
   //--------- виконується 1
   //--------- завантаження даних поточного чату
   //--------- встановлення поля lastSeen для залогіненого юзера в табл. chats значення - online
@@ -94,53 +84,90 @@ const Chat = () => {
     loadUsers();
   }, [chatData])
 
+  // useEffect(() => {
+  //   const firstFetch = async () => {
+  //     const prevQ = query(collection(database, 'messages', String(id), 'message'), orderBy('createdAt', 'desc'), limit(100))
+  //     const docs = await getDocs(prevQ);
+  //     let lastDoc = null;
+  //     docs.forEach(data => {
+  //       // console.log('for each 111111')
+  //       fetchPrevMessagess(0, data)
+  //     })
+  //   }
+  //   // console.log('here rerender')
+  //   firstFetch();
+    
+  // }, [canFetched])
   
   // ----------- виконується 3
   // ----------- виконується після завантаження всіх користувачів в чаті 
   // ----------- оримує повідомлення чату і стежить за їх оновленнями
   useEffect(() => {
-    if(messagesCount){
-    const q = query(collection(database, 'messages', String(id), 'message'), orderBy('createdAt', 'desc'), limit(30))
+    if(canFetched){
+    const q = query(collection(database, 'messages', String(id), 'message'), orderBy('createdAt', 'desc'), limit(1))
     const unsubscribe = onSnapshot(q, async (snapshot) => {
       let newMessages = {}
       let messagesLenght = 0;
       let lastId = null;
-      snapshot.docs.forEach((doc, index) => {
-        const messageData = doc.data();
-        const messageCreatedAt = new Date(messageData.createdAt.seconds * 1000)
-        const messageSlug = messageCreatedAt.getFullYear() + "_" + messageCreatedAt.getMonth() + "_" + messageCreatedAt.getDate(); 
-        if(newMessages[messageSlug]){
-          newMessages[messageSlug].push({...messageData, id: doc.id})
-        }else{
-          newMessages[messageSlug] = [
-            {...messageData, id: doc.id}
-          ]
+      snapshot.docChanges().forEach(change => {
+        if(change.type === 'added') {
+          const messageData = change.doc.data();
+          const id = change.doc.id;
+          if(!messageData.createdAt){
+            messageData.createdAt = {
+              seconds: Date.now()
+            }
+          }else{
+            messageData.createdAt = {
+              ...messageData.createdAt,
+              seconds: messageData.createdAt.seconds * 1000
+            }
+          }
+          const messageCreatedAt = new Date(messageData.createdAt.seconds)
+          const messageSlug = messageCreatedAt.getFullYear() + "_" + messageCreatedAt.getMonth() + "_" + messageCreatedAt.getDate(); 
+          if(newMessages[messageSlug]){
+            newMessages[messageSlug].push({...messageData, id})
+          }else{
+            newMessages[messageSlug] = [
+              {...messageData, id}
+            ]
+          }
+          lastId = id;
+          messagesLenght++;
         }
-        lastId = doc.id;
-        messagesLenght++;
-        })
-        // Object.keys(newMessages).forEach(key => {
-        //   console.log('\n', key, ': ', newMessages[key])
-        // })
-        
-        setMessages(newMessages)
-        setLastLoadedId(lastId)
-        setLoadMessagesStatus({
-          messagesCount: messagesCount,
-          loadedMessagesCount: messagesLength,
+      })
+        setMessages(oldMessages => {
+          const prevKeys = Object.keys(oldMessages);
+          const assignMessages = oldMessages;
+          for (const key in newMessages) {
+            if(prevKeys.find(prevKey => prevKey === key)){
+              assignMessages[key].unshift(...newMessages[key])
+            }else{
+              assignMessages[key] = newMessages[key]
+            }
+          }
+          return assignMessages
         })
     }, 
     (error) => {console.log(error, '----> firebase onSnapshot messages')})
     return () => unsubscribe();
     }
-  }, [messagesCount])
+  }, [canFetched])
 
   useEffect(() => {
+    console.log('i use')
     const setCount = async () => {
       setMessagesCount((await getCountFromServer(collection(database, 'messages', id, 'message'))).data().count)
     }
     setCount()
-  }, [])
+  }, [chatData])
+
+  useEffect(() => {
+    if(messagesCount){
+      setCanFetched(true)
+    }
+  }, [messagesCount])
+
 
   const setFetchedMessages = async (fetchedMessages) => {
     const fetchedMessagesKeys = Object.keys(fetchedMessages)
@@ -253,45 +280,35 @@ const Chat = () => {
 
   const loadPreviousMessages = useCallback(async (loadedMessagesLength) => {
     if(!loading){
+
       fetchPrevMessagess(loadedMessagesLength)
     }
   }, [messagesCount, messages, loading, lastLoadedId])
 
-  const fetchPrevMessagess = async (loadedMessagesLength) => {
+  const fetchPrevMessagess = async (loadedMessagesLength, lastDoc = null) => {
     console.log(loadedMessagesLength, messagesCount)
     if(loadedMessagesLength < messagesCount){
     setLoading(true)
-    const docSnap = await getDoc(doc(database, "messages", id, "message", lastLoadedId));
-    const q = query(collection(database, 'messages', String(id), 'message'), orderBy('createdAt', 'desc'), limit(30), startAt(docSnap))
+    if(!lastDoc){
+    lastDoc = await getDoc(doc(database, "messages", id, "message", lastLoadedId));
+    }
+    const q = query(collection(database, 'messages', String(id), 'message'), orderBy('createdAt', 'desc'), limit(100), startAt(lastDoc))
     const oldMessages = await loadMessages(q)
-   // setLoading(false)
-    // setMessages(prev => {
-    //   const prevKeys = Object.keys(prev);
-    //   const assignMessages = prev;
-    //   for (const key in oldMessages) {
-    //     console.log(key, 'key')
-    //     if(prevKeys.find(prevKey => prevKey === key)){
-    //       assignMessages[key] = [
-    //         ...assignMessages[key],
-    //         ...oldMessages[key]
-    //       ]  
-    //     }else{
-    //       assignMessages[key] = oldMessages[key]
-    //     }
-    //   }
-    //   return assignMessages
-    // })
-
      const prevKeys = Object.keys(messages);
-      const assignMessages = messages;
-      for (const key in oldMessages) {
-        if(prevKeys.find(prevKey => prevKey === key)){
-          assignMessages[key].push(...oldMessages[key])
-        }else{
-          assignMessages[key] = oldMessages[key]
-        }
+     if(prevKeys.length){
+        const assignMessages = messages;
+        for (const key in oldMessages) {
+          if(prevKeys.find(prevKey => prevKey === key)){
+            assignMessages[key].push(...oldMessages[key])
+          }else{
+            assignMessages[key] = oldMessages[key]
+          }
+        } 
+        setMessages(assignMessages)
+      }else{
+        setMessages(oldMessages)
       }
-    setMessages(assignMessages)
+    setCanSnapshot(true)
     setLoading(false)
     }
   }
@@ -299,12 +316,12 @@ const Chat = () => {
   const loadMessages = async (query) => {
     const result = await getDocs(query)
     const oldMessages = {};
-    console.log(result.docs.length, 'length-----')
     let lastLoaded = null;
     result.docs.forEach((doc, index) => {
       if(index !== 0){
         const messageData = doc.data();
-        const messageCreatedAt = new Date(messageData.createdAt.seconds * 1000)
+        messageData.createdAt.seconds = messageData.createdAt.seconds * 1000;
+        const messageCreatedAt = new Date(messageData?.createdAt?.seconds)
         const messageSlug = messageCreatedAt.getFullYear() + "_" + messageCreatedAt.getMonth() + "_" + messageCreatedAt.getDate(); 
         if(oldMessages[messageSlug]){
           oldMessages[messageSlug].push({...messageData, id: doc.id})
@@ -322,6 +339,7 @@ const Chat = () => {
 
   const deleteMessages = (messagesForDelete) => {
     messagesForDelete.forEach(message => {
+      console.log(message)
       const selectedMessage = messages.find(m => m.id === message)
       if(selectedMessage.media){
         const storage = getStorage();
@@ -381,90 +399,6 @@ const Chat = () => {
         }
   }, [])
 
-  const selectImages = async () => {
-    if(preloadImagesCountError){
-      Alert.alert('Error', 'Max count images is 5', [
-        {
-          text: 'OK'
-        }
-      ]);
-    }
-    else{
-      const options = {
-      mediaTypes: ImagePicker.MediaTypeOptions.All,
-      aspect: [4, 3],
-      quality: .4,
-      allowsMultipleSelection: true,
-      selectionLimit: 5,
-      mediaTypes: ImagePicker.MediaTypeOptions.Images
-    }
-    const result = await ImagePicker.launchImageLibraryAsync(options);
-    if(!result.canceled){
-      const images = result.assets.map(item => {
-      if(item.type === 'image'){
-        return {path: item.uri, progress: null}
-      }
-    })
-    setPreloadImages(preloadImages ? [...preloadImages, ...images] : images)
-    }
-    }
-  }
-
-  const removePreloadImage = (image) => {
-    if(preloadImages?.length === 1){
-      setPreloadImages(null);
-    }
-    else{
-      setPreloadImages(preloadImages.filter(preloadImage => preloadImage.path !== image));
-    }
-  }
-
-  const sendMessage = async () => {
-    if(!preloadImagesCountError){    
-    let mediaItems = null;
-    if(preloadImages?.length){
-       mediaItems = await Promise.all(await preloadImages.map(async image => {
-        return await uploadChatMedia(image.path)
-      }))
-    }
-    const newText = newMessageText === '' ? null : newMessageText
-    const data = {
-      uid: user.uid,
-      text: newText,
-      media: mediaItems,
-      createdAt: serverTimestamp()
-    }
-    setNewMessageText('');
-    setPreloadImages(null)
-    await addDoc(collection(database, 'messages', String(id), 'message'), data)
-    }
-  }  
-
-  const uploadChatMedia = async (path) => {
-    const fileName = path.split('/').pop();
-    
-    const response = await fetch(path).catch(err => console.log(err))
-    const blobImage = await response.blob();
-    
-    const storageRef = ref(fileStorage, `media/${fileName}`);
-    const uploadTask = uploadBytesResumable(storageRef, blobImage)
-    uploadTask.on("state_changed", (snapshot => {
-      const progress = Math.floor((snapshot.bytesTransferred / snapshot.totalBytes) * 100)
-      setPreloadImages(images => images.map(img => {
-        if(img.path === path){
-          return {...img, progress}
-        }
-        return img
-      }))
-    }),
-    (error => console.log('uploadTask.on error --------->', error))
-    )
-    return uploadTask.then(async data => {
-      return await getDownloadURL(uploadTask.snapshot.ref).then(url => url)
-    })
-    .catch(error => console.log('uploadTask error -----> ', error))
-  }
-
   if(!chatUsers || !messages || !chatData){
     return <ActivityIndicator size='large'/>
   }
@@ -473,92 +407,31 @@ const Chat = () => {
     <>
     <ChatCanvas>
       <> 
-      {loading && <ActivityIndicator style={{alignSelf: 'center'}} color={'blue'} size={'large'}/>}
-      {!messagesLength
-        ? <View>
-            <Text>No data</Text>
-          </View>
-        : <ChatItemContainer messagesCount={messagesCount} chatData={chatData} chatUsers={chatUsers} messages={messages} selectedMessages={selectedMessages} updateSelectedMessages={updateSelectedMessages} loadPreviousMessages={loadPreviousMessages}/>
-      }
+        {loading && <ActivityIndicator style={{alignSelf: 'center'}} color={'blue'} size={'large'}/>}
+        {!messagesLength
+          ? <View>
+              <Text>No data</Text>
+            </View>
+          : <ChatItemContainer 
+          messagesCount={messagesCount} 
+          chatData={chatData} 
+          chatUsers={chatUsers} 
+          messages={messages} 
+          selectedMessages={selectedMessages} 
+          updateSelectedMessages={updateSelectedMessages} 
+          loadPreviousMessages={loadPreviousMessages}/>
+        }
       </>
-      </ChatCanvas>
-    <BottomContainer  
-    behavior={Platform.OS === "ios" ? "padding" : undefined} 
-    keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
-    style={Platform.OS === 'ios' && {marginBottom: 20}}>
-      {preloadImages && <PreloadImages images={preloadImages} removeImage={removePreloadImage}/>}
-      <NewMessageContainer>
-        <NewMessageButton onPress={selectImages}><Image style={{width: 25, height: 25, transform: [{ rotate: '90deg'}]}} source={require('../../../assets/back.png')}/></NewMessageButton>
-        <NewMessageInput value={newMessageText} onChangeText={setNewMessageText} placeholder='Введіть повідомлення...'/>
-        <NewMessageButton disabled={buttonDisable} style={buttonDisable ? {backgroundColor: 'gray'} : {}} onPress={sendMessage}><NewMessageText>Надіслати</NewMessageText></NewMessageButton>
-      </NewMessageContainer>
-    </BottomContainer>
+    </ChatCanvas>
+    <ChatActions id={id}/>
     </>
   )
 }
 
-
-const CompanionMessages = styled.View`
-background-color: #296314;
-padding: 5px ;
-margin: 2.5px 0;
-align-self: flex-start;
-border-radius: 0 12px 12px 12px;
-flex-shrink: 1;
-max-width: 80%;
-`
-const MessageButton = styled.TouchableOpacity`
-position: absolute;
-top: 0;
-right: 0;
-bottom: 0;
-left: 0;
-background-color: red;
-z-index: 1;
-opacity: 0;
-`
 const ChatCanvas = styled.View`
 background-color: #eaeaea; 
 flex-shrink: 1;
 flex-grow: 1;
-`
-
-const BottomContainer = styled.KeyboardAvoidingView`
-background-color: #fff;
-padding: 5px;
-`
-const NewMessageContainer = styled.View`
-flex-direction: row;
-gap: 10px;
-flex-shrink: 1;
-border-radius: 12px 12px 0 0;
-`
-
-const NewMessageInput = styled.TextInput`
-border-radius: 12px;
-padding: 5px 10px;
-background-color: #fff;
-border-color: #eaeaea;
-border-width: 1px;
-color: #000;
-font-size: 14px;
-font-weight: 400;
-flex-grow: 1;
-flex-shrink: 1;
-`
-
-const NewMessageButton = styled.TouchableOpacity`
-padding: 5px 10px;
-background-color: #1657f2;
-border-radius: 12px;
-align-items: center;
-justify-content: center;
-`
-
-const NewMessageText = styled.Text`
-font-size: 14px;
-font-weight: 700;
-color: #fff;
 `
 
 export default Chat

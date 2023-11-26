@@ -46,12 +46,13 @@ const Chats = () => {
                 onlineStatus: false
             }  
         }))
-        setChats(newChats.sort((a, b) => {
+        const sortedChats = newChats.sort((a, b) => {
             if(!b.message){
                 return -1;  
             }
             return b.message?.createdAt?.seconds - a.message?.createdAt?.seconds
-        }))
+        })
+        setChats(sortedChats)
         setRefresh(false);
         } 
 
@@ -124,9 +125,6 @@ const Chats = () => {
     const hadnleChatClick = (chat) => {
         clearChatData(setChatUsers, setMessages, setChatData)
         moveToChat(chat.id)
-    }
-
-    const updateLastSeenChat = (chatId) => {
     }
 
     const moveToChat = (id) => {

@@ -6,6 +6,8 @@ import ChatItem from './ChatItem';
 
 
 const ChatItemContainer = React.memo(({messagesCount, messages, chatData, chatUsers, selectedMessages, updateSelectedMessages, loadPreviousMessages}) => {  
+    // console.log(messages, '-----> messages')
+    console.log('rere')
     const [endReached, setEndReached] = useState(false);
     const [allowSetEndReached, setAllowSetEndReached] = useState(false);
     const {user} = useContext(AuthUserContext);
@@ -16,7 +18,7 @@ const ChatItemContainer = React.memo(({messagesCount, messages, chatData, chatUs
         for (const key in messages) {
           messagesLenght += messages[key].length
         }
-        console.log(messagesCount, '---', messagesLenght)
+        // console.log(messagesCount, '---', messagesLenght)
         if(messagesCount > messagesLenght){
           console.log(messagesLenght, 'len')
           loadPreviousMessages(messagesLenght)
@@ -87,7 +89,7 @@ const ChatItemContainer = React.memo(({messagesCount, messages, chatData, chatUs
             messageMedia={itemData.media}
             messageText={itemData.text}
             messageId={itemData.id}
-            messageCreatedAt={itemData.createdAt.seconds}
+            messageCreatedAt={itemData?.createdAt?.seconds}
             isAuthor={itemData.uid === user.uid}
             chatType={chatData.type}
             selectMessage={updateSelectedMessages} />

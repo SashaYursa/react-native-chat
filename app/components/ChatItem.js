@@ -12,7 +12,7 @@ const ChatItem = React.memo(({userName, isAuthor, userImage, chatType, messageMe
         setIsOpenedImages(true);
     }
     const {user} = useContext(AuthUserContext);
-    const date = new Date(messageCreatedAt * 1000)
+    const date = new Date(messageCreatedAt)
     const dateText = String(date.getHours() < 10 ? `0${date.getHours()}` : date.getHours()) + ":" + String(date.getMinutes() < 10 ? `0${date.getMinutes()}` : date.getMinutes()); 
     return (
     <MessageOutsideContaier style={isAuthor ? {justifyContent: 'flex-end'} : {justifyContent: 'flex-start'} }>
