@@ -19,7 +19,7 @@ import {
 } from 'firebase/firestore'
 import * as FileSystem from 'expo-file-system'
 import { ref, getStorage, deleteObject } from 'firebase/storage'
-import {ref as realRef} from 'firebase/database'
+import {ref as realRef, update} from 'firebase/database'
 import "firebase/compat/auth";
 import "firebase/compat/firestore";
 import { AuthUserContext, FirebaseContext, SelectedChatContext } from '../../_layout'
@@ -40,10 +40,7 @@ const Chat = () => {
   const { user } = useContext(AuthUserContext);
   const [chatUsersIsLoading, setChatUsersIsLoading] = useState(true);
   const [messagesCount, setMessagesCount] = useState(null)
-  const [canFetched, setCanFetched] = useState(false)
-  const [canSnapshot, setCanSnapshot] = useState(false)
   const [lastLoadedId, setLastLoadedId] = useState(null)
-  const [loadMessagesStatus, setLoadMessagesStatus] = useState(null)
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const navigation = useNavigation();
@@ -84,29 +81,28 @@ const Chat = () => {
     loadUsers();
   }, [chatData])
 
-  // useEffect(() => {
-  //   const firstFetch = async () => {
-  //     const prevQ = query(collection(database, 'messages', String(id), 'message'), orderBy('createdAt', 'desc'), limit(100))
-  //     const docs = await getDocs(prevQ);
-  //     let lastDoc = null;
-  //     docs.forEach(data => {
-  //       // console.log('for each 111111')
-  //       fetchPrevMessagess(0, data)
-  //     })
-  //   }
-  //   // console.log('here rerender')
-  //   firstFetch();
+  useEffect(() => {
+    console.log('refetch data')
+    const firstFetch = async () => {
+      const prevQ = query(collection(database, 'messages', String(id), 'message'), orderBy('createdAt', 'desc'), limit(10))
+      const lastMessages = await loadMessages(prevQ);
+      setMessages(lastMessages)
+    }
+    if(chatData ){
+      console.log('chat data is not null')
+      firstFetch();
+    }
     
-  // }, [canFetched])
+  }, [chatData])
   
   // ----------- виконується 3
   // ----------- виконується після завантаження всіх користувачів в чаті 
   // ----------- оримує повідомлення чату і стежить за їх оновленнями
   useEffect(() => {
-    if(canFetched){
+    if(chatData){
     const q = query(collection(database, 'messages', String(id), 'message'), orderBy('createdAt', 'desc'), limit(1))
     const unsubscribe = onSnapshot(q, async (snapshot) => {
-      let newMessages = {}
+      let newMessages = []
       let messagesLenght = 0;
       let lastId = null;
       snapshot.docChanges().forEach(change => {
@@ -125,34 +121,47 @@ const Chat = () => {
           }
           const messageCreatedAt = new Date(messageData.createdAt.seconds)
           const messageSlug = messageCreatedAt.getFullYear() + "_" + messageCreatedAt.getMonth() + "_" + messageCreatedAt.getDate(); 
-          if(newMessages[messageSlug]){
-            newMessages[messageSlug].push({...messageData, id})
-          }else{
-            newMessages[messageSlug] = [
-              {...messageData, id}
-            ]
-          }
+          newMessages.push({date: messageSlug, data: [{...messageData, id: change.doc.id}]})
           lastId = id;
           messagesLenght++;
         }
       })
-        setMessages(oldMessages => {
-          const prevKeys = Object.keys(oldMessages);
-          const assignMessages = oldMessages;
-          for (const key in newMessages) {
-            if(prevKeys.find(prevKey => prevKey === key)){
-              assignMessages[key].unshift(...newMessages[key])
-            }else{
-              assignMessages[key] = newMessages[key]
-            }
+      setMessages(messages => {
+        const updatedMessages = [
+          ...messages
+        ]
+        newMessages.forEach(messageItem => {
+          const findDate = updatedMessages.findIndex(upd => upd.date === messageItem.date)
+          console.log(findDate, 'find date')
+          if(findDate !== -1){
+            messageItem.data.forEach(messageData => {
+              if(!updatedMessages[findDate].data.find(m => m.id === messageData.id)){
+                updatedMessages[findDate].data.unshift(messageData)
+              }
+            })
+          }else{
+            updatedMessages.push(messageItem) 
           }
-          return assignMessages
         })
+        return updatedMessages
+      })
+        // setMessages(oldMessages => {
+        //   const prevKeys = Object.keys(oldMessages);
+        //   const assignMessages = oldMessages;
+        //   for (const key in newMessages) {
+        //     if(prevKeys.find(prevKey => prevKey === key)){
+        //       assignMessages[key].unshift(...newMessages[key])
+        //     }else{
+        //       assignMessages[key] = newMessages[key]
+        //     }
+        //   }
+        //   return assignMessages
+        // })
     }, 
     (error) => {console.log(error, '----> firebase onSnapshot messages')})
     return () => unsubscribe();
     }
-  }, [canFetched])
+  }, [chatData])
 
   useEffect(() => {
     console.log('i use')
@@ -160,30 +169,8 @@ const Chat = () => {
       setMessagesCount((await getCountFromServer(collection(database, 'messages', id, 'message'))).data().count)
     }
     setCount()
-  }, [chatData])
+  }, [id])
 
-  useEffect(() => {
-    if(messagesCount){
-      setCanFetched(true)
-    }
-  }, [messagesCount])
-
-
-  const setFetchedMessages = async (fetchedMessages) => {
-    const fetchedMessagesKeys = Object.keys(fetchedMessages)
-    // if(!(messages.length === 0 && messagesCount > 1 
-    //   && fetchedMessagesKeys.length === 0 
-    //   && fetchedMessages[fetchedMessagesKeys[0]].length < 2)){
-    //   console.log('can')
-    // }
-      setMessages(fetchedMessages)
-      setLoadMessagesStatus({
-        messagesCount: messagesCount,
-        loadedMessagesCount: fetchedMessages.length,
-        canLoadedMessages: true
-      })
-    // }
-  }
 
       //----- виконується 3
       //----- встановлення даних про співрозмовника в хедері чату
@@ -278,61 +265,91 @@ const Chat = () => {
     return loadedChatUsers
   }
 
-  const loadPreviousMessages = useCallback(async (loadedMessagesLength) => {
+  const loadPreviousMessages = useCallback(async () => {
     if(!loading){
-
-      fetchPrevMessagess(loadedMessagesLength)
+      console.log('fetch prev messages')
+      fetchPrevMessagess()
     }
   }, [messagesCount, messages, loading, lastLoadedId])
 
-  const fetchPrevMessagess = async (loadedMessagesLength, lastDoc = null) => {
-    console.log(loadedMessagesLength, messagesCount)
-    if(loadedMessagesLength < messagesCount){
+  const fetchPrevMessagess = async () => {
+    let loadedMessagesCount = 0;
+    messages.forEach(m => {
+      loadedMessagesCount += m.data.length;
+    })
+    console.log(loadedMessagesCount, messagesCount)
+    if(loadedMessagesCount < messagesCount){
     setLoading(true)
-    if(!lastDoc){
-    lastDoc = await getDoc(doc(database, "messages", id, "message", lastLoadedId));
-    }
-    const q = query(collection(database, 'messages', String(id), 'message'), orderBy('createdAt', 'desc'), limit(100), startAt(lastDoc))
+    const lastDoc = await getDoc(doc(database, "messages", id, "message", lastLoadedId));
+    const q = query(collection(database, 'messages', String(id), 'message'), orderBy('createdAt', 'desc'), limit(20), startAt(lastDoc))
     const oldMessages = await loadMessages(q)
-     const prevKeys = Object.keys(messages);
-     if(prevKeys.length){
-        const assignMessages = messages;
-        for (const key in oldMessages) {
-          if(prevKeys.find(prevKey => prevKey === key)){
-            assignMessages[key].push(...oldMessages[key])
-          }else{
-            assignMessages[key] = oldMessages[key]
-          }
-        } 
-        setMessages(assignMessages)
-      }else{
-        setMessages(oldMessages)
-      }
-    setCanSnapshot(true)
+    setMessages(messages => {
+      const updatedMessages = [
+        ...messages
+      ]
+      oldMessages.forEach(messageItem => {
+        const findDate = updatedMessages.findIndex(upd => upd.date === messageItem.date)
+        console.log(findDate, 'find date')
+        if(findDate !== -1){
+          messageItem.data.forEach(messageData => {
+            if(messageData.id !== lastLoadedId){
+              updatedMessages[findDate].data.push(messageData)
+            }
+          })
+        }else{
+          updatedMessages.push(messageItem) 
+        }
+      })
+      return updatedMessages
+    })
+    // const prevKeys = Object.keys(messages);
+    //  if(prevKeys.length){
+    //     const assignMessages = messages;
+    //     for (const key in oldMessages) {
+    //       if(prevKeys.find(prevKey => prevKey === key)){
+    //         assignMessages[key].push(...oldMessages[key])
+    //       }else{
+    //         assignMessages[key] = oldMessages[key]
+    //       }
+    //     } 
+    //     setMessages(assignMessages)
+    //   }else{
+    //     setMessages(oldMessages)
+    //   }
     setLoading(false)
     }
   }
 
   const loadMessages = async (query) => {
+    console.log('fetched 100 messages');
     const result = await getDocs(query)
-    const oldMessages = {};
+    const oldMessages = [];
     let lastLoaded = null;
     result.docs.forEach((doc, index) => {
-      if(index !== 0){
-        const messageData = doc.data();
-        messageData.createdAt.seconds = messageData.createdAt.seconds * 1000;
-        const messageCreatedAt = new Date(messageData?.createdAt?.seconds)
-        const messageSlug = messageCreatedAt.getFullYear() + "_" + messageCreatedAt.getMonth() + "_" + messageCreatedAt.getDate(); 
-        if(oldMessages[messageSlug]){
-          oldMessages[messageSlug].push({...messageData, id: doc.id})
+      const messageData = doc.data();
+      messageData.createdAt.seconds = messageData.createdAt.seconds * 1000;
+      const messageCreatedAt = new Date(messageData?.createdAt?.seconds)
+      const messageSlug = messageCreatedAt.getFullYear() + "_" + messageCreatedAt.getMonth() + "_" + messageCreatedAt.getDate(); 
+      const currentDateIndex = oldMessages.findIndex(messages => messages.date === messageSlug);
+      if(currentDateIndex !== -1){
+        const existedMessage = oldMessages[currentDateIndex].data.find(message => message.id === doc.id)
+        if(existedMessage){
+          console.log('message is exist', existedMessage)
         }else{
-          oldMessages[messageSlug] = [
+          oldMessages[currentDateIndex].data.push({...messageData, id: doc.id})
+        }
+      }
+      else{
+        oldMessages.push({
+          date: messageSlug,
+          data: [
             {...messageData, id: doc.id}
           ]
-        }
-        lastLoaded = doc.id     
-      } 
-    })
+        })
+      }
+      lastLoaded = doc.id     
+    } 
+    )
     setLastLoadedId(lastLoaded)
     return oldMessages
   }
@@ -402,13 +419,12 @@ const Chat = () => {
   if(!chatUsers || !messages || !chatData){
     return <ActivityIndicator size='large'/>
   }
-  const messagesLength = Object.keys(messages)
   return (
     <>
     <ChatCanvas>
       <> 
         {loading && <ActivityIndicator style={{alignSelf: 'center'}} color={'blue'} size={'large'}/>}
-        {!messagesLength
+        {!messages.length
           ? <View>
               <Text>No data</Text>
             </View>
