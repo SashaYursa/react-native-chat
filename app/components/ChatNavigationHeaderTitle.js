@@ -6,6 +6,8 @@ import TimeAgo from './TimeAgo'
 import { router } from 'expo-router'
 
 const ChatNavigationHeaderTitle = ({contentPressHandle, chatType, chatImage, name, online, selectedMessagesCount, handleSelectedMessages}) => {
+  console.log(chatType, '----type')
+  const defaultChatImage = chatType === 'public' ? require('../../assets/group-chat.png') : require('../../assets/default-user.png')
   const OnlineStatusIndication = () => {
     if(chatType === 'private'){
       return (
@@ -29,7 +31,10 @@ const ChatNavigationHeaderTitle = ({contentPressHandle, chatType, chatImage, nam
   return (
     <HeaderContainer>
       <HeaderContentButton onPress={contentPressHandle}>
-        <UserImage style={{width: 35, height: 35, borderRadius: 50, overflow: 'hidden', backgroundColor: "#eaeaea"}} imageUrl={chatImage} />
+        { chatImage 
+          ? <UserImage style={{width: 35, height: 35, borderRadius: 50, overflow: 'hidden', backgroundColor: "#eaeaea"}} imageUrl={chatImage} />
+          : <Image style={{width: 35, height: 35, borderRadius: 50, overflow: 'hidden', backgroundColor: "#eaeaea"}} source={defaultChatImage}/>
+        }
         <View>
           <ChatName>{name}</ChatName>
           <OnlineStatusDisplay>

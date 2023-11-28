@@ -2,29 +2,18 @@ import { View, Text, Image, Platform } from 'react-native'
 import React from 'react'
 import styled from 'styled-components'
 import CachedImage from '../CachedImage'
-import dayjs from 'dayjs'
-import relativeTime from 'dayjs/plugin/relativeTime';
-import ualocal from 'dayjs/locale/uk';
-import Date from '../TimeAgo'
 import TimeAgo from '../TimeAgo'
 
 const ChatListItem = ({item}) => {
-    dayjs.extend(relativeTime);
-    dayjs.locale(ualocal)
-    const getTime = (time) => {
-        let dateNow = dayjs();
-        let blogDate = new Date(time * 1000);
-        return dateNow.from(blogDate, true);
-    }
+    const defaultImage = item.type === 'private' ? require('../../../assets/default-user.png') : require('../../../assets/group-chat.png')
   return (
     <Container>
-        
         <ImageContainer>
             {
             item.onlineStatus && <OnlineIndicator/>
             }
-            { item.image === null
-                ? <ChatImage source={require('../../../assets/default-chat-image.png')}/>
+            { !item.image
+                ? <ChatImage style={{borderColor: "#eaeaea"}} source={defaultImage}/>
                 : <CachedImage url={item.image} style={{width: 50, height: 50, objectFit: 'cover', borderRadius: 50}}/>
             }
         </ImageContainer>
@@ -75,6 +64,7 @@ width: 50px;
 height: 50px;
 object-fit: cover;
 border-radius: 50px;
+border-width: 1px;
 `
 const ChatData = styled.View`
 flex-grow: 1;

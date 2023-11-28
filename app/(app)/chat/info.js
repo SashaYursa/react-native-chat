@@ -12,12 +12,17 @@ const Info = () => {
     const {chatData, chatUsers, setChatData, setChatUsers} = useContext(SelectedChatContext)
     const createdAtDate = new Date(chatData.createdAt.seconds * 1000)
     const createdAt = `${createdAtDate.getFullYear()}-${createdAtDate.getMonth() + 1}-${createdAtDate.getDate()} ${createdAtDate.getHours()}:${createdAtDate.getMinutes()}`
-  return (
-    <Container>
+    const defaultChatImage = chatData.type === "public" ? require('../../../assets/group-chat.png') : require('../../../assets/default-user.png')
+    const headImage = chatData.type === "private" ? chatUsers[0].image : chatData.image
+    return (
+      <Container>
         <ChatInfoContainer>
             <InfoData>
                 <ChatImageContainer>
-                    <ChatImage source={chatData.image ? {uri: chatData.image} : require('../../../assets/default-chat-image.png')}/>
+                    { headImage 
+                        ? <CachedImage url={headImage} style={{width: '100%', height: '100%'}} />
+                        : <ChatImage source={chatData.image ? {uri: chatData.image} : defaultChatImage}/>
+                    }
                 </ChatImageContainer>
                 <ChatDataContainer>
                     <ChatDataItem>
@@ -247,6 +252,7 @@ const UserImage = styled.Image`
 width: 100%;
 height: 100%;
 border-radius: 20px;
+background-color: #fff;
 `
 
 const UserDataContainer = styled.View`

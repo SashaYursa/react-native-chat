@@ -2,8 +2,8 @@ import { Image } from 'react-native'
 import {memo} from 'react'
 import CachedImage from './CachedImage'
 
-const UserImage = memo(({imageUrl, style}) => {
-    return imageUrl === null 
+const UserImage = memo(({imageUrl, style}) => {   
+  return imageUrl === null
     ? <Image source={require('../../assets/default-user.png')} style={style}/> 
     : <CachedImage style={style} url={imageUrl}/>
   }, (prev, next) => {

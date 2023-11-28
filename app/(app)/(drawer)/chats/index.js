@@ -2,13 +2,11 @@ import React, { useContext, useEffect, useState } from 'react'
 import { View, Text, RefreshControl, ScrollView, Platform } from 'react-native'
 import styled from 'styled-components'
 import ChatListItem from '../../../components/ChatList/ChatListItem'
-import { DrawerLayoutAndroid, TouchableOpacity } from 'react-native-gesture-handler'
-import { Link, useRouter } from 'expo-router'
-import { collection, doc, getDoc, getDocs, limit, limitToLast, onSnapshot, orderBy, query, where } from 'firebase/firestore'
+import {  useRouter } from 'expo-router'
+import { collection, getDocs, limit, onSnapshot, orderBy, query, where } from 'firebase/firestore'
 import { AuthUserContext, SelectedChatContext, clearChatData } from '../../../_layout'
 import { database, rDatabase } from '../../../../config/firebase'
-import { setParams } from 'expo-router/src/global-state/routing'
-import { checkUserStatus, getUserData } from '../../_layout'
+import { getUserData } from '../../_layout'
 import { onValue, ref } from 'firebase/database'
 const Chats = () => {
     const { user } = useContext(AuthUserContext);
@@ -135,19 +133,21 @@ const Chats = () => {
         setRefresh(true);
         fetchData()
     }
-    const ChatItem = (itemData) => {
+    const ChatItem = ({itemData}) => {
         const message = chatsLastMessages?.[itemData.id] ? chatsLastMessages[itemData.id] : {
             images: null,
             text: 'Повідомлень немає',
             createdAt: null
-        }  
+        } 
+        const image =  itemData.type === "public" ? itemData.image : itemData.userData.image
         const item = {
-            image: itemData.image ? itemData.image : itemData.userData.image,
+            image,
             userData: itemData.userData,
             name: itemData.name ? itemData.name : itemData.userData.displayName,
             data: message.text,
             time: message.createdAt,
             media: message.images,
+            type: itemData.type,
             onlineStatus: usersOnlineStatus ? usersOnlineStatus[itemData.userData.id] : false
         }
         return(
@@ -156,7 +156,7 @@ const Chats = () => {
     } 
 
     return (
-         <ScrollView
+        <ScrollView
                 refreshControl={
                 <RefreshControl refreshing={refresh} onRefresh={onRefresh} />
                 }>
@@ -165,7 +165,7 @@ const Chats = () => {
                     {chats.length > 0 && chats.map(chat => (
                     <ChatLink key={chat.id} onPress={() => hadnleChatClick(chat)}>
                        {
-                        ChatItem(chat)
+                        <ChatItem itemData={chat}/>
                        }
                     </ChatLink>
                     ))}
