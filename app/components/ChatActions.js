@@ -11,8 +11,8 @@ import { getDownloadURL, ref, getStorage, deleteObject, uploadBytesResumable } f
 const ChatActions = ({id}) => {
   const [preloadImages, setPreloadImages] = useState(null);
   const [newMessageText, setNewMessageText] = useState('');
-  const preloadImagesCountError = preloadImages?.length > 4;
-  const buttonDisable = preloadImages?.length > 5 || !newMessageText.trim();
+  const preloadImagesCountError = preloadImages?.length > 5;
+  const buttonDisable = preloadImagesCountError || (!preloadImages?.length && !newMessageText.trim());
   const {database} = useContext(FirebaseContext);
   const {user} = useContext(AuthUserContext);
   const removePreloadImage = (image) => {

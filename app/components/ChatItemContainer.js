@@ -6,19 +6,14 @@ import ChatItem from './ChatItem';
 
 
 const ChatItemContainer = React.memo(({messagesCount, messages, chatData, chatUsers, selectedMessages, updateSelectedMessages, loadPreviousMessages}) => {  
-    console.log('rere')
-    console.log(messages)
     const [endReached, setEndReached] = useState(false);
     const [allowSetEndReached, setAllowSetEndReached] = useState(false);
     const {user} = useContext(AuthUserContext);
     const scrollRef = useRef();
     useEffect(() => {
       if(endReached){  
-        // console.log(messagesCount, '---', messagesLenght)
-        // if(messagesCount > messagesLenght){
           loadPreviousMessages()
           setEndReached(false)
-        // }
       }
     }, [scrollRef, endReached, messagesCount])
 

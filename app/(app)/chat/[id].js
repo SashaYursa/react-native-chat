@@ -32,8 +32,6 @@ import ChatNavigationHeaderTitle from '../../components/ChatNavigationHeaderTitl
 import ChatActions from '../../components/ChatActions'
 
 const Chat = () => {
-  // console.log('rerender', Platform.OS)
-  // const [messages, setMessages] = useState([]);
   const [selectedMessages, setSelectedMessages] = useState([])
   const [loading, setLoading] = useState(true);
   const { database } = useContext(FirebaseContext);
@@ -44,7 +42,6 @@ const Chat = () => {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const navigation = useNavigation();
-  // const [messages, setMessages] = useState({});
   const {chatUsers, chatData, setChatUsers, setChatData, messages = {}, setMessages} = useContext(SelectedChatContext)
   //--------- виконується 1
   //--------- завантаження даних поточного чату
@@ -82,14 +79,12 @@ const Chat = () => {
   }, [chatData])
 
   useEffect(() => {
-    console.log('refetch data')
     const firstFetch = async () => {
       const prevQ = query(collection(database, 'messages', String(id), 'message'), orderBy('createdAt', 'desc'), limit(10))
       const lastMessages = await loadMessages(prevQ);
       setMessages(lastMessages)
     }
     if(chatData ){
-      console.log('chat data is not null')
       firstFetch();
     }
     
@@ -132,7 +127,6 @@ const Chat = () => {
         ]
         newMessages.forEach(messageItem => {
           const findDate = updatedMessages.findIndex(upd => upd.date === messageItem.date)
-          console.log(findDate, 'find date')
           if(findDate !== -1){
             messageItem.data.forEach(messageData => {
               if(!updatedMessages[findDate].data.find(m => m.id === messageData.id)){
@@ -140,23 +134,11 @@ const Chat = () => {
               }
             })
           }else{
-            updatedMessages.push(messageItem) 
+            updatedMessages.unshift(messageItem) 
           }
         })
         return updatedMessages
       })
-        // setMessages(oldMessages => {
-        //   const prevKeys = Object.keys(oldMessages);
-        //   const assignMessages = oldMessages;
-        //   for (const key in newMessages) {
-        //     if(prevKeys.find(prevKey => prevKey === key)){
-        //       assignMessages[key].unshift(...newMessages[key])
-        //     }else{
-        //       assignMessages[key] = newMessages[key]
-        //     }
-        //   }
-        //   return assignMessages
-        // })
     }, 
     (error) => {console.log(error, '----> firebase onSnapshot messages')})
     return () => unsubscribe();
@@ -164,7 +146,6 @@ const Chat = () => {
   }, [chatData])
 
   useEffect(() => {
-    console.log('i use')
     const setCount = async () => {
       setMessagesCount((await getCountFromServer(collection(database, 'messages', id, 'message'))).data().count)
     }
@@ -267,7 +248,6 @@ const Chat = () => {
 
   const loadPreviousMessages = useCallback(async () => {
     if(!loading){
-      console.log('fetch prev messages')
       fetchPrevMessagess()
     }
   }, [messagesCount, messages, loading, lastLoadedId])
@@ -277,7 +257,6 @@ const Chat = () => {
     messages.forEach(m => {
       loadedMessagesCount += m.data.length;
     })
-    console.log(loadedMessagesCount, messagesCount)
     if(loadedMessagesCount < messagesCount){
     setLoading(true)
     const lastDoc = await getDoc(doc(database, "messages", id, "message", lastLoadedId));
@@ -289,7 +268,6 @@ const Chat = () => {
       ]
       oldMessages.forEach(messageItem => {
         const findDate = updatedMessages.findIndex(upd => upd.date === messageItem.date)
-        console.log(findDate, 'find date')
         if(findDate !== -1){
           messageItem.data.forEach(messageData => {
             if(messageData.id !== lastLoadedId){
@@ -302,20 +280,6 @@ const Chat = () => {
       })
       return updatedMessages
     })
-    // const prevKeys = Object.keys(messages);
-    //  if(prevKeys.length){
-    //     const assignMessages = messages;
-    //     for (const key in oldMessages) {
-    //       if(prevKeys.find(prevKey => prevKey === key)){
-    //         assignMessages[key].push(...oldMessages[key])
-    //       }else{
-    //         assignMessages[key] = oldMessages[key]
-    //       }
-    //     } 
-    //     setMessages(assignMessages)
-    //   }else{
-    //     setMessages(oldMessages)
-    //   }
     setLoading(false)
     }
   }
@@ -333,9 +297,7 @@ const Chat = () => {
       const currentDateIndex = oldMessages.findIndex(messages => messages.date === messageSlug);
       if(currentDateIndex !== -1){
         const existedMessage = oldMessages[currentDateIndex].data.find(message => message.id === doc.id)
-        if(existedMessage){
-          console.log('message is exist', existedMessage)
-        }else{
+        if(!existedMessage){
           oldMessages[currentDateIndex].data.push({...messageData, id: doc.id})
         }
       }
@@ -356,8 +318,15 @@ const Chat = () => {
 
   const deleteMessages = (messagesForDelete) => {
     messagesForDelete.forEach(message => {
-      console.log(message)
-      const selectedMessage = messages.find(m => m.id === message)
+      let selectedMessage;  
+      messages.forEach(element => {
+        if(!selectedMessage){
+          const findItem  = element.data.find(m => m.id === message)
+          if(findItem){
+            selectedMessage = findItem
+          }
+        }
+      });
       if(selectedMessage.media){
         const storage = getStorage();
         selectedMessage.media.forEach(mediaItem => {
@@ -387,15 +356,15 @@ const Chat = () => {
       else{
         deleteDoc(doc(database, 'messages', id, 'message', message));
       }
-      setSelectedMessages(messages => {
-        return messages.filter(m => m !== message)
-      })
+      setSelectedMessages(messages => messages.filter(m => m !== selectedMessage.id))
     })
-     setMessages(messages => messages.filter(m => {
-      const deleteMessage = messagesForDelete.find(forDelete => forDelete === m.id)
-      if(deleteMessage) return false
-      return true
-    }))
+    setMessages(messages => messages.map(item => ({...item, data: item.data.filter(m => {
+          const deleteMessage = messagesForDelete.find(forDelete => forDelete === m.id)
+          if(deleteMessage) return false
+          return true
+        })
+      })
+    ))
   }
 
   const updateSelectedMessages = useCallback((selectedMessage) => {
