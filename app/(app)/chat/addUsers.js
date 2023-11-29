@@ -31,7 +31,6 @@ const AddUsers = () => {
 		}else{
 			const chatDoc = doc(database, 'chats', chatData.id)
 			const chatDocData = (await getDoc(chatDoc)).data()
-			// console.log(chatDocData)
 			const findUser = chatDocData.users.find(id => id === user.id)
 			console.log(findUser)
 			if(findUser){
@@ -70,7 +69,7 @@ const AddUsers = () => {
   return (
     <View style={{paddingTop:Platform.OS === 'android' ? 25 : 5, flex: 1}}>
         <TopSearch inputRef={inputRef} searchText={searchText} setSearchText={setSearchText} hasBack={Platform.OS === 'ios' ? false : true}/>
-				<UsersContainer style={{flex: 1}}>
+		<UsersContainer style={{flex: 1}}>
         	<UsersList searchValue={debouncedSearchValue} userAction={addUser} hideUsers={chatData.users}/>
       	</UsersContainer>
     </View>

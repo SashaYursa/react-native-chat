@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react'
-import { View, Text, RefreshControl, ScrollView, Platform } from 'react-native'
+import { View, Text, RefreshControl, ScrollView, Platform, TouchableOpacity, Image } from 'react-native'
 import styled from 'styled-components'
 import ChatListItem from '../../../components/ChatList/ChatListItem'
 import {  useRouter } from 'expo-router'
@@ -156,22 +156,27 @@ const Chats = () => {
     } 
 
     return (
-        <ScrollView
-                refreshControl={
-                <RefreshControl refreshing={refresh} onRefresh={onRefresh} />
-                }>
-            <Container>
-                <ChatsList>
-                    {chats.length > 0 && chats.map(chat => (
-                    <ChatLink key={chat.id} onPress={() => hadnleChatClick(chat)}>
-                       {
-                        <ChatItem itemData={chat}/>
-                       }
-                    </ChatLink>
-                    ))}
-                </ChatsList>
-            </Container>
-        </ScrollView>
+        <View style={{flex: 1}}>
+            <ScrollView
+                    refreshControl={
+                        <RefreshControl refreshing={refresh} onRefresh={onRefresh} />
+                    }>
+                <Container>
+                    <ChatsList>
+                        {chats.length > 0 && chats.map(chat => (
+                            <ChatLink key={chat.id} onPress={() => hadnleChatClick(chat)}>
+                        {
+                            <ChatItem itemData={chat}/>
+                            }
+                        </ChatLink>
+                        ))}
+                    </ChatsList>
+                </Container>
+            </ScrollView>
+            <CreateChatButton onPress={() => {router.push('createChat')}}>
+                <CreateChatIcon source={require('../../../../assets/create-chat.png')} />
+            </CreateChatButton>
+        </View>
     )
 }
 const Container  = styled.View`
@@ -186,6 +191,22 @@ width: 100%;
 `
 const ChatLink = styled.TouchableOpacity`
 flex-grow: 1;
+`
+const CreateChatButton = styled.TouchableOpacity`
+width: 60px;
+height: 60px;
+position: absolute;
+bottom: 30px;
+right: 20px;
+border-radius: 40px;
+align-items: center;
+justify-content: center;
+background-color: #bfbfbf;
+`
+
+const CreateChatIcon = styled.Image`
+width: 50%;
+height: 50%;
 `
 
 export default Chats

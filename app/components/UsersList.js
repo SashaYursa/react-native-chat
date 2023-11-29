@@ -3,13 +3,14 @@ import React, { memo, useContext, useEffect, useState } from 'react'
 import styled from 'styled-components'
 import UserImage from './UserImage'
 import CachedImage from './CachedImage'
-import { collection, endAt, getDocs, orderBy, query, startAt } from 'firebase/firestore'
+import { collection, endAt, getDocs, limit, orderBy, query, startAt } from 'firebase/firestore'
 import { AuthUserContext, FirebaseContext } from '../_layout'
 const UsersList = memo(({searchValue, userAction, hideUsers = null}) => {
     const { user } = useContext(AuthUserContext)
     const {database} = useContext(FirebaseContext)
     const [usersLoading, setUsersLoading] = useState(true);
     const [searchUsers, setSearchUsers] = useState(null);
+    const [filteredUsers, setFilteredUsers] = useState(null)
 
     const closeKeyboard = () => {
         if(Keyboard.isVisible()){
@@ -39,12 +40,14 @@ const UsersList = memo(({searchValue, userAction, hideUsers = null}) => {
 
     useEffect(() => {
         if(hideUsers?.length && searchUsers){
-            setSearchUsers(searchU => searchU.filter(s => s.id !== hideUsers.find(hide => hide === s.id)))
+            setFilteredUsers(searchUsers.filter(s => s.id !== hideUsers.find(hide => hide === s.id)))
+        }else if(hideUsers === null && searchUsers){
+            setFilteredUsers(searchUsers)
         }
     }, [hideUsers])
 
     const getLastUsers = () => {
-        const qUsers = query(collection(database, "users"), orderBy("lastCheckedStatus", "desc"));
+        const qUsers = query(collection(database, "users"), orderBy("lastCheckedStatus", "desc"), limit(50));
         fetchUsers(qUsers)
     }
     const fetchUsers = async (query) => {
@@ -57,6 +60,7 @@ const UsersList = memo(({searchValue, userAction, hideUsers = null}) => {
             newUsers = users.docs.map(res => res.data()).filter(item => item.id !== user.uid)
         }
         setSearchUsers(newUsers);
+        setFilteredUsers(newUsers);
         setUsersLoading(false);
     }
 
@@ -71,11 +75,11 @@ const UsersList = memo(({searchValue, userAction, hideUsers = null}) => {
     
     return usersLoading
     ?  (<ActivityIndicator size={'large'}/>)
-    : searchUsers.length > 0 
+    : filteredUsers.length > 0 
         ? (<FlatList contentContainerStyle={{gap: 5, paddingBottom: 10}}
                         onScrollBeginDrag={closeKeyboard}
                         renderItem={renderItem}
-                        data={searchUsers} />)
+                        data={filteredUsers} />)
         : (<View><Text>Users not found</Text></View>)
 })
 

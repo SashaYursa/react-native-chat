@@ -8,7 +8,14 @@ const TopSearch = ({inputRef, searchText, setSearchText, hasBack = true}) => {
     <Container>
         {hasBack && <BackButton/>}
         <SearchContainer>
-            <TextInput ref={inputRef} mode='outlined' label='Search' style={{flexGrow: 1}} value={searchText} onChangeText={setSearchText}/>
+            <TextInput ref={inputRef} 
+            mode='outlined'
+            label='Search' 
+            style={{flexGrow: 1}} 
+            value={searchText} 
+            onChangeText={setSearchText}
+            theme={{colors: {primary: '#007bff'}}}
+            />
         </SearchContainer>
    </Container>
   )

@@ -126,6 +126,10 @@ const AppLayout = () => {
             <Stack.Screen name='user/[userId]' options={{
                 headerShown: false
             }}/>
+            <Stack.Screen name='createChat' options={{
+                headerShown: false,
+                presentation: "modal"
+            }}/>
         </Stack>
     )
 }
