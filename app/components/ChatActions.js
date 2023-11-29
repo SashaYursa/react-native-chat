@@ -66,7 +66,8 @@ const ChatActions = ({id}) => {
       uid: user.uid,
       text: newText,
       media: mediaItems,
-      createdAt: serverTimestamp()
+      createdAt: serverTimestamp(),
+      isRead: [user.uid]
     }
     setNewMessageText('');
     setPreloadImages(null)

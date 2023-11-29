@@ -16,6 +16,8 @@ import {
   deleteDoc,
   startAt,
   getCountFromServer,
+  setDoc,
+  updateDoc,
 } from 'firebase/firestore'
 import * as FileSystem from 'expo-file-system'
 import { ref, getStorage, deleteObject } from 'firebase/storage'
@@ -102,8 +104,9 @@ const Chat = () => {
       let lastId = null;
       snapshot.docChanges().forEach(change => {
         if(change.type === 'added') {
+          console.log('added')
           const messageData = change.doc.data();
-          const id = change.doc.id;
+          const docId = change.doc.id;
           if(!messageData.createdAt){
             messageData.createdAt = {
               seconds: Date.now()
@@ -114,11 +117,20 @@ const Chat = () => {
               seconds: messageData.createdAt.seconds * 1000
             }
           }
+          if(!messageData.isRead.includes(user.uid)){
+            const data = {
+              isRead: [...messageData.isRead, user.uid]
+            }
+            updateDoc(doc(database, 'messages', String(id), 'message', docId), data)
+          }
           const messageCreatedAt = new Date(messageData.createdAt.seconds)
           const messageSlug = messageCreatedAt.getFullYear() + "_" + messageCreatedAt.getMonth() + "_" + messageCreatedAt.getDate(); 
           newMessages.push({date: messageSlug, data: [{...messageData, id: change.doc.id}]})
-          lastId = id;
+          lastId = docId;
           messagesLenght++;
+        }
+        if(change.type === 'modified'){
+          console.log('modified on ', Platform.OS)
         }
       })
       setMessages(messages => {
@@ -288,9 +300,17 @@ const Chat = () => {
     console.log('fetched 100 messages');
     const result = await getDocs(query)
     const oldMessages = [];
+    const messagesForRead = [];
     let lastLoaded = null;
-    result.docs.forEach((doc, index) => {
+    result.docs.forEach(doc => {
       const messageData = doc.data();
+
+      if(messageData.isRead.includes(user.uid)){
+        console.log('is read')
+      }else{
+        messagesForRead.push({id: doc.id, data: messageData})
+      }
+
       messageData.createdAt.seconds = messageData.createdAt.seconds * 1000;
       const messageCreatedAt = new Date(messageData?.createdAt?.seconds)
       const messageSlug = messageCreatedAt.getFullYear() + "_" + messageCreatedAt.getMonth() + "_" + messageCreatedAt.getDate(); 
@@ -312,6 +332,12 @@ const Chat = () => {
       lastLoaded = doc.id     
     } 
     )
+    messagesForRead.forEach(messageForRead => {
+      const data = {
+        isRead: [...messageForRead.data.isRead, user.uid]
+      }
+      updateDoc(doc(database, 'messages', String(id), 'message', messageForRead.id), data)
+    })
     setLastLoadedId(lastLoaded)
     return oldMessages
   }

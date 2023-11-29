@@ -3,16 +3,18 @@ import { View, Text, RefreshControl, ScrollView, Platform, TouchableOpacity, Ima
 import styled from 'styled-components'
 import ChatListItem from '../../../components/ChatList/ChatListItem'
 import {  useRouter } from 'expo-router'
-import { collection, getDocs, limit, onSnapshot, orderBy, query, where } from 'firebase/firestore'
+import { collection, getCountFromServer, getDocs, limit, onSnapshot, orderBy, query, where } from 'firebase/firestore'
 import { AuthUserContext, SelectedChatContext, clearChatData } from '../../../_layout'
 import { database, rDatabase } from '../../../../config/firebase'
 import { getUserData } from '../../_layout'
 import { onValue, ref } from 'firebase/database'
+import UnreadMessagesIndicator from '../../../components/UnreadMessagesIndicator'
 const Chats = () => {
     const { user } = useContext(AuthUserContext);
     const [chats, setChats] = useState([]);
     const [usersOnlineStatus, setUsersOnlineStatus] = useState(null);
     const [chatsLastMessages, setChatsLastMessages] = useState(null);
+    const [unreadedMessages, setUnreadedMessages] = useState(null);
     const [refresh, setRefresh] = useState(false);
     const {setMessages, setChatUsers, setChatData} = useContext(SelectedChatContext)
     const getLastMessage = async (chatId) => {
@@ -58,6 +60,21 @@ const Chats = () => {
         fetchData();
     }, [user])
 
+    useEffect(() => {
+        const checkMessages = async () => {
+            console.log('checking messages')
+            let i = 0
+            const unreadedMessages = await Promise.all(chats.map(async chat => {
+                console.log(i++)
+                const totalMessagesCount = (await getCountFromServer(collection(database, 'messages', chat.id, 'message'))).data().count
+                const readedMessages = (await getCountFromServer(query(collection(database, 'messages', chat.id, 'message'), where("isRead", "array-contains", user.uid)))).data().count
+                return {id: chat.id, unreadedMessages: totalMessagesCount - readedMessages}
+            }))
+            setUnreadedMessages(unreadedMessages)
+        }
+        checkMessages()
+    }, [chats])
+
     // observing users status
     useEffect(() => {
         let unsubs = [];
@@ -92,8 +109,16 @@ const Chats = () => {
             const qMessages = query(collection(database, "messages", String(chat.id), "message"), orderBy('createdAt', 'desc'), limit(1));
             const unsubscribe = onSnapshot(qMessages, async (snapShot) => {
                 snapShot.docs.forEach(async e => { 
-                setChatsLastMessages(lastMessages => {
-                    const data = e.data();
+                    const data = e.data(); 
+                    setUnreadedMessages(unreadedChats =>{
+                        return(unreadedChats.map(unreadedChat => {
+                            if(unreadedChat.id === chat.id){
+                                return {...unreadedChat, unreadedMessages: unreadedChat.unreadedMessages + 1}
+                            }
+                            return unreadedChat;
+                        }))
+                    })
+                    setChatsLastMessages(lastMessages => {
                     const message = {
                         images: data.media === null ? null : data.media,
                         text: data.text ? data.text : data.media !== null ? 'Фото' : 'Повідомлень немає',
@@ -164,9 +189,14 @@ const Chats = () => {
                 <Container>
                     <ChatsList>
                         {chats.length > 0 && chats.map(chat => (
-                            <ChatLink key={chat.id} onPress={() => hadnleChatClick(chat)}>
-                        {
-                            <ChatItem itemData={chat}/>
+                        <ChatLink key={chat.id} onPress={() => hadnleChatClick(chat)}>
+                            {
+                                <ChatItem itemData={chat}/>
+                            }
+                            { unreadedMessages.length > 0 &&
+                                <UnreadMessagesCountCountainer>
+                                    <UnreadMessagesIndicator count={unreadedMessages.find(unrd => unrd.id === chat.id).unreadedMessages}/>
+                                </UnreadMessagesCountCountainer>
                             }
                         </ChatLink>
                         ))}
@@ -179,6 +209,7 @@ const Chats = () => {
         </View>
     )
 }
+
 const Container  = styled.View`
 background-color: #fff;
 flex-grow: 1;
@@ -191,6 +222,7 @@ width: 100%;
 `
 const ChatLink = styled.TouchableOpacity`
 flex-grow: 1;
+position: relative;
 `
 const CreateChatButton = styled.TouchableOpacity`
 width: 60px;
@@ -208,5 +240,12 @@ const CreateChatIcon = styled.Image`
 width: 50%;
 height: 50%;
 `
+
+const UnreadMessagesCountCountainer = styled.View`
+position: absolute;
+right: 10px;
+top: 45%;
+`
+
 
 export default Chats

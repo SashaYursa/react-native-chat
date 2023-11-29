@@ -20,10 +20,11 @@ const RootLayout = () => {
     const [chatData, setChatData] = useState(null)
     const [chatUsers, setChatUsers] = useState(null)
     const [messages, setMessages] = useState([])
+    const [unreadedMessages, setUnreadedMessages] = useState(null)
     return (
         <FirebaseContext.Provider value={{auth, database}}>
             <AuthUserContext.Provider value={{user, setUser}}>
-                <SelectedChatContext.Provider value={{chatData, chatUsers, messages, setChatData, setChatUsers, setMessages}}>
+                <SelectedChatContext.Provider value={{chatData, chatUsers, messages, unreadedMessages, setChatData, setChatUsers, setMessages, setUnreadedMessages}}>
                     <Stack screenOptions={{headerShown: false}}>
                     </Stack>
                 </SelectedChatContext.Provider>
