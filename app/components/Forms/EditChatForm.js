@@ -5,16 +5,17 @@ import { Formik } from 'formik'
 import styled from 'styled-components'
 import * as ImagePicker from 'expo-image-picker';
 import CachedImage from '../CachedImage';
-const EditUserForm = ({userData, updateUser}) => {
+const EditChatForm = ({chatData, updateChat}) => {
+    console.log(chatData, '--------> chatdata')
     const userImageHandleImage = require('../../../assets/remove-item.png')
-    const defaultUserImage = require('../../../assets/default-user-big.png');
+    const defaultChatImage = require('../../../assets/group-chat.png');
     const initValues = {
-        displayName: userData.displayName,
-        image: userData.image,
+        chatName: chatData.name,
+        image: chatData.image,
         uploadedImage: null
     }
 
-    const selectUserImage = async (setValue) => {
+    const selectChatImage = async (setValue) => {
         const options = {
             mediaTypes: ImagePicker.MediaTypeOptions.All,
             aspect: [4, 3],
@@ -39,7 +40,7 @@ const EditUserForm = ({userData, updateUser}) => {
         <Formik 
         initialValues={initValues}
         onSubmit={async (values) => {
-            updateUser(values)
+            updateChat(values)
         }}
         >
             {({ handleChange, setFieldValue, handleSubmit, values }) => (
@@ -50,25 +51,26 @@ const EditUserForm = ({userData, updateUser}) => {
                      ? <Image source={{uri: values.uploadedImage}} style={styles.imagePreview}/>
                      : values.image 
                         ? <CachedImage url={values.image} style={styles.imagePreview} />
-                        : <Image source={defaultUserImage} style={styles.imagePreview}/>
+                        : <Image source={defaultChatImage} style={styles.imagePreview}/>
                     }
                     
-                    { (values.uploadedImage !== null || initValues.image !== null) &&
-                    <RemoveImageButton onPress={() => {
-                        setFieldValue('uploadedImage', null)
-                        setFieldValue('image', null)
-                        }}>
+                    { (values.uploadedImage !== null || chatData.image !== null) &&
+                    <RemoveImageButton onPress={() => setFieldValue('uploadedImage', null)}>
                         <Image style={{width: '100%', height: '100%'}} source={userImageHandleImage} />
                     </RemoveImageButton>
                     }
-                    <ImageSelectButton onPress={() => selectUserImage(setFieldValue)}>
+                    { values.uploadedImage === null &&
+                        <ImageSelectButton onPress={() => {
+                            selectChatImage(setFieldValue)
+                        }}>
                         <Image style={{width: '100%', height: '100%'}} source={userImageHandleImage} />
                     </ImageSelectButton>
+                    }
                 </ImageContainer>
                 <TextFields>
-                    <TextInput label='UserName' mode='outlined'
-                    onChangeText={handleChange('displayName')}
-                    value={values.displayName}
+                    <TextInput label='ChatName' mode='outlined'
+                    onChangeText={handleChange('chatName')}
+                    value={values.chatName}
                     />
                 </TextFields>
                 <Button style={{alignSelf: 'center', marginTop: 20}} icon="check" mode="elevated" uppee textColor='#000' onPress={handleSubmit}>
@@ -126,4 +128,4 @@ background-color: #fff;
 `
 
 
-export default EditUserForm;
+export default EditChatForm;

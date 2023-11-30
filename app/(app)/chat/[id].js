@@ -215,8 +215,8 @@ const Chat = () => {
               if(chatUser.id === u.id){
                     return {
                         ...u,
-                        onlineStatus: value.isOnline,
-                        timeStamp: value.timeStamp
+                        onlineStatus: value?.isOnline,
+                        timeStamp: value?.timeStamp
                     }
                 }
                 return u;

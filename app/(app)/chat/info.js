@@ -14,6 +14,7 @@ const Info = () => {
     const createdAt = `${createdAtDate.getFullYear()}-${createdAtDate.getMonth() + 1}-${createdAtDate.getDate()} ${createdAtDate.getHours()}:${createdAtDate.getMinutes()}`
     const defaultChatImage = chatData.type === "public" ? require('../../../assets/group-chat.png') : require('../../../assets/default-user.png')
     const headImage = chatData.type === "private" ? chatUsers[0].image : chatData.image
+    const userIsAdmin = chatData?.admin.includes(user.uid) 
     return (
       <Container>
         <ChatInfoContainer>
@@ -62,28 +63,29 @@ const Info = () => {
                     </UserDataContainer>
                 </UserItem>
                 
-                {chatUsers.map(chatUser => (<UserItem key={chatUser.id}>
-                            <UserImageContainer>
-                                <UserItemImage>
-                                    {chatUser.image 
-                                    ? <CachedImage url={chatUser.image} style={{width: '100%', height: '100%'}}/>
-                                    : <UserImage source={require('../../../assets/default-user.png')}/>
-                                    }      
-                                </UserItemImage>
-                                <UserOnlineStatus style={!chatUser.onlineStatus && {backgroundColor: "#828181"}}/>  
-                            </UserImageContainer>
-                            <UserDataContainer>
-                                <UserDataText style={{fontWeight: 700}}>
-                                    {
-                                        chatUser.displayName
-                                    }
-                                </UserDataText>
-                                {chatUser.onlineStatus
-                                    ? <UserDataText>online</UserDataText>
-                                    : <TimeAgo date={chatUser.timeStamp} styleProps={{fontSize: 14, color: '#fff'}} textAfter={'тому'}/>
+                {chatUsers.map(chatUser => (
+                    <UserItem key={chatUser.id}>
+                        <UserImageContainer>
+                            <UserItemImage>
+                                {chatUser.image 
+                                ? <CachedImage url={chatUser.image} style={{width: '100%', height: '100%'}}/>
+                                : <UserImage source={require('../../../assets/default-user.png')}/>
+                                }      
+                            </UserItemImage>
+                            <UserOnlineStatus style={!chatUser.onlineStatus && {backgroundColor: "#828181"}}/>  
+                        </UserImageContainer>
+                        <UserDataContainer>
+                            <UserDataText style={{fontWeight: 700}}>
+                                {
+                                    chatUser.displayName
                                 }
-                            </UserDataContainer>
-                        </UserItem>  
+                            </UserDataText>
+                            {chatUser.onlineStatus
+                                ? <UserDataText>online</UserDataText>
+                                : <TimeAgo date={chatUser.timeStamp} styleProps={{fontSize: 14, color: '#fff'}} textAfter={'тому'}/>
+                            }
+                        </UserDataContainer>
+                    </UserItem>  
                     )
                 )}
                 <View style={{height: 10}}></View>
@@ -94,18 +96,20 @@ const Info = () => {
                 Actions
             </ContainerHeader>
             <ActionsContainer contentContainerStyle={{paddingBottom: 10}}>
-                {chatData.type === 'public' &&
+                {(chatData.type === 'public' && userIsAdmin) &&
                 <ActionButton onPress={() => router.push('chat/addUsers')} style={{backgroundColor: '#22092C'}}>
                     <ActionButtonText>
                         Add users
                     </ActionButtonText>
                 </ActionButton>
                 }
+                { userIsAdmin &&
                 <ActionButton onPress={() => router.push('chat/settings')} style={{backgroundColor: '#22092C'}}>
                     <ActionButtonText>
                         Settings
                     </ActionButtonText>
                 </ActionButton>
+                }
                 <ActionButton style={{backgroundColor: '#BE3144'}}>
                     <ActionButtonText>
                         Leave

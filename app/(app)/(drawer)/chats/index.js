@@ -70,6 +70,7 @@ const Chats = () => {
                 const readedMessages = (await getCountFromServer(query(collection(database, 'messages', chat.id, 'message'), where("isRead", "array-contains", user.uid)))).data().count
                 return {id: chat.id, unreadedMessages: totalMessagesCount - readedMessages}
             }))
+            console.log(unreadedMessages, 'unreaded messages')
             setUnreadedMessages(unreadedMessages)
         }
         checkMessages()
@@ -85,12 +86,12 @@ const Chats = () => {
                     setUsersOnlineStatus(usersOnlineStatus =>{
                         if(usersOnlineStatus === null){
                             return {
-                                [chat.userData.id]: value.isOnline 
+                                [chat.userData.id]: value?.isOnline 
                             }
                         }
                         return {
                             ...usersOnlineStatus,
-                            [chat.userData.id]: value.isOnline
+                            [chat.userData.id]: value?.isOnline
                         }
                     })
                 })
@@ -109,15 +110,17 @@ const Chats = () => {
             const qMessages = query(collection(database, "messages", String(chat.id), "message"), orderBy('createdAt', 'desc'), limit(1));
             const unsubscribe = onSnapshot(qMessages, async (snapShot) => {
                 snapShot.docs.forEach(async e => { 
-                    const data = e.data(); 
-                    setUnreadedMessages(unreadedChats =>{
-                        return(unreadedChats.map(unreadedChat => {
-                            if(unreadedChat.id === chat.id){
-                                return {...unreadedChat, unreadedMessages: unreadedChat.unreadedMessages + 1}
-                            }
-                            return unreadedChat;
-                        }))
-                    })
+                    const data = e.data();
+                    if(unreadedMessages){
+                        setUnreadedMessages(unreadedChats => {
+                            return(unreadedChats.map(unreadedChat => {
+                                if(unreadedChat.id === chat.id){
+                                    return {...unreadedChat, unreadedMessages: unreadedChat.unreadedMessages + 1}
+                                }
+                                return unreadedChat;
+                            }))
+                        })
+                    }
                     setChatsLastMessages(lastMessages => {
                     const message = {
                         images: data.media === null ? null : data.media,

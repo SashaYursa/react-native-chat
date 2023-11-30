@@ -1,4 +1,4 @@
-import { View, Text, SafeAreaView, Button, ScrollView, StyleSheet } from 'react-native'
+import { View, Text, SafeAreaView, Button, ScrollView, StyleSheet, Platform } from 'react-native'
 import React, { memo, useCallback, useContext, useMemo, useRef, useState } from 'react'
 import styled from 'styled-components'
 import { TextInput } from 'react-native-paper'
@@ -38,6 +38,7 @@ const createChat = () => {
             users: [user.uid , ...usersId],
             type: 'public',
             image: null,
+            admin: [user.uid],
             createdAt: serverTimestamp()
         }).then(doc => {
             router.back();
@@ -46,10 +47,10 @@ const createChat = () => {
     }
     
     return (
-        <SafeAreaView style={{flex: 1}}>
+        <SafeAreaView style={Platform.OS === 'android' ? {flex: 1, marginTop: 35} : {flex: 1}}>
             <Header>
                 <Button  title='Back' onPress={() => {
-                    console.log('go back')
+                    router.back()
                 }}/>
                 <HeaderTitle>
                     Create chat
