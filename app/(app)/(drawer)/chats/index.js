@@ -2,21 +2,22 @@ import React, { useContext, useEffect, useState } from 'react'
 import { View, Text, RefreshControl, ScrollView, Platform, TouchableOpacity, Image } from 'react-native'
 import styled from 'styled-components'
 import ChatListItem from '../../../components/ChatList/ChatListItem'
-import {  useRouter } from 'expo-router'
+import {  useNavigation, useRouter } from 'expo-router'
 import { collection, getCountFromServer, getDocs, limit, onSnapshot, orderBy, query, where } from 'firebase/firestore'
 import { AuthUserContext, SelectedChatContext, clearChatData } from '../../../_layout'
 import { database, rDatabase } from '../../../../config/firebase'
 import { getUserData } from '../../_layout'
 import { onValue, ref } from 'firebase/database'
 import UnreadMessagesIndicator from '../../../components/UnreadMessagesIndicator'
+import { ActivityIndicator } from 'react-native-paper'
 const Chats = () => {
     const { user } = useContext(AuthUserContext);
     const [chats, setChats] = useState([]);
     const [usersOnlineStatus, setUsersOnlineStatus] = useState(null);
     const [chatsLastMessages, setChatsLastMessages] = useState(null);
-    const [unreadedMessages, setUnreadedMessages] = useState(null);
     const [refresh, setRefresh] = useState(false);
     const {setMessages, setChatUsers, setChatData} = useContext(SelectedChatContext)
+    const router = useRouter();
     const getLastMessage = async (chatId) => {
         const qMessages = query(collection(database, "messages", String(chatId), "message"), orderBy('createdAt', 'desc'), limit(1));
         const data = await getDocs(qMessages)
@@ -60,21 +61,12 @@ const Chats = () => {
         fetchData();
     }, [user])
 
-    useEffect(() => {
-        const checkMessages = async () => {
+    const checkMessages = async (chatId) => {
             console.log('checking messages')
-            let i = 0
-            const unreadedMessages = await Promise.all(chats.map(async chat => {
-                console.log(i++)
-                const totalMessagesCount = (await getCountFromServer(collection(database, 'messages', chat.id, 'message'))).data().count
-                const readedMessages = (await getCountFromServer(query(collection(database, 'messages', chat.id, 'message'), where("isRead", "array-contains", user.uid)))).data().count
-                return {id: chat.id, unreadedMessages: totalMessagesCount - readedMessages}
-            }))
-            console.log(unreadedMessages, 'unreaded messages')
-            setUnreadedMessages(unreadedMessages)
-        }
-        checkMessages()
-    }, [chats])
+            const totalMessagesCount = (await getCountFromServer(collection(database, 'messages', chatId, 'message'))).data().count
+            const readedMessages = (await getCountFromServer(query(collection(database, 'messages', chatId, 'message'), where("isRead", "array-contains", user.uid)))).data().count
+            return (totalMessagesCount - readedMessages)
+    }
 
     // observing users status
     useEffect(() => {
@@ -111,21 +103,13 @@ const Chats = () => {
             const unsubscribe = onSnapshot(qMessages, async (snapShot) => {
                 snapShot.docs.forEach(async e => { 
                     const data = e.data();
-                    if(unreadedMessages){
-                        setUnreadedMessages(unreadedChats => {
-                            return(unreadedChats.map(unreadedChat => {
-                                if(unreadedChat.id === chat.id){
-                                    return {...unreadedChat, unreadedMessages: unreadedChat.unreadedMessages + 1}
-                                }
-                                return unreadedChat;
-                            }))
-                        })
-                    }
+                    let unreadedMessagesCount = await checkMessages(chat.id)
                     setChatsLastMessages(lastMessages => {
                     const message = {
                         images: data.media === null ? null : data.media,
                         text: data.text ? data.text : data.media !== null ? 'Фото' : 'Повідомлень немає',
-                        createdAt: data.createdAt?.seconds
+                        createdAt: data.createdAt?.seconds,
+                        unreadedMessagesCount
                     }
                     if(lastMessages == null){
                         return {
@@ -146,7 +130,6 @@ const Chats = () => {
         });
     }, [chats])
 
-    const router = useRouter();
 
     const hadnleChatClick = (chat) => {
         clearChatData(setChatUsers, setMessages, setChatData)
@@ -165,7 +148,8 @@ const Chats = () => {
         const message = chatsLastMessages?.[itemData.id] ? chatsLastMessages[itemData.id] : {
             images: null,
             text: 'Повідомлень немає',
-            createdAt: null
+            createdAt: null,
+            unreadedMessagesCount: 0
         } 
         const image =  itemData.type === "public" ? itemData.image : itemData.userData.image
         const item = {
@@ -179,7 +163,14 @@ const Chats = () => {
             onlineStatus: usersOnlineStatus ? usersOnlineStatus[itemData.userData.id] : false
         }
         return(
-            <ChatListItem item={item} />
+            <ChatLink onPress={() => hadnleChatClick(itemData)}>
+                <ChatListItem item={item} />
+                {message.unreadedMessagesCount > 0 &&
+                <UnreadMessagesCountCountainer>
+                    <UnreadMessagesIndicator count={message.unreadedMessagesCount}/>
+                </UnreadMessagesCountCountainer>
+                }
+            </ChatLink>
         )
     } 
 
@@ -191,18 +182,11 @@ const Chats = () => {
                     }>
                 <Container>
                     <ChatsList>
-                        {chats.length > 0 && chats.map(chat => (
-                        <ChatLink key={chat.id} onPress={() => hadnleChatClick(chat)}>
-                            {
-                                <ChatItem itemData={chat}/>
-                            }
-                            { unreadedMessages.length > 0 &&
-                                <UnreadMessagesCountCountainer>
-                                    <UnreadMessagesIndicator count={unreadedMessages.find(unrd => unrd.id === chat.id).unreadedMessages}/>
-                                </UnreadMessagesCountCountainer>
-                            }
-                        </ChatLink>
-                        ))}
+                        {chats.length > 0 && chats.map(chat => {
+                            return (
+                                <ChatItem key={chat.id} itemData={chat}/>
+                            )
+                        })}
                     </ChatsList>
                 </Container>
             </ScrollView>

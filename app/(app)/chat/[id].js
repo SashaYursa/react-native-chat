@@ -104,7 +104,7 @@ const Chat = () => {
       let lastId = null;
       snapshot.docChanges().forEach(change => {
         if(change.type === 'added') {
-          console.log('added')
+          // console.log('added')
           const messageData = change.doc.data();
           const docId = change.doc.id;
           if(!messageData.createdAt){
@@ -130,7 +130,7 @@ const Chat = () => {
           messagesLenght++;
         }
         if(change.type === 'modified'){
-          console.log('modified on ', Platform.OS)
+          // console.log('modified on ', Platform.OS)
         }
       })
       setMessages(messages => {
@@ -297,7 +297,7 @@ const Chat = () => {
   }
 
   const loadMessages = async (query) => {
-    console.log('fetched 100 messages');
+    // console.log('fetched 100 messages');
     const result = await getDocs(query)
     const oldMessages = [];
     const messagesForRead = [];
@@ -306,7 +306,7 @@ const Chat = () => {
       const messageData = doc.data();
 
       if(messageData.isRead.includes(user.uid)){
-        console.log('is read')
+        // console.log('is read')
       }else{
         messagesForRead.push({id: doc.id, data: messageData})
       }
