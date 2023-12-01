@@ -44,24 +44,26 @@ const Chat = () => {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const navigation = useNavigation();
-  const {chatUsers, chatData, setChatUsers, setChatData, messages = {}, setMessages} = useContext(SelectedChatContext)
+  const {chatUsers, getChatData, setChatUsers, setChatData, messages = {}, setMessages} = useContext(SelectedChatContext)
   //--------- виконується 1
   //--------- завантаження даних поточного чату
   //--------- встановлення поля lastSeen для залогіненого юзера в табл. chats значення - online
   //--------- при виході з чату в поле встановлюється значення new Date()
-  useEffect(() => {
-    const qChat = doc(database, "chats", id);
-    const unsubscribe = onSnapshot(qChat, { includeMetadataChanges: true }, async (data) => {
-      const chat = data.data();
-      const newChatData = {...chat, id: data.id}
-        if(!compareObjects(newChatData, chatData)){
-          setChatData(newChatData);
-        }
-    })
-    return async () => {
-      unsubscribe();
-    }
-  }, [id])
+  const chatData = getChatData(id)
+
+  // useEffect(() => {
+  //   const qChat = doc(database, "chats", id);
+  //   const unsubscribe = onSnapshot(qChat, { includeMetadataChanges: true }, async (data) => {
+  //     const chat = data.data();
+  //     const newChatData = {...chat, id: data.id}
+  //       if(!compareObjects(newChatData, chatData)){
+  //         setChatData(newChatData);
+  //       }
+  //   })
+  //   return async () => {
+  //     unsubscribe();
+  //   }
+  // }, [id])
 
   //------ виконується 2
   //------ завантаження користувачів чату
@@ -304,7 +306,6 @@ const Chat = () => {
     let lastLoaded = null;
     result.docs.forEach(doc => {
       const messageData = doc.data();
-
       if(messageData.isRead.includes(user.uid)){
         // console.log('is read')
       }else{

@@ -14,7 +14,7 @@ const Info = () => {
     const createdAt = `${createdAtDate.getFullYear()}-${createdAtDate.getMonth() + 1}-${createdAtDate.getDate()} ${createdAtDate.getHours()}:${createdAtDate.getMinutes()}`
     const defaultChatImage = chatData.type === "public" ? require('../../../assets/group-chat.png') : require('../../../assets/default-user.png')
     const headImage = chatData.type === "private" ? chatUsers[0].image : chatData.image
-    const userIsAdmin = chatData?.admin.includes(user.uid) 
+    const userIsAdmin = chatData.type === "public" && chatData?.admin.includes(user.uid) 
     return (
       <Container>
         <ChatInfoContainer>
@@ -37,7 +37,7 @@ const Info = () => {
                 </ChatDataContainer>
             </InfoData>
         </ChatInfoContainer>
-        <UsersInfoContainer>
+        <UsersInfoContainer style={{flex: 1, flexGrow: 1}}>
             <ContainerHeader>
                 Users
             </ContainerHeader>
@@ -139,7 +139,6 @@ const UsersInfoContainer = styled.View`
 border-radius: 0 32px 0 32px;
 background-color: #fff;
 background-color: #3A4D39;
-flex-grow: 1;
 `
 
 const ChatActions = styled.View`

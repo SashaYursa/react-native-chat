@@ -12,12 +12,14 @@ import UnreadMessagesIndicator from '../../../components/UnreadMessagesIndicator
 import { ActivityIndicator } from 'react-native-paper'
 const Chats = () => {
     const { user } = useContext(AuthUserContext);
-    const [chats, setChats] = useState([]);
+    // const [chats, setChats] = useState([]);
     const [usersOnlineStatus, setUsersOnlineStatus] = useState(null);
     const [chatsLastMessages, setChatsLastMessages] = useState(null);
     const [refresh, setRefresh] = useState(false);
-    const {setMessages, setChatUsers, setChatData} = useContext(SelectedChatContext)
+    const {setMessages, getChatData, setChatUsers, setChatsData, addLastMessage, getChatLastMessage} = useContext(SelectedChatContext)
+    const chats = getChatData();
     const router = useRouter();
+    
     const getLastMessage = async (chatId) => {
         const qMessages = query(collection(database, "messages", String(chatId), "message"), orderBy('createdAt', 'desc'), limit(1));
         const data = await getDocs(qMessages)
@@ -53,7 +55,7 @@ const Chats = () => {
             }
             return b.message?.createdAt?.seconds - a.message?.createdAt?.seconds
         })
-        setChats(sortedChats)
+        setChatsData(sortedChats)
         setRefresh(false);
         } 
 
@@ -73,25 +75,30 @@ const Chats = () => {
         let unsubs = [];
         if(!refresh){
             unsubs = chats.map(chat => {
-                const unsub = onValue(ref(rDatabase, '/status/' + chat.userData.id), (snapShot) => {
-                    const value = snapShot.val();
-                    setUsersOnlineStatus(usersOnlineStatus =>{
-                        if(usersOnlineStatus === null){
-                            return {
-                                [chat.userData.id]: value?.isOnline 
+                if(chat.type === "private"){
+                    const unsub = onValue(ref(rDatabase, '/status/' + chat.userData.id), (snapShot) => {
+                        const value = snapShot.val();
+                        setUsersOnlineStatus(usersOnlineStatus =>{
+                            if(usersOnlineStatus === null){
+                                return {
+                                    [chat.userData.id]: value?.isOnline 
+                                }
                             }
-                        }
-                        return {
-                            ...usersOnlineStatus,
-                            [chat.userData.id]: value?.isOnline
-                        }
+                            return {
+                                ...usersOnlineStatus,
+                                [chat.userData.id]: value?.isOnline
+                            }
+                        })
                     })
-                })
-                return unsub;
+                    return unsub;
+                }
             })
         }
         return () => unsubs.forEach(unsub => {
-            unsub();    
+            console.log(unsub, '-----> unsub')
+            if(unsub){
+                unsub();    
+            }
         });
     }, [chats])
 
@@ -102,26 +109,34 @@ const Chats = () => {
             const qMessages = query(collection(database, "messages", String(chat.id), "message"), orderBy('createdAt', 'desc'), limit(1));
             const unsubscribe = onSnapshot(qMessages, async (snapShot) => {
                 snapShot.docs.forEach(async e => { 
+                    console.log('new message')
                     const data = e.data();
                     let unreadedMessagesCount = await checkMessages(chat.id)
-                    setChatsLastMessages(lastMessages => {
-                    const message = {
-                        images: data.media === null ? null : data.media,
+                    addLastMessage({
+                        ...data, 
                         text: data.text ? data.text : data.media !== null ? 'Фото' : 'Повідомлень немає',
+                        id: e.id, 
                         createdAt: data.createdAt?.seconds,
                         unreadedMessagesCount
-                    }
-                    if(lastMessages == null){
-                        return {
-                            [chat.id]: message
-                        }
-                    }
-                    return {
-                        ...lastMessages,
-                        [chat.id]: message
-                    }
-                })
-            });
+                    }, chat.id)
+                //     setChatsLastMessages(lastMessages => {
+                //     const message = {
+                //         images: data.media === null ? null : data.media,
+                //         text: data.text ? data.text : data.media !== null ? 'Фото' : 'Повідомлень немає',
+                //         createdAt: data.createdAt?.seconds,
+                //         unreadedMessagesCount
+                //     }
+                //     if(lastMessages == null){
+                //         return {
+                //             [chat.id]: message
+                //         }
+                //     }
+                //     return {
+                //         ...lastMessages,
+                //         [chat.id]: message
+                //     }
+                // })
+                });
             })
             return unsubscribe;  
         })
@@ -132,7 +147,7 @@ const Chats = () => {
 
 
     const hadnleChatClick = (chat) => {
-        clearChatData(setChatUsers, setMessages, setChatData)
+        // clearChatData(setChatUsers, setMessages, setChatData)
         moveToChat(chat.id)
     }
 
@@ -145,7 +160,8 @@ const Chats = () => {
         fetchData()
     }
     const ChatItem = ({itemData}) => {
-        const message = chatsLastMessages?.[itemData.id] ? chatsLastMessages[itemData.id] : {
+        const selectedChatMessage = getChatLastMessage(itemData.id)
+        const message = selectedChatMessage ? selectedChatMessage.messageData : {
             images: null,
             text: 'Повідомлень немає',
             createdAt: null,
