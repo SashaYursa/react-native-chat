@@ -1,5 +1,5 @@
 import { View, Text, Platform } from 'react-native'
-import React, { createContext, useContext, useEffect, useState } from 'react'
+import React, { createContext, useContext, useEffect, useReducer, useState } from 'react'
 import { Stack } from 'expo-router/stack'
 import { onAuthStateChanged } from 'firebase/auth';
 import { setParams } from 'expo-router/src/global-state/routing';
@@ -14,6 +14,55 @@ export const clearChatData = (setChatUsers, setMessages, setChatData) => {
     setMessages([])
     setChatData(null)
 }
+export const reducer = (state, action) =>{
+    if(action.type === 'set-chats'){
+        return {
+            ...state,
+            chatsData: action.payload
+        }
+    }
+    if(action.type === 'add-chat'){
+        return {
+            ...state,
+            chatsData: [...state.chatsData, action.payload]
+        }
+    }
+    if(action.type === 'add-users'){
+        return {
+            ...state,
+            users: [...state.users, action.payload]
+        }
+    }
+    if(action.type === 'set-users'){
+        return {
+            ...state,
+            users: action.payload
+        }
+    }
+    if(action.type === 'set-lastmessages'){
+        return {
+            ...state,
+            lastMessages: state.lastMessages.map(lm => {
+                if(lm.chatId === action.payload.chatId){
+                    return {chatId: action.payload.chatId, messageData: action.payload.messageData} 
+                }
+                return lm
+            })
+        }
+    }
+    if(action.type === 'add-lastmessage'){
+        return {
+            ...state,
+            lastMessages: action.payload
+        }
+    }
+    if(action.type === 'add-messages'){
+        return
+    }
+    if(action.type === 'set-messages'){
+
+    }
+}
 
 const RootLayout = () => {
     // console.log('root rerender')
@@ -22,6 +71,9 @@ const RootLayout = () => {
     const [chatUsers, setChatUsers] = useState(null)
     const [messages, setMessages] = useState([])
     const [lastMessages, setLastMessages] = useState([])
+    console.log('rerender layout')
+
+    // const [chatStore, dispatch] = useReducer(reducer, {chatsData: [], users: [], lastMessages: [], messages: []})
     const debouncedLastMessages = useDebounce(lastMessages, 100)
     const getChatData = (chatId = null) => {
         if(chatId){
@@ -42,7 +94,7 @@ const RootLayout = () => {
     const addLastMessage = (messageData, chatId) => {
         setLastMessages(lastMessages => {
             const lastMessageIndexInChat = lastMessages.findIndex(lm => lm?.chatId === chatId)
-            console.log(lastMessageIndexInChat, 'last index in ', Platform.OS)
+            // console.log(lastMessageIndexInChat, 'last index in ', Platform.OS)
             if(lastMessageIndexInChat === -1){
             
                 return [
@@ -84,7 +136,7 @@ const RootLayout = () => {
     return (
         <FirebaseContext.Provider value={{auth, database}}>
             <AuthUserContext.Provider value={{user, setUser}}>
-                <SelectedChatContext.Provider value={{getChatData, chatUsers, messages, unreadedMessages, getChatLastMessage, setChatsData, addLastMessage, setChatUsers, setMessages, setUnreadedMessages}}>
+                <SelectedChatContext.Provider value={{ getChatData, chatUsers, messages, unreadedMessages, getChatLastMessage, setChatsData, addLastMessage, setChatUsers, setMessages, setUnreadedMessages, setLastMessages}}>
                     <Stack screenOptions={{headerShown: false}}>
                     </Stack>
                 </SelectedChatContext.Provider>

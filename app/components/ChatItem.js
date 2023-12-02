@@ -11,7 +11,6 @@ const ChatItem = React.memo(({userName, isAuthor, userImage, chatType, messageMe
         setSelectedImage(index);
         setIsOpenedImages(true);
     }
-    const {user} = useContext(AuthUserContext);
     const date = new Date(messageCreatedAt)
     const dateText = String(date.getHours() < 10 ? `0${date.getHours()}` : date.getHours()) + ":" + String(date.getMinutes() < 10 ? `0${date.getMinutes()}` : date.getMinutes()); 
     return (
@@ -26,7 +25,7 @@ const ChatItem = React.memo(({userName, isAuthor, userImage, chatType, messageMe
             {messageMedia &&
                 <MessageImagesContainer>
                     {messageMedia.map((image, idx) => (
-                        <MessageImageButton style={messageMedia.length > 2 && {width: '49%'}} key={image} onPress={()=>{openImage(idx)}} onLongPress={() => {selectMessage(messageId)}} delayLongPress={300} activeOpacity={1}>
+                        <MessageImageButton style={messageMedia.length > 2 && {width: '49%'}} key={image} onPress={()=>{openImage(idx)}} onLongPress={() => {console.log('1231231')}} delayLongPress={300} activeOpacity={1}>
                             <CachedImage style={{width: '100%', height: '100%', objectFit: 'cover'}} url={image}/>
                         </MessageImageButton>
                     ))}
@@ -51,7 +50,7 @@ const ChatItem = React.memo(({userName, isAuthor, userImage, chatType, messageMe
   </MessageOutsideContaier>
   )
 }, (prev, next) => {
-    return prev === next
+    return prev.messageId === next.messageId
 })
 
 const MessageOutsideContaier = styled.View`

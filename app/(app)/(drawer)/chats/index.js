@@ -11,6 +11,7 @@ import { onValue, ref } from 'firebase/database'
 import UnreadMessagesIndicator from '../../../components/UnreadMessagesIndicator'
 import { ActivityIndicator } from 'react-native-paper'
 const Chats = () => {
+    console.log('rerender chats')
     const { user } = useContext(AuthUserContext);
     // const [chats, setChats] = useState([]);
     const [usersOnlineStatus, setUsersOnlineStatus] = useState(null);
@@ -176,7 +177,7 @@ const Chats = () => {
             time: message.createdAt,
             media: message.images,
             type: itemData.type,
-            onlineStatus: usersOnlineStatus ? usersOnlineStatus[itemData.userData.id] : false
+            onlineStatus: false
         }
         return(
             <ChatLink onPress={() => hadnleChatClick(itemData)}>

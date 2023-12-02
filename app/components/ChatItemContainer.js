@@ -76,7 +76,8 @@ const ChatItemContainer = React.memo(({messagesCount, messages, chatData, chatUs
             messageCreatedAt={item?.createdAt?.seconds}
             isAuthor={item.uid === user.uid}
             chatType={chatData.type}
-            selectMessage={updateSelectedMessages} />
+            // selectMessage={updateSelectedMessages} 
+            />
         </MessagesContainer>
       )
     }

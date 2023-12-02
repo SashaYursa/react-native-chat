@@ -44,7 +44,8 @@ const Chat = () => {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const navigation = useNavigation();
-  const {chatUsers, getChatData, setChatUsers, setChatData, messages = {}, setMessages} = useContext(SelectedChatContext)
+  const [messages, setMessages] = useState([])
+  const {chatUsers, getChatData, setChatUsers, setChatData} = useContext(SelectedChatContext)
   //--------- виконується 1
   //--------- завантаження даних поточного чату
   //--------- встановлення поля lastSeen для залогіненого юзера в табл. chats значення - online
@@ -84,7 +85,7 @@ const Chat = () => {
 
   useEffect(() => {
     const firstFetch = async () => {
-      const prevQ = query(collection(database, 'messages', String(id), 'message'), orderBy('createdAt', 'desc'), limit(10))
+      const prevQ = query(collection(database, 'messages', String(id), 'message'), orderBy('createdAt', 'desc'), limit(70))
       const lastMessages = await loadMessages(prevQ);
       setMessages(lastMessages)
     }
@@ -274,7 +275,7 @@ const Chat = () => {
     if(loadedMessagesCount < messagesCount){
     setLoading(true)
     const lastDoc = await getDoc(doc(database, "messages", id, "message", lastLoadedId));
-    const q = query(collection(database, 'messages', String(id), 'message'), orderBy('createdAt', 'desc'), limit(20), startAt(lastDoc))
+    const q = query(collection(database, 'messages', String(id), 'message'), orderBy('createdAt', 'desc'), limit(70), startAt(lastDoc))
     const oldMessages = await loadMessages(q)
     setMessages(messages => {
       const updatedMessages = [
