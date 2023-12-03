@@ -4,9 +4,8 @@ import { AuthUserContext } from '../_layout';
 import styled from 'styled-components';
 import ChatItem from './ChatItem';
 
-
 const ChatItemContainer = React.memo(({messagesCount, messages, chatData, chatUsers, selectedMessages, updateSelectedMessages, loadPreviousMessages}) => {  
-    const [endReached, setEndReached] = useState(false);
+  const [endReached, setEndReached] = useState(false);
     const [allowSetEndReached, setAllowSetEndReached] = useState(false);
     const {user} = useContext(AuthUserContext);
     const scrollRef = useRef();

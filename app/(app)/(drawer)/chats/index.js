@@ -10,15 +10,37 @@ import { getUserData } from '../../_layout'
 import { onValue, ref } from 'firebase/database'
 import UnreadMessagesIndicator from '../../../components/UnreadMessagesIndicator'
 import { ActivityIndicator } from 'react-native-paper'
+import { useDispatch, useSelector } from 'react-redux'
+import { setChats } from '../../../store/reducers/chats'
+import { useFetchChatsQuery } from '../../../store/features/chats/chatsApi'
+import { addLastMessage } from '../../../store/reducers/lastMessages'
 const Chats = () => {
-    console.log('rerender chats')
+    // console.log('rerender chats')
     const { user } = useContext(AuthUserContext);
     // const [chats, setChats] = useState([]);
     const [usersOnlineStatus, setUsersOnlineStatus] = useState(null);
     const [chatsLastMessages, setChatsLastMessages] = useState(null);
     const [refresh, setRefresh] = useState(false);
-    const {setMessages, getChatData, setChatUsers, setChatsData, addLastMessage, getChatLastMessage} = useContext(SelectedChatContext)
+    // const {chats} = useSelector((state) => state.chats)
+    const dispatch = useDispatch();
+    // const cachedChatData = useSelector((state) => state.chats)
+    // console.log(cachedChatData)
+    const chatsData = useFetchChatsQuery(user.uid)
+    const lastMessages = useSelector(state => state.lastMessages)
+    const l123 = useSelector(state => state)
+    console.log(l123, '-2312131')
+    // const chatUsers = 
+    // if(!chatsData.isLoading){
+    //     // chatUsers = chatsData.map(chat => chat.)
+    // }
+    // console.log(chatsData.isLoading, '-------------------------data')
+    if(!chatsData.isLoading){
+        // console.log(chatsData.data)
+    }
+
+    const {setMessages, getChatData, setChatUsers, setChatsData, getChatLastMessage} = useContext(SelectedChatContext)
     const chats = getChatData();
+    // console.log(chats)
     const router = useRouter();
     
     const getLastMessage = async (chatId) => {
@@ -42,7 +64,7 @@ const Chats = () => {
                 : users[0]
             const messages = await getLastMessage(doc.id);
             const userData = await getUserData(database, selectedUserID)
-            
+            console.log()
             return {
                 ...chat,
                 message: messages,
@@ -56,6 +78,7 @@ const Chats = () => {
             }
             return b.message?.createdAt?.seconds - a.message?.createdAt?.seconds
         })
+        // dispatch(setChats(sortedChats))
         setChatsData(sortedChats)
         setRefresh(false);
         } 
@@ -101,7 +124,7 @@ const Chats = () => {
                 unsub();    
             }
         });
-    }, [chats])
+    }, [chatsData.isLoading])
 
     // observing users messages
     useEffect(() => {
@@ -113,30 +136,14 @@ const Chats = () => {
                     console.log('new message')
                     const data = e.data();
                     let unreadedMessagesCount = await checkMessages(chat.id)
-                    addLastMessage({
+                    dispatch(addLastMessage({
                         ...data, 
+                        chatId: chat.id,
                         text: data.text ? data.text : data.media !== null ? 'Фото' : 'Повідомлень немає',
                         id: e.id, 
                         createdAt: data.createdAt?.seconds,
                         unreadedMessagesCount
-                    }, chat.id)
-                //     setChatsLastMessages(lastMessages => {
-                //     const message = {
-                //         images: data.media === null ? null : data.media,
-                //         text: data.text ? data.text : data.media !== null ? 'Фото' : 'Повідомлень немає',
-                //         createdAt: data.createdAt?.seconds,
-                //         unreadedMessagesCount
-                //     }
-                //     if(lastMessages == null){
-                //         return {
-                //             [chat.id]: message
-                //         }
-                //     }
-                //     return {
-                //         ...lastMessages,
-                //         [chat.id]: message
-                //     }
-                // })
+                    }))
                 });
             })
             return unsubscribe;  
@@ -144,7 +151,7 @@ const Chats = () => {
         return () => unsubs.forEach(unsub => {
             unsub();    
         });
-    }, [chats])
+    }, [chatsData.isLoading])
 
 
     const hadnleChatClick = (chat) => {
@@ -161,7 +168,7 @@ const Chats = () => {
         fetchData()
     }
     const ChatItem = ({itemData}) => {
-        const selectedChatMessage = getChatLastMessage(itemData.id)
+        const selectedChatMessage = lastMessages.find(lm => lm.chatId === itemData.id)
         const message = selectedChatMessage ? selectedChatMessage.messageData : {
             images: null,
             text: 'Повідомлень немає',
@@ -190,6 +197,10 @@ const Chats = () => {
             </ChatLink>
         )
     } 
+
+    if(!lastMessages){
+        return <ActivityIndicator />
+    }
 
     return (
         <View style={{flex: 1}}>

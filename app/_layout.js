@@ -5,6 +5,8 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { setParams } from 'expo-router/src/global-state/routing';
 import { auth, database } from '../config/firebase';
 import useDebounce from '../hooks/useDebounce';
+import { Provider } from 'react-redux';
+import store from './store';
 export const AuthUserContext = createContext({});
 export const FirebaseContext = createContext({});
 export const SelectedChatContext = createContext({});
@@ -134,6 +136,7 @@ const RootLayout = () => {
 
     const [unreadedMessages, setUnreadedMessages] = useState(null)
     return (
+        <Provider store={store}>
         <FirebaseContext.Provider value={{auth, database}}>
             <AuthUserContext.Provider value={{user, setUser}}>
                 <SelectedChatContext.Provider value={{ getChatData, chatUsers, messages, unreadedMessages, getChatLastMessage, setChatsData, addLastMessage, setChatUsers, setMessages, setUnreadedMessages, setLastMessages}}>
@@ -142,6 +145,7 @@ const RootLayout = () => {
                 </SelectedChatContext.Provider>
             </AuthUserContext.Provider>
         </FirebaseContext.Provider>
+        </Provider>
         
     )
 }
