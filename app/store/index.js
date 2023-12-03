@@ -1,13 +1,15 @@
 import { configureStore, getDefaultMiddleware } from "@reduxjs/toolkit";
 import usersReducer from "./features/users/usersSlice";
 import chatsReducer from "./features/chats/chatsSlice";
+import lastMessagesReducer from "./reducers/lastMessages";
 import { rootApi } from "./features/rootApi/rootApi";
 import { setupListeners } from "@reduxjs/toolkit/query";
 const store = configureStore({
     reducer: {
         [rootApi.reducerPath]: rootApi.reducer,
         users: usersReducer,
-        chats: chatsReducer
+        chats: chatsReducer,
+        lastMessages: lastMessagesReducer
     },
     middleware: (getDefaultMiddleware) => getDefaultMiddleware({
         serializableCheck: false

@@ -14,6 +14,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { setChats } from '../../../store/reducers/chats'
 import { useFetchChatsQuery } from '../../../store/features/chats/chatsApi'
 import { addLastMessage } from '../../../store/reducers/lastMessages'
+import useDebounce from '../../../../hooks/useDebounce'
 const Chats = () => {
     // console.log('rerender chats')
     const { user } = useContext(AuthUserContext);
@@ -26,9 +27,7 @@ const Chats = () => {
     // const cachedChatData = useSelector((state) => state.chats)
     // console.log(cachedChatData)
     const chatsData = useFetchChatsQuery(user.uid)
-    const lastMessages = useSelector(state => state.lastMessages)
-    const l123 = useSelector(state => state)
-    console.log(l123, '-2312131')
+    const lastMessages = useDebounce(useSelector(state => state.lastMessages.messages), 100)
     // const chatUsers = 
     // if(!chatsData.isLoading){
     //     // chatUsers = chatsData.map(chat => chat.)
@@ -97,25 +96,25 @@ const Chats = () => {
     // observing users status
     useEffect(() => {
         let unsubs = [];
-        if(!refresh){
-            unsubs = chats.map(chat => {
-                if(chat.type === "private"){
-                    const unsub = onValue(ref(rDatabase, '/status/' + chat.userData.id), (snapShot) => {
-                        const value = snapShot.val();
-                        setUsersOnlineStatus(usersOnlineStatus =>{
-                            if(usersOnlineStatus === null){
-                                return {
-                                    [chat.userData.id]: value?.isOnline 
-                                }
-                            }
-                            return {
-                                ...usersOnlineStatus,
-                                [chat.userData.id]: value?.isOnline
-                            }
-                        })
-                    })
-                    return unsub;
-                }
+        if(!chatsData.isLoading){
+            unsubs = chatsData.data.map(chat => {
+                // if(chat.type === "private"){
+                //     const unsub = onValue(ref(rDatabase, '/status/' + chat.userData.id), (snapShot) => {
+                //         const value = snapShot.val();
+                //         setUsersOnlineStatus(usersOnlineStatus =>{
+                //             if(usersOnlineStatus === null){
+                //                 return {
+                //                     [chat.userData.id]: value?.isOnline 
+                //                 }
+                //             }
+                //             return {
+                //                 ...usersOnlineStatus,
+                //                 [chat.userData.id]: value?.isOnline
+                //             }
+                //         })
+                //     })
+                //     return unsub;
+                // }
             })
         }
         return () => unsubs.forEach(unsub => {
@@ -129,25 +128,27 @@ const Chats = () => {
     // observing users messages
     useEffect(() => {
         let unsubs = [];
-        unsubs = chats.map(chat => {
-            const qMessages = query(collection(database, "messages", String(chat.id), "message"), orderBy('createdAt', 'desc'), limit(1));
-            const unsubscribe = onSnapshot(qMessages, async (snapShot) => {
-                snapShot.docs.forEach(async e => { 
-                    console.log('new message')
-                    const data = e.data();
-                    let unreadedMessagesCount = await checkMessages(chat.id)
-                    dispatch(addLastMessage({
-                        ...data, 
-                        chatId: chat.id,
-                        text: data.text ? data.text : data.media !== null ? 'Фото' : 'Повідомлень немає',
-                        id: e.id, 
-                        createdAt: data.createdAt?.seconds,
-                        unreadedMessagesCount
-                    }))
-                });
+        if(!chatsData.isLoading){
+            unsubs = chatsData.data.map(chat => {
+                const qMessages = query(collection(database, "messages", String(chat.id), "message"), orderBy('createdAt', 'desc'), limit(1));
+                const unsubscribe = onSnapshot(qMessages, async (snapShot) => {
+                    snapShot.docs.forEach(async e => { 
+                        console.log('new message')
+                        const data = e.data();
+                        let unreadedMessagesCount = await checkMessages(chat.id)
+                        dispatch(addLastMessage({
+                            ...data, 
+                            chatId: chat.id,
+                            text: data.text ? data.text : data.media !== null ? 'Фото' : 'Повідомлень немає',
+                            id: e.id, 
+                            createdAt: data.createdAt?.seconds,
+                            unreadedMessagesCount
+                        }))
+                    });
+                })
+                return unsubscribe;  
             })
-            return unsubscribe;  
-        })
+        }
         return () => unsubs.forEach(unsub => {
             unsub();    
         });
@@ -169,8 +170,8 @@ const Chats = () => {
     }
     const ChatItem = ({itemData}) => {
         const selectedChatMessage = lastMessages.find(lm => lm.chatId === itemData.id)
-        const message = selectedChatMessage ? selectedChatMessage.messageData : {
-            images: null,
+        const message = selectedChatMessage ? selectedChatMessage : {
+            media: null,
             text: 'Повідомлень немає',
             createdAt: null,
             unreadedMessagesCount: 0
@@ -182,23 +183,24 @@ const Chats = () => {
             name: itemData.name ? itemData.name : itemData.userData.displayName,
             data: message.text,
             time: message.createdAt,
-            media: message.images,
+            media: message.media,
             type: itemData.type,
             onlineStatus: false
         }
         return(
             <ChatLink onPress={() => hadnleChatClick(itemData)}>
                 <ChatListItem item={item} />
-                {message.unreadedMessagesCount > 0 &&
+                {/* {message.unreadedMessagesCount > 0 &&
                 <UnreadMessagesCountCountainer>
                     <UnreadMessagesIndicator count={message.unreadedMessagesCount}/>
                 </UnreadMessagesCountCountainer>
-                }
+                } */}
             </ChatLink>
         )
     } 
+    console.log('len', lastMessages.length)
 
-    if(!lastMessages){
+    if(!lastMessages.length){
         return <ActivityIndicator />
     }
 
