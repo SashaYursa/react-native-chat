@@ -19,14 +19,13 @@ import { useFetchAllChatsUsersQuery } from '../../../store/features/users/usersA
 import { setUsers, updateOnlineStatus } from '../../../store/features/users/usersSlice'
 
 const Chats = ({user: {user}}) => {
-    console.log('rerender', Platform.OS)
     const [refresh, setRefresh] = useState(false);
-
     const dispatch = useDispatch();
 
     const chatsData = useFetchChatsQuery(user.uid)
     const usersForChats = chatsData.isLoading === false
     ? (chatsData.data.map(chat => chat.users)).flat(2).filter((value, index, array) => {
+        if(value === user.uid) return false
         return array.indexOf(value) === index;
     }) 
     : []
@@ -35,22 +34,18 @@ const Chats = ({user: {user}}) => {
     
     useFetchAllChatsUsersQuery(usersForChats)
     const {users: chatUsers, loading: usersLoading, error: usersError} = useDebounce(useSelector(state => state.users), 100)
-
     const router = useRouter();
 
     // observing users status
     useEffect(() => {
         let unsubs = [];
         if(!usersLoading){
-            unsubs = chatsData.data.map(chat => {
-                if(chat.type === "private"){
-                    const userId = (chat.users.filter(u => u !== user.uid))[0] 
-                    const unsub = onValue(ref(rDatabase, '/status/' + userId), (snapShot) => {
-                        const value = snapShot.val();
-                        dispatch(updateOnlineStatus({id: userId, isOnline: value?.isOnline}))
-                    })
-                    return unsub;
-                }
+            unsubs = usersForChats.map(userId => {
+                const unsub = onValue(ref(rDatabase, '/status/' + userId), (snapShot) => {
+                    const value = snapShot.val();
+                    dispatch(updateOnlineStatus({id: userId, isOnline: value?.isOnline, timeStamp: value.timeStamp}))
+                })
+                return unsub;
             })
         }
         return () => unsubs.forEach(unsub => {

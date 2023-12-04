@@ -16,11 +16,7 @@ const AuthLayout = () => {
       const email = await ReactNativeAsyncStorage.getItem("email")
       const password = await ReactNativeAsyncStorage.getItem("password")
       if(email && password){
-        login({email, password}).then(data => {
-          if(data.data){
-            console.log('logined')
-          }
-        })
+        login({email, password})
       }
     }
     autoLogin()

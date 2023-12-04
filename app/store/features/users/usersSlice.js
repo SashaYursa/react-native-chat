@@ -17,11 +17,12 @@ export const usersSlice = createSlice({
             state.users = [...state.users, action.payload]
             state.loading = false
         },
-        updateOnlineStatus: (state, {type, payload: {id, isOnline}}) => {
+        updateOnlineStatus: (state, {type, payload: {id, isOnline, timeStamp}}) => {
             const index = state.users.findIndex(u => u.id === id)
             state.users[index] = {
                 ...state.users[index],
-                isOnline: isOnline
+                isOnline,
+                timeStamp 
             } 
         }
     },
