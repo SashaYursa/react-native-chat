@@ -6,9 +6,10 @@ import { Image, TouchableOpacity, View, Text } from 'react-native';
 import { useContext } from 'react';
 import { AuthUserContext } from '../../_layout';
 import { useRouter } from 'expo-router';
+import { useSelector } from 'react-redux';
 
 const Layout = () => {
-  const { user } = useContext(AuthUserContext);
+  const user = useSelector(state => state.auth.user);
   const router = useRouter();
   return (
     <Drawer initialRouteName='chats' screenOptions={{headerShown: true}}>

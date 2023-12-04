@@ -5,6 +5,7 @@ import { Redirect, Stack } from 'expo-router';
 import { onAuthStateChanged, onUserChanged } from 'firebase/auth';
 import { auth, database } from '../../config/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { useSelector } from 'react-redux';
 export const getUserData = async (database, uid) => {
     const qUser = doc(database, "users", String(uid))
     return await getDoc(qUser)
@@ -64,15 +65,7 @@ export const checkUserStatus = async (database, uid, callback) => {
 }
 
 const AppLayout = () => {
-    const {user, setUser} = useContext(AuthUserContext);
-    useEffect(()=> {
-        const unsub = onAuthStateChanged(auth, 
-            authUser => {
-                authUser ? setUser(authUser) : setUser(null)
-            })
-        return () => unsub();
-    }, [user])
-    
+    const user = useSelector(state => state.auth.user);
     if (!user) {
         return (
            <Redirect href='auth' />

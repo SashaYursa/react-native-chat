@@ -1,4 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
+import { chatsApi } from "./chatsApi";
 
 export const chatsSlice = createSlice({
     name: 'chats',
@@ -15,6 +16,13 @@ export const chatsSlice = createSlice({
             loading: false
             })
         }
+    },
+    extraReducers: (builder) => {
+        builder
+        .addMatcher(chatsApi.endpoints.fetchChats.matchFulfilled, (state, action) => {
+            state.chats = action.payload
+            state.loading = false
+        })
     }
 })
 
