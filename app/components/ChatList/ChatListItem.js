@@ -10,7 +10,7 @@ const ChatListItem = ({item}) => {
     <Container>
         <ImageContainer>
             {
-            item.onlineStatus && <OnlineIndicator/>
+            (item.onlineStatus === true && item.type === 'private') && <OnlineIndicator/>
             }
             { !item.image
                 ? <ChatImage style={{borderColor: "#eaeaea"}} source={defaultImage}/>

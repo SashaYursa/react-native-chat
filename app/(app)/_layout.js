@@ -6,12 +6,12 @@ import { onAuthStateChanged, onUserChanged } from 'firebase/auth';
 import { auth, database } from '../../config/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useSelector } from 'react-redux';
-export const getUserData = async (database, uid) => {
-    const qUser = doc(database, "users", String(uid))
-    return await getDoc(qUser)
-    .then(data => data.data())
-    .catch(error => console.log(error))
-}
+// export const getUserData = async (database, uid) => {
+//     const qUser = doc(database, "users", String(uid))
+//     return await getDoc(qUser)
+//     .then(data => data.data())
+//     .catch(error => console.log(error))
+// }
 
 
 export const compareObjects = (first, second) => {
@@ -37,32 +37,32 @@ export const compareObjects = (first, second) => {
         return true
 }
 
-export const checkUserStatus = async (database, uid, callback) => {
-    setInterval( async () => {
-        const user = await getUserData(database, uid);
-        if(user.status === "online"){
-            const currentDate = new Date();
-            currentDate.setSeconds(currentDate.getSeconds() - 20);
-            const date = new Date();
-            if(new Date(user.lastCheckedStatus).getTime() < currentDate.getTime()){
-                setDoc(doc(database, 'users', uid), {
-                    ...user,
-                    lastCheckedStatus: date,
-                    status: 'offline'
-                })
-                callback({status: 'offline', lastCheckedStatus: date})
-                //console.log(user.displayName, 'leave from programm')
-            }
-            else{
-                callback({status: 'online', lastCheckedStatus: date})
-              //  console.log('more')
-            }
-        }
-        else{
-            console.log('user is not online')
-        }
-    }, 5000);
-}
+// export const checkUserStatus = async (database, uid, callback) => {
+//     setInterval( async () => {
+//         const user = await getUserData(database, uid);
+//         if(user.status === "online"){
+//             const currentDate = new Date();
+//             currentDate.setSeconds(currentDate.getSeconds() - 20);
+//             const date = new Date();
+//             if(new Date(user.lastCheckedStatus).getTime() < currentDate.getTime()){
+//                 setDoc(doc(database, 'users', uid), {
+//                     ...user,
+//                     lastCheckedStatus: date,
+//                     status: 'offline'
+//                 })
+//                 callback({status: 'offline', lastCheckedStatus: date})
+//                 //console.log(user.displayName, 'leave from programm')
+//             }
+//             else{
+//                 callback({status: 'online', lastCheckedStatus: date})
+//               //  console.log('more')
+//             }
+//         }
+//         else{
+//             console.log('user is not online')
+//         }
+//     }, 5000);
+// }
 
 const AppLayout = () => {
     const user = useSelector(state => state.auth.user);

@@ -32,7 +32,7 @@ export const usersApi = rootApi.injectEndpoints({
                             const qUser = doc(database, "users", userId)
                             const res = await getDoc(qUser)
                             const user = res.data()
-                            return {...user, id: res.id}
+                            return {...user, id: res.id, isOnline: undefined}
                         }))
                         return{data: users}                        
                     }

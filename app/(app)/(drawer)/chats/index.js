@@ -16,109 +16,50 @@ import { useFetchChatsQuery } from '../../../store/features/chats/chatsApi'
 import { addLastMessage } from '../../../store/reducers/lastMessages'
 import useDebounce from '../../../../hooks/useDebounce'
 import { useFetchAllChatsUsersQuery } from '../../../store/features/users/usersApi'
-import { setUsers } from '../../../store/features/users/usersSlice'
+import { setUsers, updateOnlineStatus } from '../../../store/features/users/usersSlice'
+
 const Chats = ({user: {user}}) => {
-    console.log('uid', user.uid)
+    console.log('rerender', Platform.OS)
     const [refresh, setRefresh] = useState(false);
 
     const dispatch = useDispatch();
 
     const chatsData = useFetchChatsQuery(user.uid)
-
-    const lastMessages = useDebounce(useSelector(state => state.lastMessages.messages), 100)
-
     const usersForChats = chatsData.isLoading === false
     ? (chatsData.data.map(chat => chat.users)).flat(2).filter((value, index, array) => {
         return array.indexOf(value) === index;
     }) 
     : []
-    const chatUsers = useFetchAllChatsUsersQuery(usersForChats)
 
-    useEffect(() => {
-        if(chatUsers.isLoading === false){
-            dispatch(setUsers(chatUsers))
-        }    
-    }, [chatUsers.isLoading])
+    const lastMessages = useDebounce(useSelector(state => state.lastMessages.messages), 100)
+    
+    useFetchAllChatsUsersQuery(usersForChats)
+    const {users: chatUsers, loading: usersLoading, error: usersError} = useDebounce(useSelector(state => state.users), 100)
 
     const router = useRouter();
-    
-    // const getLastMessage = async (chatId) => {
-    //     const qMessages = query(collection(database, "messages", String(chatId), "message"), orderBy('createdAt', 'desc'), limit(1));
-    //     const data = await getDocs(qMessages)
-    //     .catch(error => console.log(error))
-    //     const res = await Promise.all(data.docs.map(async e => { 
-    //         return e.data();
-    //     }));
-    //     return await res[0];
-    // }
-    // const fetchData = async () => {
-    //     const qChats = query(collection(database, "chats"), where("users", "array-contains", String(user.uid)));
-    //     const chats = await getDocs(qChats);
-    //     const newChats = await Promise.all(chats.docs.map(async (doc) => {
-    //         const chat = doc.data();
-    //         chat.id =  doc.id
-    //         const users = chat.users;
-    //         const selectedUserID = users[0] === user.uid 
-    //             ? users[1]
-    //             : users[0]
-    //         const messages = await getLastMessage(doc.id);
-    //         const userData = await getUserData(database, selectedUserID)
-    //         console.log()
-    //         return {
-    //             ...chat,
-    //             message: messages,
-    //             userData: userData,
-    //             onlineStatus: false
-    //         }  
-    //     }))
-    //     const sortedChats = newChats.sort((a, b) => {
-    //         if(!b.message){
-    //             return -1;  
-    //         }
-    //         return b.message?.createdAt?.seconds - a.message?.createdAt?.seconds
-    //     })
-    //     // dispatch(setChats(sortedChats))
-    //     setChatsData(sortedChats)
-    //     setRefresh(false);
-    //     } 
-
-    // useEffect(() => {
-    //     fetchData();
-    // }, [user])
-
-    
 
     // observing users status
-    // useEffect(() => {
-    //     let unsubs = [];
-    //     if(!chatsData.isLoading){
-    //         unsubs = chatsData.data.map(chat => {
-    //             // if(chat.type === "private"){
-    //             //     const unsub = onValue(ref(rDatabase, '/status/' + chat.userData.id), (snapShot) => {
-    //             //         const value = snapShot.val();
-    //             //         setUsersOnlineStatus(usersOnlineStatus =>{
-    //             //             if(usersOnlineStatus === null){
-    //             //                 return {
-    //             //                     [chat.userData.id]: value?.isOnline 
-    //             //                 }
-    //             //             }
-    //             //             return {
-    //             //                 ...usersOnlineStatus,
-    //             //                 [chat.userData.id]: value?.isOnline
-    //             //             }
-    //             //         })
-    //             //     })
-    //             //     return unsub;
-    //             // }
-    //         })
-    //     }
-    //     return () => unsubs.forEach(unsub => {
-    //         console.log(unsub, '-----> unsub')
-    //         if(unsub){
-    //             unsub();    
-    //         }
-    //     });
-    // }, [chatsData.isLoading])
+    useEffect(() => {
+        let unsubs = [];
+        if(!usersLoading){
+            unsubs = chatsData.data.map(chat => {
+                if(chat.type === "private"){
+                    const userId = (chat.users.filter(u => u !== user.uid))[0] 
+                    const unsub = onValue(ref(rDatabase, '/status/' + userId), (snapShot) => {
+                        const value = snapShot.val();
+                        dispatch(updateOnlineStatus({id: userId, isOnline: value?.isOnline}))
+                    })
+                    return unsub;
+                }
+            })
+        }
+        return () => unsubs.forEach(unsub => {
+            console.log(unsub, '-----> unsub')
+            if(unsub){
+                unsub();    
+            }
+        });
+    }, [usersLoading])
 
     const checkMessages = async (chatId) => {
             const totalMessagesCount = (await getCountFromServer(collection(database, 'messages', chatId, 'message'))).data().count
@@ -155,7 +96,6 @@ const Chats = ({user: {user}}) => {
 
 
     const hadnleChatClick = (chat) => {
-        // clearChatData(setChatUsers, setMessages, setChatData)
         moveToChat(chat.id)
     }
 
@@ -175,7 +115,7 @@ const Chats = ({user: {user}}) => {
             createdAt: null,
             unreadedMessagesCount: 0
         } 
-        const selectedUser = chatUsers.data.find(chatUser => chatUser.id === itemData.users.find(id => id !== user.uid))
+        const selectedUser = chatUsers.find(chatUser => chatUser.id === itemData.users.find(id => id !== user.uid))
         const image =  itemData.type === "public" ? itemData.image : selectedUser.image
         const item = {
             image,
@@ -185,7 +125,7 @@ const Chats = ({user: {user}}) => {
             time: message.createdAt,
             media: message.media,
             type: itemData.type,
-            onlineStatus: false
+            onlineStatus: selectedUser.isOnline
         }
         return(
             <ChatLink onPress={() => hadnleChatClick(itemData)}>
@@ -198,19 +138,18 @@ const Chats = ({user: {user}}) => {
             </ChatLink>
         )
     } 
-    // console.log('len', lastMessages.length)
     if(!lastMessages.length){
         return <ActivityIndicator/>
     }
 
-    if(chatUsers.error || chatsData.error){
+    if(usersError || chatsData.error){
         return <View>
                 <Text>
                     error in chat users or chats data
                 </Text>
             </View>
     }
-    if(chatUsers.isLoading || chatsData.isLoading){
+    if(usersLoading || chatsData.isLoading){
         return <ActivityIndicator />
     }
 
