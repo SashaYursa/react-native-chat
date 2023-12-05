@@ -12,10 +12,9 @@ export const lastMessagesSlice = createSlice({
         addLastMessage: (state, action) => {
             state.messages = [...state.messages, action.payload]
         }
-
     }
 })
 
-export const { setLastMessages, addLastMessage } = lastMessagesSlice.actions
+export const { setLastMessages } = lastMessagesSlice.actions
 
 export default lastMessagesSlice.reducer;

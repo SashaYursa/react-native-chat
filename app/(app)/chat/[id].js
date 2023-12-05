@@ -35,7 +35,7 @@ import ChatActions from '../../components/ChatActions'
 import { useDispatch, useSelector } from 'react-redux'
 import { useFetchMessagesQuery, useFetchPrevMessagesMutation } from '../../store/features/messages/messagesApi'
 import { Button } from 'react-native-paper'
-const MESSAGES_PER_REQUEST_LIMIT = 70;
+const MESSAGES_PER_REQUEST_LIMIT = 10;
 const Chat = () => {
   const { id } = useLocalSearchParams();
   const dispatch = useDispatch();
@@ -46,11 +46,15 @@ const Chat = () => {
     if(chatData.users.includes(u.id)) return true
     return false
   })
-  const {error, isLoading: firstLoadingMessages} = useFetchMessagesQuery({chatId: id, count: MESSAGES_PER_REQUEST_LIMIT})
+  const {error, isLoading: firstLoadingMessages, error: firstMessagesError} = useFetchMessagesQuery({chatId: id, count: MESSAGES_PER_REQUEST_LIMIT})
 
-  const [fetchPrevMessages, {isLoading, error: fetchPrevError}] = useFetchPrevMessagesMutation()
-  console.log(fetchPrevError, 'prevFetch error')
-  const chatMesssages = useSelector(state => state.messages.messages)
+  const [fetchPrevMessages, {isLoading: prevMessagesIsLoading, error: fetchPrevError}] = useFetchPrevMessagesMutation()
+  // console.log(fetchPrevError, 'prevFetch error')
+
+  const messagesData = ((useSelector(state => state.messagesData.chatsMessages)).find(m => m.chatId === id))
+  // console.log('messagesData ------------->',messagesData)
+  const {messages, unreadedMessagesCount, readedMessages, totalMessagesCount, loading: messagesLoading} = messagesData
+  // console.log(JSON.stringify(messagesData), '_________chat messages')
   // console.log(chatMesssages)
   const [selectedMessages, setSelectedMessages] = useState([])
   // const [loading, setLoading] = useState(true);
@@ -62,10 +66,11 @@ const Chat = () => {
   // const [messages, setMessages] = useState([])
   // const {chatUsers, getChatData, setChatUsers, setChatData} = useContext(SelectedChatContext)
 
-
   const deleteMessages = (selectedMessages) => {
 
   }
+  
+
   // useEffect(() => {
   //   const firstFetch = async () => {
   //     const prevQ = query(collection(database, 'messages', String(id), 'message'), orderBy('createdAt', 'desc'), limit(70))
@@ -280,50 +285,50 @@ const Chat = () => {
     }
   }
 
-  // const loadMessages = async (query) => {
-  //   // console.log('fetched 100 messages');
-  //   const result = await getDocs(query)
-  //   const oldMessages = [];
-  //   const messagesForRead = [];
-  //   let lastLoaded = null;
-  //   result.docs.forEach(doc => {
-  //     const messageData = doc.data();
-  //     if(messageData.isRead.includes(user.uid)){
-  //       // console.log('is read')
-  //     }else{
-  //       messagesForRead.push({id: doc.id, data: messageData})
-  //     }
+  const loadMessages = async (query) => {
+    // console.log('fetched 100 messages');
+    const result = await getDocs(query)
+    const oldMessages = [];
+    const messagesForRead = [];
+    let lastLoaded = null;
+    result.docs.forEach(doc => {
+      const messageData = doc.data();
+      if(messageData.isRead.includes(user.uid)){
+        // console.log('is read')
+      }else{
+        messagesForRead.push({id: doc.id, data: messageData})
+      }
 
-  //     messageData.createdAt.seconds = messageData.createdAt.seconds * 1000;
-  //     const messageCreatedAt = new Date(messageData?.createdAt?.seconds)
-  //     const messageSlug = messageCreatedAt.getFullYear() + "_" + messageCreatedAt.getMonth() + "_" + messageCreatedAt.getDate(); 
-  //     const currentDateIndex = oldMessages.findIndex(messages => messages.date === messageSlug);
-  //     if(currentDateIndex !== -1){
-  //       const existedMessage = oldMessages[currentDateIndex].data.find(message => message.id === doc.id)
-  //       if(!existedMessage){
-  //         oldMessages[currentDateIndex].data.push({...messageData, id: doc.id})
-  //       }
-  //     }
-  //     else{
-  //       oldMessages.push({
-  //         date: messageSlug,
-  //         data: [
-  //           {...messageData, id: doc.id}
-  //         ]
-  //       })
-  //     }
-  //     lastLoaded = doc.id     
-  //   } 
-  //   )
-  //   messagesForRead.forEach(messageForRead => {
-  //     const data = {
-  //       isRead: [...messageForRead.data.isRead, user.uid]
-  //     }
-  //     updateDoc(doc(database, 'messages', String(id), 'message', messageForRead.id), data)
-  //   })
-  //   setLastLoadedId(lastLoaded)
-  //   return oldMessages
-  // }
+      messageData.createdAt.seconds = messageData.createdAt.seconds * 1000;
+      const messageCreatedAt = new Date(messageData?.createdAt?.seconds)
+      const messageSlug = messageCreatedAt.getFullYear() + "_" + messageCreatedAt.getMonth() + "_" + messageCreatedAt.getDate(); 
+      const currentDateIndex = oldMessages.findIndex(messages => messages.date === messageSlug);
+      if(currentDateIndex !== -1){
+        const existedMessage = oldMessages[currentDateIndex].data.find(message => message.id === doc.id)
+        if(!existedMessage){
+          oldMessages[currentDateIndex].data.push({...messageData, id: doc.id})
+        }
+      }
+      else{
+        oldMessages.push({
+          date: messageSlug,
+          data: [
+            {...messageData, id: doc.id}
+          ]
+        })
+      }
+      lastLoaded = doc.id     
+    } 
+    )
+    messagesForRead.forEach(messageForRead => {
+      const data = {
+        isRead: [...messageForRead.data.isRead, user.uid]
+      }
+      updateDoc(doc(database, 'messages', String(id), 'message', messageForRead.id), data)
+    })
+    setLastLoadedId(lastLoaded)
+    return oldMessages
+  }
 
   // const deleteMessages = (messagesForDelete) => {
   //   messagesForDelete.forEach(message => {
@@ -376,56 +381,78 @@ const Chat = () => {
   //   ))
   // }
 
-  // const updateSelectedMessages = useCallback((selectedMessage) => {
-  //   const messageId = selectedMessage.id;
-  //           if(selectedMessage.uid === user.uid) {
-  //               setSelectedMessages(selectedMessages => {
-  //               const findMessage = selectedMessages.find(id => id === messageId)
-  //               if(findMessage){
-  //                   return [
-  //                       ...selectedMessages.filter(id => id !== messageId)
-  //                   ]
-  //               }
-  //               return [
-  //                   ...selectedMessages,
-  //                   messageId
-  //               ]
-  //           })
-  //       }
-  // }, [])
+  const loadPreviousMessages = () => {
+    console.log('load previous')
+  }
 
+  const updateSelectedMessages = useCallback((selectedMessage) => {
+    const messageId = selectedMessage.id;
+            if(selectedMessage.uid === user.uid) {
+                setSelectedMessages(selectedMessages => {
+                const findMessage = selectedMessages.find(id => id === messageId)
+                if(findMessage){
+                    return [
+                        ...selectedMessages.filter(id => id !== messageId)
+                    ]
+                }
+                return [
+                    ...selectedMessages,
+                    messageId
+                ]
+            })
+        }
+  }, [])
+  // return <View>
+  //   <Text>
+  //     12312312431
+  //   </Text>
+  // </View>
+
+  if(firstMessagesError || fetchPrevError){
+    return <View>
+      <Text>
+      ⚠️error fetching messages⚠️
+      </Text>
+    </View>
+  }
+  if(firstLoadingMessages || messagesLoading){
+    return  <View style={{alignItems: 'center', justifyContent: 'center'}}>
+              <ActivityIndicator size='large'/>
+            </View>
+  }
+  
   // if(!chatUsers || !messages || !chatData){
   //   return <ActivityIndicator size='large'/>
   // }
-  // return (
-  //   <>
-  //   <ChatCanvas>
-  //     <> 
-  //       {loading && <ActivityIndicator style={{alignSelf: 'center'}} color={'blue'} size={'large'}/>}
-  //       {!messages.length
-  //         ? <View>
-  //             <Text>No data</Text>
-  //           </View>
-  //         : <ChatItemContainer 
-  //         messagesCount={messagesCount} 
-  //         chatData={chatData} 
-  //         chatUsers={chatUsers} 
-  //         messages={messages} 
-  //         selectedMessages={selectedMessages} 
-  //         updateSelectedMessages={updateSelectedMessages} 
-  //         loadPreviousMessages={loadPreviousMessages}/>
-  //       }
-  //     </>
-  //   </ChatCanvas>
-  //   <ChatActions id={id}/>
-  //   </>
-  // )
+  return (
+    <>
+    <ChatCanvas>
+      <> 
+        {prevMessagesIsLoading && <ActivityIndicator style={{alignSelf: 'center', paddingTop: 5}} color={'blue'} size={'large'}/>}
+        {messages?.length === 0
+          ? <View>
+              <Text>No data</Text>
+            </View>
+          : <ChatItemContainer 
+              messagesCount={totalMessagesCount} 
+              chatData={chatData} 
+              chatUsers={chatUsers} 
+              messages={messagesData.messages} 
+              selectedMessages={selectedMessages} 
+              updateSelectedMessages={updateSelectedMessages} 
+              loadPreviousMessages={loadPreviousMessages}/>
+        }
+      </>
+    </ChatCanvas>
+    <ChatActions id={id}/>
+    </>
+  )
   return (
     <View>
       <Text>
         123123
       </Text>
-      <Button onPress={() => {fetchPrevMessages({chatId: id, lastMessageId: chatMesssages[chatMesssages.length - 1], count: MESSAGES_PER_REQUEST_LIMIT})}}>
+      <Button onPress={() => {fetchPrevMessages({chatId: id, lastMessageId: (messagesData?.messages[messagesData?.messages.length -1]).id, count: MESSAGES_PER_REQUEST_LIMIT})}}>
         <Text>
           Load prev
         </Text>

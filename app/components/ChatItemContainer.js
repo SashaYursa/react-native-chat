@@ -3,12 +3,15 @@ import React, { useCallback, useContext, useEffect, useRef, useState } from 'rea
 import { AuthUserContext } from '../_layout';
 import styled from 'styled-components';
 import ChatItem from './ChatItem';
+import { useSelector } from 'react-redux';
 
-const ChatItemContainer = React.memo(({messagesCount, messages, chatData, chatUsers, selectedMessages, updateSelectedMessages, loadPreviousMessages}) => {  
+const ChatItemContainer = ({messagesCount, messages, chatData, chatUsers, selectedMessages, updateSelectedMessages, loadPreviousMessages}) => {  
+  const users = useSelector(state => state.users.users)
   const [endReached, setEndReached] = useState(false);
-    const [allowSetEndReached, setAllowSetEndReached] = useState(false);
-    const {user} = useContext(AuthUserContext);
-    const scrollRef = useRef();
+  const [allowSetEndReached, setAllowSetEndReached] = useState(false);
+  const user = useSelector(state => state.auth.user);
+  console.log(user)
+  const scrollRef = useRef();
     useEffect(() => {
       if(endReached){  
           loadPreviousMessages()
@@ -46,7 +49,7 @@ const ChatItemContainer = React.memo(({messagesCount, messages, chatData, chatUs
     const rerenderItem = ({ item }) => {
       let messageUser;
       if(item.uid !== user.uid){
-        messageUser = chatUsers.find(u => u.id === item.uid);
+        messageUser = users.find(u => u.id === item.uid);
       }
       else{
         messageUser = user
@@ -68,7 +71,7 @@ const ChatItemContainer = React.memo(({messagesCount, messages, chatData, chatUs
         : {justifyContent: 'flex-start', ...selected} }>  
 
           <ChatItem userName={messageUser?.displayName}
-            userImage={messageUser.image}
+            userImage={messageUser?.image}
             messageMedia={item.media}
             messageText={item.text}
             messageId={item.id}
@@ -80,6 +83,14 @@ const ChatItemContainer = React.memo(({messagesCount, messages, chatData, chatUs
         </MessagesContainer>
       )
     }
+
+    // return (
+    //   <View>
+    //     <Text>
+    //       123123
+    //     </Text>
+    //   </View>
+    // )
 
     return (
       <ChatSectionList contentContainerStyle={{paddingVertical: 10}}
@@ -109,14 +120,7 @@ const ChatItemContainer = React.memo(({messagesCount, messages, chatData, chatUs
                   // initialNumToRender={19}
                   />
     )
-  }, (prev, next) => {
-    return prev.chatUsers === next.chatUsers 
-    && prev.loadPreviousMessages === next.loadPreviousMessages
-    && prev.updateSelectedMessages === next.updateSelectedMessages
-    && prev.selectedMessages === next.selectedMessages
-    && prev.messages === next.messages
-    && prev.messagesCount === next.messagesCount
-  })
+  }
 
 const MessagesContainer = styled.TouchableOpacity`
 flex-direction: row;

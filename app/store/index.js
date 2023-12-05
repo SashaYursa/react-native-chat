@@ -13,7 +13,7 @@ const store = configureStore({
         chats: chatsReducer,
         lastMessages: lastMessagesReducer,
         auth: authSlice,
-        messages: messagesReducer
+        messagesData: messagesReducer
     },
     middleware: (getDefaultMiddleware) => getDefaultMiddleware({
         serializableCheck: false
