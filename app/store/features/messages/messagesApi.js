@@ -1,7 +1,8 @@
-import { collection, doc, getDoc, getDocs, orderBy, query, limit, getDocFromCache, startAt } from "firebase/firestore";
-import { database } from "../../../../config/firebase";
+import { collection, doc, getDoc, getDocs, orderBy, query, limit, getDocFromCache, startAt, addDoc, serverTimestamp } from "firebase/firestore";
+import { database, fileStorage } from "../../../../config/firebase";
 import { rootApi } from "../rootApi/rootApi";
-
+import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage'
+import { useDispatch } from "react-redux";
 export const messagesApi = rootApi.injectEndpoints({
     endpoints: (builder) => ({
         fetchMessages: builder.query({
@@ -87,7 +88,67 @@ export const messagesApi = rootApi.injectEndpoints({
                     return {error}
                 }
             }
-        })
+        }),
+        sendMessage: builder.mutation({
+            async queryFn({media, userId, text, chatId}){
+                try{
+                    let mediaItems = null;
+                    const newText = text?.trim() === '' ? null : text
+                    const data = {
+                        uid: userId,
+                        text: newText,
+                        media,
+                        createdAt: serverTimestamp(),
+                        isRead: [userId]
+                    }
+                    await addDoc(collection(database, 'messages', chatId, 'message'), data)
+                    return {data: "ok"}
+                }
+                catch(error){
+                    return {error: 'send message error: ->', error}
+                }
+            }
+        }),
+        // uploadChatMedia: builder.mutation({
+        //     async queryFn({images, callback}){
+        //         try{
+        //             const uploadedImagesURL = await Promise.all(images.map(async ({name}) => {
+        //                 return await callback(name)
+        //                 })                  
+        //             )
+        //             return {data: uploadedImagesURL}
+        //         }
+        //         catch(error){
+        //             return {error: 'upload image error ->', error}
+        //         }
+        //     }
+        // })
     })
 })
-export const { useLazyFetchMessagesQuery, useFetchPrevMessagesMutation } = messagesApi
+
+const uploadChatMedia = async (path) => {
+    const fileName = path.split('/').pop();
+    
+    const response = await fetch(path).catch(err => console.log(err))
+    const blobImage = await response.blob();
+    
+    const storageRef = ref(fileStorage, `media/${fileName}`);
+    const uploadTask = uploadBytesResumable(storageRef, blobImage)
+    uploadTask.on("state_changed", (snapshot => {
+        const progress = Math.floor((snapshot.bytesTransferred / snapshot.totalBytes) * 100)
+        setPreloadImages(images => images.map(img => {
+            if(img.path === path){
+            return {...img, progress}
+            }
+            return img
+        }))
+    }),
+    (error => console.log('uploadTask.on error --------->', error))
+    )
+    return uploadTask.then(async data => {
+      return await getDownloadURL(uploadTask.snapshot.ref).then(url => url)
+    })
+    .catch(error => console.log('uploadTask error -----> ', error))
+  }
+
+export const { useLazyFetchMessagesQuery, useFetchPrevMessagesMutation, useSendMessageMutation,} = messagesApi

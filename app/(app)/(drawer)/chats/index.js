@@ -81,23 +81,23 @@ const Chats = ({user}) => {
                 const unsubscribe = onSnapshot(qMessages, async (snapShot) => {
                     snapShot.docs.forEach(async e => { 
                         const data = e.data();
-                        data?.createdAt !== undefined ? data.createdAt.seconds = data.createdAt.seconds * 1000 : data.createdAt = {seconds: Date.now()};
-                        const messageCreatedAt = new Date(data.createdAt.seconds)
-                        const messageSlug = messageCreatedAt.getFullYear() + "_" + messageCreatedAt.getMonth() + "_" + messageCreatedAt.getDate();  
-                        let unreadedMessagesCount = await checkMessages(chat.id)
-                        dispatch(addLastMessage({
-                            message: {
-                                date: messageSlug, 
-                                data: [{
-                                    ...data,
-                                    id: e.id, 
-                                }]
-                            }, 
-                            chatId: chat.id,
-                            // text: data.text ? data.text : data.media !== null ? 'Фото' : 'Повідомлень немає',
-                            ...unreadedMessagesCount
-                        }))
-                    });
+                        if(data?.createdAt?.seconds){
+                            const messageCreatedAt = new Date(data?.createdAt?.seconds * 1000)
+                            const messageSlug = messageCreatedAt.getFullYear() + "_" + messageCreatedAt.getMonth() + "_" + messageCreatedAt.getDate();  
+                            let unreadedMessagesCount = await checkMessages(chat.id)
+                            dispatch(addLastMessage({
+                                message: {
+                                    date: messageSlug, 
+                                    data: [{
+                                        ...data,
+                                        id: e.id, 
+                                    }]
+                                }, 
+                                chatId: chat.id,
+                                ...unreadedMessagesCount
+                            }))
+                        }
+                        });
                 })
                 return unsubscribe;  
             })

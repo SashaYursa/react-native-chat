@@ -9,21 +9,21 @@ const PreloadImages = ({images, removeImage}) => {
         <Container>
         {
             images.map(image => {
-                if(image.progress){
-                    return <ImageContainer key={image.path}>
-                    <ImageItem source={{uri: image.path}}/>
-                    <DeleteButton onPress={() => removeImage(image.path)}>
+                if(image.statusUpload){
+                    return <ImageContainer key={image.name}>
+                    <ImageItem source={{uri: image.name}}/>
+                    <DeleteButton onPress={() => removeImage(image.name)}>
                         <DeleteImage source={require('../../assets/remove-item.png')}/>
                     </DeleteButton>
                     <LoadProgress>
-                        <LoadProgressText>{image.progress}%</LoadProgressText>
+                        <LoadProgressText>{image.statusUpload}%</LoadProgressText>
                     </LoadProgress>
                     </ImageContainer>
                 }
                 return (
-                <ImageContainer key={image.path}>
-                    <ImageItem source={{uri: image.path}}/>
-                    <DeleteButton onPress={() => removeImage(image.path)}>
+                <ImageContainer key={image.name}>
+                    <ImageItem source={{uri: image.name}}/>
+                    <DeleteButton onPress={() => removeImage(image.name)}>
                         <DeleteImage source={require('../../assets/remove-item.png')}/>
                     </DeleteButton>
                 </ImageContainer>

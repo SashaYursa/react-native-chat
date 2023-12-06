@@ -7,21 +7,29 @@ import { fileStorage, rDatabase } from '../../config/firebase'
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore'
 import { AuthUserContext, FirebaseContext } from '../_layout'
 import { getDownloadURL, ref, getStorage, deleteObject, uploadBytesResumable } from 'firebase/storage'
-import { useSelector } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
+import { useSendMessageMutation, useUploadChatMediaMutation } from '../store/features/messages/messagesApi'
+import { addMediaItems, removeAllMediaItems, removeMediaItem, setMediaUploadStatus } from '../store/reducers/mediaUpload'
 
 const ChatActions = ({id}) => {
-  const [preloadImages, setPreloadImages] = useState(null);
+    const user = useSelector(state => state.auth.user);
+    const dispatch = useDispatch()
+    const preloadImages = useSelector(state => state.mediaUpload.mediaItems)
+//   const [preloadImages, setPreloadImages] = useState(null);
   const [newMessageText, setNewMessageText] = useState('');
+  const [sendMessage, {isLoading: sendMessageIsLoading, error: senddMessageError}] = useSendMessageMutation()
+//   const [uploadChatMedia] = useUploadChatMediaMutation();
+//   console.log(sendMessageIsLoading, 'is loading ---', senddMessageError, '  error ----')
   const preloadImagesCountError = preloadImages?.length > 5;
   const buttonDisable = preloadImagesCountError || (!preloadImages?.length && !newMessageText.trim());
-  const user = useSelector(state => state.auth.user);
   const removePreloadImage = (image) => {
-    if(preloadImages?.length === 1){
-      setPreloadImages(null);
-    }
-    else{
-      setPreloadImages(preloadImages.filter(preloadImage => preloadImage.path !== image));
-    }
+    dispatch(removeMediaItem(image))
+    // if(preloadImages?.length === 1){
+    //   setPreloadImages(null);
+    // }
+    // else{
+    //   setPreloadImages(preloadImages.filter(preloadImage => preloadImage.path !== image));
+    // }
   }
 
   const selectImages = async () => {
@@ -45,37 +53,33 @@ const ChatActions = ({id}) => {
     if(!result.canceled){
       const images = result.assets.map(item => {
       if(item.type === 'image'){
-        return {path: item.uri, progress: null}
+        return {
+            name: item.uri, 
+            statusUpload: null
+        }
       }
     })
-    setPreloadImages(preloadImages ? [...preloadImages, ...images] : images)
+    dispatch(addMediaItems(images))
     }
     }
   }
 
-  const sendMessage = async () => {
-    if(!preloadImagesCountError){    
-    let mediaItems = null;
-    if(preloadImages?.length){
-       mediaItems = await Promise.all(await preloadImages.map(async image => {
-        return await uploadChatMedia(image.path)
-      }))
-    }
-    const newText = newMessageText === '' ? null : newMessageText
-    const data = {
-      uid: user.uid,
-      text: newText,
-      media: mediaItems,
-      createdAt: serverTimestamp(),
-      isRead: [user.uid]
-    }
-    setNewMessageText('');
-    setPreloadImages(null)
-    await addDoc(collection(database, 'messages', String(id), 'message'), data)
+  const sendMessageHandler = async () => {
+    if(!preloadImagesCountError){ 
+        let media = null
+        if(preloadImages.length){
+            console.log(preloadImages)
+            media = await Promise.all(preloadImages.map(async ({name}) => {
+                return await uploadChatMediaItem(name)
+            })) 
+        }
+        sendMessage({media, userId: user.uid, text: newMessageText, chatId: id})
+        setNewMessageText('');
+        dispatch(removeAllMediaItems())
     }
   } 
 
-  const uploadChatMedia = async (path) => {
+  const uploadChatMediaItem = async (path) => {
     const fileName = path.split('/').pop();
     
     const response = await fetch(path).catch(err => console.log(err))
@@ -85,12 +89,7 @@ const ChatActions = ({id}) => {
     const uploadTask = uploadBytesResumable(storageRef, blobImage)
     uploadTask.on("state_changed", (snapshot => {
       const progress = Math.floor((snapshot.bytesTransferred / snapshot.totalBytes) * 100)
-      setPreloadImages(images => images.map(img => {
-        if(img.path === path){
-          return {...img, progress}
-        }
-        return img
-      }))
+      dispatch(setMediaUploadStatus({name: path, statusUpload: progress}))
     }),
     (error => console.log('uploadTask.on error --------->', error))
     )
@@ -111,7 +110,7 @@ const ChatActions = ({id}) => {
           <Image style={{width: 25, height: 25, transform: [{ rotate: '90deg'}]}} source={require('../../assets/back.png')}/>
         </NewMessageButton>
         <NewMessageInput value={newMessageText} onChangeText={setNewMessageText} placeholder='Введіть повідомлення...'/>
-        <NewMessageButton disabled={buttonDisable} style={buttonDisable ? {backgroundColor: 'gray'} : {}} onPress={sendMessage}>
+        <NewMessageButton disabled={buttonDisable} style={buttonDisable ? {backgroundColor: 'gray'} : {}} onPress={sendMessageHandler}>
           <NewMessageText>
             Надіслати
           </NewMessageText>

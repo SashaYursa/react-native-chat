@@ -2,6 +2,7 @@ import { configureStore, getDefaultMiddleware } from "@reduxjs/toolkit";
 import usersReducer from "./features/users/usersSlice";
 import chatsReducer from "./features/chats/chatsSlice";
 import lastMessagesReducer from "./reducers/lastMessages";
+import mediaUploadReducer from "./reducers/mediaUpload";
 import messagesReducer from "./features/messages/messagesSlice"
 import authSlice from "./features/auth/authSlice";
 import { rootApi } from "./features/rootApi/rootApi";
@@ -13,7 +14,8 @@ const store = configureStore({
         chats: chatsReducer,
         lastMessages: lastMessagesReducer,
         auth: authSlice,
-        messagesData: messagesReducer
+        messagesData: messagesReducer,
+        mediaUpload: mediaUploadReducer
     },
     middleware: (getDefaultMiddleware) => getDefaultMiddleware({
         serializableCheck: false
