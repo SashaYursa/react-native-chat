@@ -9,7 +9,6 @@ import { useLoginMutation } from '../store/features/auth/authApi';
 
 const Login = () => {
   const [login] = useLoginMutation()
-  console.log('rerender')
   // ReactNativeAsyncStorage.getItem("email").then(email => {
   //     if(email){
   //       ReactNativeAsyncStorage.getItem("password").then(password => {

@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, SectionList } from 'react-native'
+import { View, Text, TouchableOpacity, Platform, FlatList } from 'react-native'
 import React, { useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { AuthUserContext } from '../_layout';
 import styled from 'styled-components';
@@ -6,18 +6,20 @@ import ChatItem from './ChatItem';
 import { useSelector } from 'react-redux';
 
 const ChatItemContainer = ({messagesCount, messages, chatData, chatUsers, selectedMessages, updateSelectedMessages, loadPreviousMessages}) => {  
+  
+  const flatArray = messages.reduce((result, obj) => result.concat([...obj.data, obj.date]), []);
+  console.log('rerender ', Platform.OS)
   const users = useSelector(state => state.users.users)
   const [endReached, setEndReached] = useState(false);
   const [allowSetEndReached, setAllowSetEndReached] = useState(false);
   const user = useSelector(state => state.auth.user);
-  console.log(user)
   const scrollRef = useRef();
-    useEffect(() => {
-      if(endReached){  
-          loadPreviousMessages()
-          setEndReached(false)
-      }
-    }, [scrollRef, endReached, messagesCount])
+    // useEffect(() => {
+    //   if(endReached){  
+    //       loadPreviousMessages()
+    //       setEndReached(false)
+    //   }
+    // }, [scrollRef, endReached, messagesCount])
 
     const checkDate = (date) => {
       function isYesterday() {
@@ -47,6 +49,16 @@ const ChatItemContainer = ({messagesCount, messages, chatData, chatUsers, select
     }
 
     const rerenderItem = ({ item }) => {
+      if(typeof item === 'string'){
+        const splitDate =  item.split('_');
+        const dateObj = new Date(splitDate[0], splitDate[1], splitDate[2])
+        const dateString = checkDate(dateObj);
+        return (
+          <DateSplitter>
+            <DateSplitterText>{dateString}</DateSplitterText>
+          </DateSplitter>
+        )
+      }
       let messageUser;
       if(item.uid !== user.uid){
         messageUser = users.find(u => u.id === item.uid);
@@ -95,28 +107,33 @@ const ChatItemContainer = ({messagesCount, messages, chatData, chatUsers, select
     return (
       <ChatSectionList contentContainerStyle={{paddingVertical: 10}}
                   ref={scrollRef}
-                  onEndReached={(props) => {
-                    if(allowSetEndReached){
-                      setEndReached(true)
-                    }
-                  }}
-                  onMomentumScrollBegin={() => {
-                    setAllowSetEndReached(true)
-                  }}
-                  inverted showsVerticalScrollIndicator={false} 
-                  sections={messages}
-                  keyExtractor={item => {return item.id}} 
+                  // onEndReached={(props) => {
+                  //   if(allowSetEndReached){
+                  //     setEndReached(true)
+                  //   }
+                  // }}
+                  // onMomentumScrollBegin={() => {
+                  //   setAllowSetEndReached(true)
+                  // }}
+                  inverted
+                  data={flatArray} 
+                  showsVerticalScrollIndicator={false} 
+                  // sections={messages}
+                  keyExtractor={item => {
+                    if(typeof item === 'string') return item
+                    return item.id
+                  }} 
                   renderItem={rerenderItem} 
-                  renderSectionFooter={({section: { date }}) => {
-                    const splitDate =  date.split('_');
-                    const dateObj = new Date(splitDate[0], splitDate[1], splitDate[2])
-                    const dateString = checkDate(dateObj);
-                    return(
-                      <DateSplitter>
-                        <DateSplitterText>{dateString}</DateSplitterText>
-                      </DateSplitter>
-                    )
-                  }}
+                  // renderSectionFooter={({section: { date }}) => {
+                  //   const splitDate =  date.split('_');
+                  //   const dateObj = new Date(splitDate[0], splitDate[1], splitDate[2])
+                  //   const dateString = checkDate(dateObj);
+                  //   return(
+                  //     <DateSplitter>
+                  //       <DateSplitterText>{dateString}</DateSplitterText>
+                  //     </DateSplitter>
+                  //   )
+                  // }}
                   // initialNumToRender={19}
                   />
     )
@@ -131,7 +148,7 @@ padding: 2.5px 0;
 position: relative;
 `
 
-const ChatSectionList = styled.SectionList`
+const ChatSectionList = styled.FlatList`
 padding: 0 5px;
 flex-direction: column;
 `

@@ -36,8 +36,8 @@ const Chats = ({user}) => {
             ...rest,
             message: {
                 ...message,
-                text: message.text ? message.text : message.media !== null ? 'Фото' : 'Повідомлень немає',
-                createdAt: message.createdAt.seconds
+                text: message?.text ? message.text : message.media !== null ? 'Фото' : 'Повідомлень немає',
+                createdAt: message?.createdAt.seconds
             } 
         }
     })

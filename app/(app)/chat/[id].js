@@ -33,10 +33,11 @@ import { compareObjects } from '../_layout'
 import ChatNavigationHeaderTitle from '../../components/ChatNavigationHeaderTitle'
 import ChatActions from '../../components/ChatActions'
 import { useDispatch, useSelector } from 'react-redux'
-import { useFetchMessagesQuery, useFetchPrevMessagesMutation } from '../../store/features/messages/messagesApi'
+import { useFetchMessagesQuery, useFetchPrevMessagesMutation, useLazyFetchMessagesQuery } from '../../store/features/messages/messagesApi'
 import { Button } from 'react-native-paper'
 const MESSAGES_PER_REQUEST_LIMIT = 10;
 const Chat = () => {
+  // console.log('rerender top')
   const { id } = useLocalSearchParams();
   const dispatch = useDispatch();
   const user = useSelector(state => state.auth.user);
@@ -46,16 +47,15 @@ const Chat = () => {
     if(chatData.users.includes(u.id)) return true
     return false
   })
-  const {error, isLoading: firstLoadingMessages, error: firstMessagesError} = useFetchMessagesQuery({chatId: id, count: MESSAGES_PER_REQUEST_LIMIT})
-
+  const [trigger, result] = useLazyFetchMessagesQuery()
+  useEffect(() => {
+    trigger({chatId: id, count: MESSAGES_PER_REQUEST_LIMIT})
+  }, [])
+  // {error, isLoading: firstLoadingMessages, error: firstMessagesError, refetch}
   const [fetchPrevMessages, {isLoading: prevMessagesIsLoading, error: fetchPrevError}] = useFetchPrevMessagesMutation()
-  // console.log(fetchPrevError, 'prevFetch error')
 
   const messagesData = ((useSelector(state => state.messagesData.chatsMessages)).find(m => m.chatId === id))
-  // console.log('messagesData ------------->',messagesData)
   const {messages, unreadedMessagesCount, readedMessages, totalMessagesCount, loading: messagesLoading} = messagesData
-  // console.log(JSON.stringify(messagesData), '_________chat messages')
-  // console.log(chatMesssages)
   const [selectedMessages, setSelectedMessages] = useState([])
   // const [loading, setLoading] = useState(true);
   // const [chatUsersIsLoading, setChatUsersIsLoading] = useState(true);
@@ -69,7 +69,6 @@ const Chat = () => {
   const deleteMessages = (selectedMessages) => {
 
   }
-  
 
   // useEffect(() => {
   //   const firstFetch = async () => {
@@ -95,7 +94,6 @@ const Chat = () => {
   //     let lastId = null;
   //     snapshot.docChanges().forEach(change => {
   //       if(change.type === 'added') {
-  //         // console.log('added')
   //         const messageData = change.doc.data();
   //         const docId = change.doc.id;
   //         if(!messageData.createdAt){
@@ -121,7 +119,6 @@ const Chat = () => {
   //         messagesLenght++;
   //       }
   //       if(change.type === 'modified'){
-  //         // console.log('modified on ', Platform.OS)
   //       }
   //     })
   //     setMessages(messages => {
@@ -286,7 +283,6 @@ const Chat = () => {
   }
 
   const loadMessages = async (query) => {
-    // console.log('fetched 100 messages');
     const result = await getDocs(query)
     const oldMessages = [];
     const messagesForRead = [];
@@ -294,7 +290,6 @@ const Chat = () => {
     result.docs.forEach(doc => {
       const messageData = doc.data();
       if(messageData.isRead.includes(user.uid)){
-        // console.log('is read')
       }else{
         messagesForRead.push({id: doc.id, data: messageData})
       }
@@ -382,7 +377,9 @@ const Chat = () => {
   // }
 
   const loadPreviousMessages = () => {
-    console.log('load previous')
+    const lastDisplayedDay = messagesData?.messages[messagesData?.messages.length -1]
+    const lastMessage = lastDisplayedDay.data[lastDisplayedDay.data.length - 1]
+    trigger({chatId: id, count: MESSAGES_PER_REQUEST_LIMIT, lastMessageId: lastMessage.id})
   }
 
   const updateSelectedMessages = useCallback((selectedMessage) => {
@@ -407,15 +404,15 @@ const Chat = () => {
   //     12312312431
   //   </Text>
   // </View>
-
-  if(firstMessagesError || fetchPrevError){
+  // return(<View><Text>123123123213</Text></View>)
+  if( fetchPrevError){
     return <View>
       <Text>
       ⚠️error fetching messages⚠️
       </Text>
     </View>
   }
-  if(firstLoadingMessages || messagesLoading){
+  if( messagesLoading){
     return  <View style={{alignItems: 'center', justifyContent: 'center'}}>
               <ActivityIndicator size='large'/>
             </View>
@@ -444,6 +441,11 @@ const Chat = () => {
         }
       </>
     </ChatCanvas>
+    <Button onPress={loadPreviousMessages}>
+        <Text>
+          Load prev
+        </Text>
+    </Button>
     <ChatActions id={id}/>
     </>
   )

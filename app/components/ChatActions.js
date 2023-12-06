@@ -7,14 +7,14 @@ import { fileStorage, rDatabase } from '../../config/firebase'
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore'
 import { AuthUserContext, FirebaseContext } from '../_layout'
 import { getDownloadURL, ref, getStorage, deleteObject, uploadBytesResumable } from 'firebase/storage'
+import { useSelector } from 'react-redux'
 
 const ChatActions = ({id}) => {
   const [preloadImages, setPreloadImages] = useState(null);
   const [newMessageText, setNewMessageText] = useState('');
   const preloadImagesCountError = preloadImages?.length > 5;
   const buttonDisable = preloadImagesCountError || (!preloadImages?.length && !newMessageText.trim());
-  const {database} = useContext(FirebaseContext);
-  const {user} = useContext(AuthUserContext);
+  const user = useSelector(state => state.auth.user);
   const removePreloadImage = (image) => {
     if(preloadImages?.length === 1){
       setPreloadImages(null);
