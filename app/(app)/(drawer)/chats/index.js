@@ -11,17 +11,21 @@ import { onValue, ref } from 'firebase/database'
 import UnreadMessagesIndicator from '../../../components/UnreadMessagesIndicator'
 import { ActivityIndicator } from 'react-native-paper'
 import { useDispatch, useSelector } from 'react-redux'
-import { setChats } from '../../../store/features/chats/chatsSlice'
+import { setChats, setCurrentChat } from '../../../store/features/chats/chatsSlice'
 import { useFetchChatsQuery } from '../../../store/features/chats/chatsApi'
-import { addLastMessage } from '../../../store/features/messages/messagesSlice'
+import { addLastMessage, addBlankMessage } from '../../../store/features/messages/messagesSlice'
 import useDebounce from '../../../../hooks/useDebounce'
 import { useFetchAllChatsUsersQuery } from '../../../store/features/users/usersApi'
 import { setUsers, updateOnlineStatus } from '../../../store/features/users/usersSlice'
+import { legacy_createStore } from '@reduxjs/toolkit'
+import { useLazyStartReciveMessagesQuery } from '../../../store/features/messages/messagesApi'
 
 const Chats = ({user}) => {
     const [refresh, setRefresh] = useState(false);
+    const [reciveMessage, {error: reciveMessageError, data}] = useLazyStartReciveMessagesQuery()
+    console.log(data, 'recive message data')
     const dispatch = useDispatch();
-
+    const currentChat = useSelector(state => state.chats.currentChat)
     const chatsData = useFetchChatsQuery(user.uid)
     const usersForChats = chatsData.isLoading === false
     ? (chatsData.data.map(chat => chat.users)).flat(2).filter((value, index, array) => {
@@ -31,14 +35,24 @@ const Chats = ({user}) => {
     : []
 
     const lastMessages = (useDebounce(useSelector(state => state.messagesData.chatsMessages), 100))?.map(({messages, ...rest}) => {
-        const message = messages[0].data[0]
-        return {
-            ...rest,
-            message: {
-                ...message,
-                text: message?.text ? message.text : message.media !== null ? 'Фото' : 'Повідомлень немає',
-                createdAt: message?.createdAt.seconds
-            } 
+        const messageDays = messages[0]
+        let message = null 
+        if(messageDays){
+            message = messageDays.data[0]
+            return {
+                ...rest,
+                message: {
+                    ...message,
+                    text: message?.text ? message.text : message.media !== null ? 'Фото' : 'Повідомлень немає',
+                    createdAt: message?.createdAt.seconds
+                } 
+            }
+        }
+        else{
+            return {
+                ...rest,
+                message: null
+            }
         }
     })
     // console.log(JSON.stringify(lastMessages), 'last messages =>>>>>>>>')
@@ -46,6 +60,12 @@ const Chats = ({user}) => {
     useFetchAllChatsUsersQuery(usersForChats)
     const {users: chatUsers, loading: usersLoading, error: usersError} = useDebounce(useSelector(state => state.users), 100)
     const router = useRouter();
+
+    useEffect(() => {
+        if(currentChat !== null){
+            router.push(`chat/${currentChat}`);
+        }
+    }, [currentChat])
 
     // observing users status
     useEffect(() => {
@@ -72,15 +92,31 @@ const Chats = ({user}) => {
             const readedMessages = (await getCountFromServer(query(collection(database, 'messages', chatId, 'message'), where("isRead", "array-contains", user.uid)))).data().count
             return {unreadedMessagesCount: (totalMessagesCount - readedMessages), totalMessagesCount, readedMessages}
     }
+
+    const userIsInChat = (chatId) => {
+        // console.log(currentChat, '   current Chat')
+        // console.log(chatId, '   chat.id Chat')
+        return currentChat === chatId
+    }
     // observing users messages
     useEffect(() => {
         let unsubs = [];
         if(!chatsData.isLoading){
-            unsubs = chatsData.data.map(chat => {
+            chatsData.data.map(chat => {
+                reciveMessage({chatId: chat.id, userId: user.uid})
                 const qMessages = query(collection(database, "messages", String(chat.id), "message"), orderBy('createdAt', 'desc'), limit(1));
                 const unsubscribe = onSnapshot(qMessages, async (snapShot) => {
+                    if(!snapShot.docs.length){
+                        dispatch(addBlankMessage({
+                            chatId: chat.id
+                        }))
+                    }
                     snapShot.docs.forEach(async e => { 
                         const data = e.data();
+                        
+                        if(!data.isRead.includes(user.uid) && userIsInChat(chat.id)){
+                            console.log(Platform.OS, 'user in chat and read this message')
+                        }
                         if(data?.createdAt?.seconds){
                             const messageCreatedAt = new Date(data?.createdAt?.seconds * 1000)
                             const messageSlug = messageCreatedAt.getFullYear() + "_" + messageCreatedAt.getMonth() + "_" + messageCreatedAt.getDate();  
@@ -105,17 +141,12 @@ const Chats = ({user}) => {
         return () => unsubs.forEach(unsub => {
             unsub();    
         });
-    }, [chatsData.isLoading])
+    }, [chatsData.isLoading, currentChat])
 
-
-    const hadnleChatClick = (chat) => {
-        moveToChat(chat.id)
+      // add to state currentChat i.e. open chat and open it
+    const hadnleChatClick = ({id}) => {
+        dispatch(setCurrentChat({currentChat: id}))
     }
-
-    const moveToChat = (id) => {
-        router.push(`chat/${id}`);
-    }
-
     const onRefresh = () => {
         setRefresh(true);
         fetchData()
@@ -150,6 +181,7 @@ const Chats = ({user}) => {
             </ChatLink>
         )
     } 
+    // return <View><Text>1231231</Text></View>
     if(!lastMessages?.length){
         return <ActivityIndicator/>
     }

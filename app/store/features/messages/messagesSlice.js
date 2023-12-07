@@ -47,7 +47,10 @@ export const messagesSlice = createSlice({
                 }
             }
             state.loading = false
-            }
+        },
+        addBlankMessage: (state, {payload: {chatId}}) => {
+            state.chatsMessages.push({chatId, messages: [], unreadedMessagesCount: 0, totalMessagesCount: 0, readedMessages: 0})
+        }
     },
     extraReducers: (builder) => {
         builder
@@ -92,9 +95,12 @@ export const messagesSlice = createSlice({
                 messages: [...state.chatsMessages[index].messages, ...action.payload.messages]
             }
         })
+        .addMatcher(messagesApi.endpoints.startReciveMessages.matchFulfilled, (state, action) => {
+            console.log(action.payload, '------------message in matchFulfilled')
+        })
     }
 })
 
-export const { setUsers, updateUser, updateOnlineStatus, addLastMessage } = messagesSlice.actions
+export const { setUsers, updateUser, updateOnlineStatus, addLastMessage, addBlankMessage } = messagesSlice.actions
 
 export default messagesSlice.reducer;

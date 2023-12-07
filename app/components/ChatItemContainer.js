@@ -8,7 +8,6 @@ import { useSelector } from 'react-redux';
 const ChatItemContainer = ({messagesCount, messages, chatData, chatUsers, selectedMessages, updateSelectedMessages, loadPreviousMessages}) => {  
   
   const flatArray = messages.reduce((result, obj) => result.concat([...obj.data, obj.date]), []);
-  console.log('rerender ', Platform.OS)
   const users = useSelector(state => state.users.users)
   const [endReached, setEndReached] = useState(false);
   const [allowSetEndReached, setAllowSetEndReached] = useState(false);

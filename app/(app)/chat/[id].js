@@ -33,11 +33,11 @@ import { compareObjects } from '../_layout'
 import ChatNavigationHeaderTitle from '../../components/ChatNavigationHeaderTitle'
 import ChatActions from '../../components/ChatActions'
 import { useDispatch, useSelector } from 'react-redux'
-import { useFetchMessagesQuery, useFetchPrevMessagesMutation, useLazyFetchMessagesQuery } from '../../store/features/messages/messagesApi'
+import { useFetchMessagesQuery, useFetchPrevMessagesMutation, useLazyFetchMessagesQuery, useLazyStartReciveMessagesQuery } from '../../store/features/messages/messagesApi'
 import { Button } from 'react-native-paper'
+import { setCurrentChat } from '../../store/features/chats/chatsSlice'
 const MESSAGES_PER_REQUEST_LIMIT = 10;
 const Chat = () => {
-  // console.log('rerender top')
   const { id } = useLocalSearchParams();
   const dispatch = useDispatch();
   const user = useSelector(state => state.auth.user);
@@ -47,28 +47,32 @@ const Chat = () => {
     if(chatData.users.includes(u.id)) return true
     return false
   })
-  const [trigger, result] = useLazyFetchMessagesQuery()
+  const [trigger, {error: fetchMessagesError}] = useLazyFetchMessagesQuery()
+  // console.log(fetchMessagesError, '--------------------------------->fetch messsages error')
   useEffect(() => {
     trigger({chatId: id, count: MESSAGES_PER_REQUEST_LIMIT})
   }, [])
-  // {error, isLoading: firstLoadingMessages, error: firstMessagesError, refetch}
   const [fetchPrevMessages, {isLoading: prevMessagesIsLoading, error: fetchPrevError}] = useFetchPrevMessagesMutation()
 
   const messagesData = ((useSelector(state => state.messagesData.chatsMessages)).find(m => m.chatId === id))
   const {messages, unreadedMessagesCount, readedMessages, totalMessagesCount, loading: messagesLoading} = messagesData
   const [selectedMessages, setSelectedMessages] = useState([])
-  // const [loading, setLoading] = useState(true);
-  // const [chatUsersIsLoading, setChatUsersIsLoading] = useState(true);
-  // const [messagesCount, setMessagesCount] = useState(null)
-  // const [lastLoadedId, setLastLoadedId] = useState(null)
-  // const router = useRouter();
   const navigation = useNavigation();
+
+  // remove from state currentChat i.e. close chat
+  useEffect(() => {
+    navigation.addListener('beforeRemove', (e) => {
+      dispatch(setCurrentChat({currentChat: null}))
+    });
+   }, [navigation]);
   // const [messages, setMessages] = useState([])
   // const {chatUsers, getChatData, setChatUsers, setChatData} = useContext(SelectedChatContext)
 
   const deleteMessages = (selectedMessages) => {
 
   }
+
+
 
   // useEffect(() => {
   //   const firstFetch = async () => {
@@ -405,14 +409,14 @@ const Chat = () => {
   //   </Text>
   // </View>
   // return(<View><Text>123123123213</Text></View>)
-  if( fetchPrevError){
+  if(fetchPrevError){
     return <View>
       <Text>
       ⚠️error fetching messages⚠️
       </Text>
     </View>
   }
-  if( messagesLoading){
+  if(messagesLoading){
     return  <View style={{alignItems: 'center', justifyContent: 'center'}}>
               <ActivityIndicator size='large'/>
             </View>

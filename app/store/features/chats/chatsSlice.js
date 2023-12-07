@@ -4,9 +4,10 @@ import { chatsApi } from "./chatsApi";
 export const chatsSlice = createSlice({
     name: 'chats',
     initialState: {
-       chats: [],
-       loading: true,
-       error: null 
+        currentChat: null,
+        chats: [],
+        loading: true,
+        error: null 
     },
     reducers: {
         setChats:(state, action) => {
@@ -15,7 +16,12 @@ export const chatsSlice = createSlice({
             chats: action.payload,
             loading: false
             })
-        }
+        },
+        setCurrentChat: (state, {payload: {currentChat}}) => {
+            if(state.currentChat !== currentChat){
+                state.currentChat = currentChat
+            }
+        } 
     },
     extraReducers: (builder) => {
         builder
@@ -26,6 +32,6 @@ export const chatsSlice = createSlice({
     }
 })
 
-export const { setChats } = chatsSlice.actions
+export const { setChats, setCurrentChat } = chatsSlice.actions
 
 export default chatsSlice.reducer;

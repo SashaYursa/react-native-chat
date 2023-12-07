@@ -10,13 +10,13 @@ const ChatNavigationHeaderTitle = ({contentPressHandle, chatType, chatImage, nam
   const OnlineStatusIndication = () => {
     if(chatType === 'private'){
       return (
-        <>
+        <View style={{flexDirection: 'row', gap: 5, alignItems: 'center'}}>
           <StatusIndicator style={!online.onlineStatus && {backgroundColor: 'gray'}}/>
           { online.onlineStatus
             ? <Text>Зараз онлайн</Text>
             : <TimeAgo date={online.timeStamp} textAfter="тому"/>
           }
-        </>
+        </View>
       )
     }
     if(chatType === 'public'){

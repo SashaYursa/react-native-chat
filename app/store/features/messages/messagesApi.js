@@ -1,8 +1,9 @@
-import { collection, doc, getDoc, getDocs, orderBy, query, limit, getDocFromCache, startAt, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, orderBy, query, limit, getDocFromCache, startAt, addDoc, serverTimestamp, onSnapshot, getCountFromServer, where } from "firebase/firestore";
 import { database, fileStorage } from "../../../../config/firebase";
 import { rootApi } from "../rootApi/rootApi";
 import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage'
 import { useDispatch } from "react-redux";
+import { addBlankMessage, addLastMessage } from "./messagesSlice";
 export const messagesApi = rootApi.injectEndpoints({
     endpoints: (builder) => ({
         fetchMessages: builder.query({
@@ -14,13 +15,16 @@ export const messagesApi = rootApi.injectEndpoints({
                     }   
                     let messagesQuery = query(collection(database, 'messages', chatId, 'message'), orderBy('createdAt', 'desc'), limit(count))
                     if(lastMessageId){
-                        const lastDoc = await getDoc(doc(database, "messages", chatId, "message", lastMessageId));
+                        const lastDoc = await getDoc(doc(database, 'messages', chatId, 'message', lastMessageId));
                         messagesQuery = query(collection(database, 'messages', chatId, 'message'), orderBy('createdAt', 'desc'), limit(count), startAt(lastDoc))
                     }else{
                         messagesQuery = query(collection(database, 'messages', chatId, 'message'), orderBy('createdAt', 'desc'), limit(count))
                     
                     }
                     const messagesDocs = await getDocs(messagesQuery)
+                    if(messagesDocs.docs.length === 0){
+                        return {error: 'no data'}
+                    }
                     const messages = [];
                     messagesDocs.docs.forEach(doc => {
                         const message = doc.data()
@@ -39,14 +43,8 @@ export const messagesApi = rootApi.injectEndpoints({
                             ]
                             })
                         }
-                        // return {...message, id: doc.id}
                     })
-                    // if(messages.length){
-                        return{data: {chatId, messages}}                        
-                    // }
-                    // else{
-                        // return{error: 'no messages'}
-                    // }
+                    return{data: {chatId, messages}}                        
                 }
                 catch(error){
                     return {error}
@@ -109,6 +107,94 @@ export const messagesApi = rootApi.injectEndpoints({
                 }
             }
         }),
+        startReciveMessages: builder.query({
+            async queryFn(props){
+                // try{
+                //     const unsubscribe = await addMessageReciverForChat({chatId, dispatch, userId})
+                //     return {data: unsubscribe}
+                // }
+                // catch(error) {
+                //     return {error: `recive message error----->, ${error}`}
+                // }
+                return {data: props}
+            },
+            async onCacheEntryAdded(
+                {chatId, userId},
+                { updateCachedData, cacheDataLoaded, cacheEntryRemoved }
+              ) {
+                let unsubscribe = null;
+                // create a websocket connection when the cache subscription starts
+                // const ws = new WebSocket('ws://localhost:8080')
+                try {
+                  // wait for the initial query to resolve before proceeding
+                  await cacheDataLoaded
+                  console.log(chatId, userId, 'credentials')
+                    const qMessages = query(collection(database, "messages", chatId, "message"), orderBy('createdAt', 'desc'), limit(1));
+                    unsubscribe = onSnapshot(qMessages, async (snapShot) => {
+                    if(!snapShot.docs.length){
+                        // dispatch(addBlankMessage({
+                        //     chatId: chatId
+                        // }))
+                        updateCachedData((draft) => {
+                            return {error: 'not found'}
+                            // draft.push("no messages")
+                        })
+                    }
+                    const datas = []
+                    snapShot.docs.forEach(async e => { 
+                        const data = e.data();
+                        datas.push({data, id: e.id})
+                        
+                        if(data?.createdAt?.seconds){
+                            // const messageCreatedAt = new Date(data?.createdAt?.seconds * 1000)
+                            // const messageSlug = messageCreatedAt.getFullYear() + "_" + messageCreatedAt.getMonth() + "_" + messageCreatedAt.getDate();  
+                            // let unreadedMessagesCount = await checkMessages(chatId, userId)
+                            // dispatch(addLastMessage({
+                            //     message: {
+                            //         date: messageSlug, 
+                            //         data: [{
+                            //             ...data,
+                            //             id: e.id, 
+                            //         }]
+                            //     }, 
+                            //     chatId: chatId,
+                            //     ...unreadedMessagesCount
+                            // }))
+                        }
+                    });
+                    updateCachedData((draft) => {
+                        return {
+                            data: datas
+                        }
+                    })
+                })
+                  // when data is received from the socket connection to the server,
+                  // if it is a message and for the appropriate channel,
+                  // update our query result with the received message
+                //   const listener = (event) => {
+                //     const data = JSON.parse(event.data)
+                //     if (!isMessage(data) || data.channel !== arg) return
+        
+                //     updateCachedData((draft) => {
+                //       draft.push(data)
+                //     })
+                //   }
+        
+                //   ws.addEventListener('message', listener)
+
+
+                } catch(error) {
+                    console.log('error ______________', error)
+                  // no-op in case `cacheEntryRemoved` resolves before `cacheDataLoaded`,
+                  // in which case `cacheDataLoaded` will throw
+                }
+                // cacheEntryRemoved will resolve when the cache subscription is no longer active
+                await cacheEntryRemoved
+                // perform cleanup steps once the `cacheEntryRemoved` promise resolves
+                // ws.close()
+                // return unsubscribe()
+              },
+        })
         // uploadChatMedia: builder.mutation({
         //     async queryFn({images, callback}){
         //         try{
@@ -125,6 +211,43 @@ export const messagesApi = rootApi.injectEndpoints({
         // })
     })
 })
+
+const checkMessages = async (chatId, userId) => {
+    const totalMessagesCount = (await getCountFromServer(collection(database, 'messages', chatId, 'message'))).data().count
+    const readedMessages = (await getCountFromServer(query(collection(database, 'messages', chatId, 'message'), where("isRead", "array-contains", userId)))).data().count
+    return {unreadedMessagesCount: (totalMessagesCount - readedMessages), totalMessagesCount, readedMessages}
+}
+
+const addMessageReciverForChat = async ({chatId, dispatch, userId}) => {
+    const qMessages = query(collection(database, "messages", chatId, "message"), orderBy('createdAt', 'desc'), limit(1));
+    const unsubscribe = onSnapshot(qMessages, async (snapShot) => {
+        if(!snapShot.docs.length){
+            dispatch(addBlankMessage({
+                chatId: chatId
+            }))
+        }
+        snapShot.docs.forEach(async e => { 
+            const data = e.data();
+            if(data?.createdAt?.seconds){
+                const messageCreatedAt = new Date(data?.createdAt?.seconds * 1000)
+                const messageSlug = messageCreatedAt.getFullYear() + "_" + messageCreatedAt.getMonth() + "_" + messageCreatedAt.getDate();  
+                let unreadedMessagesCount = await checkMessages(chatId, userId)
+                dispatch(addLastMessage({
+                    message: {
+                        date: messageSlug, 
+                        data: [{
+                            ...data,
+                            id: e.id, 
+                        }]
+                    }, 
+                    chatId: chatId,
+                    ...unreadedMessagesCount
+                }))
+            }
+        });
+    })
+    return unsubscribe;
+}
 
 const uploadChatMedia = async (path) => {
     const fileName = path.split('/').pop();
@@ -151,4 +274,4 @@ const uploadChatMedia = async (path) => {
     .catch(error => console.log('uploadTask error -----> ', error))
   }
 
-export const { useLazyFetchMessagesQuery, useFetchPrevMessagesMutation, useSendMessageMutation,} = messagesApi
+export const { useLazyFetchMessagesQuery, useFetchPrevMessagesMutation, useSendMessageMutation, useLazyStartReciveMessagesQuery} = messagesApi
