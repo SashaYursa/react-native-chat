@@ -48,16 +48,15 @@ const Chat = () => {
     return false
   })
   const [trigger, {error: fetchMessagesError}] = useLazyFetchMessagesQuery()
-  // console.log(fetchMessagesError, '--------------------------------->fetch messsages error')
-  useEffect(() => {
+  useLayoutEffect(() => {
+    console.log(id)
     trigger({chatId: id, count: MESSAGES_PER_REQUEST_LIMIT})
   }, [])
-  const [fetchPrevMessages, {isLoading: prevMessagesIsLoading, error: fetchPrevError}] = useFetchPrevMessagesMutation()
-
-  const messagesData = ((useSelector(state => state.messagesData.chatsMessages)).find(m => m.chatId === id))
+  const messagesData = (useSelector(state => state.messagesData.chatsMessages)).find(m => m.chatId === id)
   const {messages, unreadedMessagesCount, readedMessages, totalMessagesCount, loading: messagesLoading} = messagesData
   const [selectedMessages, setSelectedMessages] = useState([])
   const navigation = useNavigation();
+  const router = useRouter();
 
   // remove from state currentChat i.e. close chat
   useEffect(() => {
@@ -65,27 +64,10 @@ const Chat = () => {
       dispatch(setCurrentChat({currentChat: null}))
     });
    }, [navigation]);
-  // const [messages, setMessages] = useState([])
-  // const {chatUsers, getChatData, setChatUsers, setChatData} = useContext(SelectedChatContext)
 
   const deleteMessages = (selectedMessages) => {
 
   }
-
-
-
-  // useEffect(() => {
-  //   const firstFetch = async () => {
-  //     const prevQ = query(collection(database, 'messages', String(id), 'message'), orderBy('createdAt', 'desc'), limit(70))
-  //     const lastMessages = await loadMessages(prevQ);
-  //     setMessages(lastMessages)
-  //   }
-  //   if(chatData ){
-  //     firstFetch();
-  //   }
-    
-  // }, [chatData])
-  
   // // ----------- виконується 3
   // // ----------- виконується після завантаження всіх користувачів в чаті 
   // // ----------- оримує повідомлення чату і стежить за їх оновленнями
@@ -167,7 +149,7 @@ const Chat = () => {
           if(chatData.type === 'private'){
             return <ChatNavigationHeaderTitle 
             contentPressHandle={() => router.push(`user/${user.id}`)} 
-            chatType={chatData.type} 
+            chatData={chatData}
             chatImage={user.image}
             name={user.displayName}
             online={{onlineStatus: user.isOnline, timeStamp: user.timeStamp}}
@@ -177,8 +159,8 @@ const Chat = () => {
           }
           if(chatData.type === 'public'){
             return <ChatNavigationHeaderTitle 
-            contentPressHandle={() => router.push('chat/info')} 
-            chatType={chatData.type} 
+            contentPressHandle={() => router.push({pathname: 'chat/info', params: {id}})} 
+            chatData={chatData}
             chatImage={chatData.image}
             name={chatData.name}
             online={chatUsers.map(chatUser => chatUser.onlineStatus)}
@@ -272,7 +254,7 @@ const Chat = () => {
         const findDate = updatedMessages.findIndex(upd => upd.date === messageItem.date)
         if(findDate !== -1){
           messageItem.data.forEach(messageData => {
-            if(messageData.id !== lastLoadedId){
+            if(messageData?.id !== lastLoadedId){
               updatedMessages[findDate].data.push(messageData)
             }
           })
@@ -295,7 +277,7 @@ const Chat = () => {
       const messageData = doc.data();
       if(messageData.isRead.includes(user.uid)){
       }else{
-        messagesForRead.push({id: doc.id, data: messageData})
+        messagesForRead.push({id: doc?.id, data: messageData})
       }
 
       messageData.createdAt.seconds = messageData.createdAt.seconds * 1000;
@@ -303,9 +285,9 @@ const Chat = () => {
       const messageSlug = messageCreatedAt.getFullYear() + "_" + messageCreatedAt.getMonth() + "_" + messageCreatedAt.getDate(); 
       const currentDateIndex = oldMessages.findIndex(messages => messages.date === messageSlug);
       if(currentDateIndex !== -1){
-        const existedMessage = oldMessages[currentDateIndex].data.find(message => message.id === doc.id)
+        const existedMessage = oldMessages[currentDateIndex].data.find(message => message?.id === doc?.id)
         if(!existedMessage){
-          oldMessages[currentDateIndex].data.push({...messageData, id: doc.id})
+          oldMessages[currentDateIndex].data.push({...messageData, id: doc?.id})
         }
       }
       else{
@@ -403,36 +385,20 @@ const Chat = () => {
             })
         }
   }, [])
-  // return <View>
-  //   <Text>
-  //     12312312431
-  //   </Text>
-  // </View>
-  // return(<View><Text>123123123213</Text></View>)
-  if(fetchPrevError){
-    return <View>
-      <Text>
-      ⚠️error fetching messages⚠️
-      </Text>
-    </View>
-  }
+  //  
   if(messagesLoading){
     return  <View style={{alignItems: 'center', justifyContent: 'center'}}>
               <ActivityIndicator size='large'/>
             </View>
   }
   
-  // if(!chatUsers || !messages || !chatData){
-  //   return <ActivityIndicator size='large'/>
-  // }
   return (
     <>
     <ChatCanvas>
       <> 
-        {prevMessagesIsLoading && <ActivityIndicator style={{alignSelf: 'center', paddingTop: 5}} color={'blue'} size={'large'}/>}
         {messages?.length === 0
           ? <View>
-              <Text>No data</Text>
+              <Text>⚠️error fetching messages⚠️</Text>
             </View>
           : <ChatItemContainer 
               messagesCount={totalMessagesCount} 
@@ -452,18 +418,6 @@ const Chat = () => {
     </Button>
     <ChatActions id={id}/>
     </>
-  )
-  return (
-    <View>
-      <Text>
-        123123
-      </Text>
-      <Button onPress={() => {fetchPrevMessages({chatId: id, lastMessageId: (messagesData?.messages[messagesData?.messages.length -1]).id, count: MESSAGES_PER_REQUEST_LIMIT})}}>
-        <Text>
-          Load prev
-        </Text>
-      </Button>
-    </View>
   )
 }
 

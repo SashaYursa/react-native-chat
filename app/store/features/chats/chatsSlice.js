@@ -29,6 +29,9 @@ export const chatsSlice = createSlice({
             state.chats = action.payload
             state.loading = false
         })
+        .addMatcher(chatsApi.endpoints.createChat.matchFulfilled, (state, action) => {
+            state.chats.push(action.payload)
+        })
     }
 })
 

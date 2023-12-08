@@ -14,8 +14,9 @@ import { Button } from 'react-native-paper';
 import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
 import { fileStorage } from '../../../../config/firebase';
 import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
+import { useSelector } from 'react-redux';
 const Profile = ({}) => {
-  const { user } = useContext(AuthUserContext)
+  const user = useSelector(state => state.auth.user);
   const [loading, setLoading] = useState(true)
   const [displayModal, setDisplayModal] = useState(false)
   const [userData, setUserData] = useState(null)

@@ -5,7 +5,8 @@ import UserImage from './UserImage'
 import TimeAgo from './TimeAgo'
 import { router } from 'expo-router'
 
-const ChatNavigationHeaderTitle = ({contentPressHandle, chatType, chatImage, name, online, selectedMessagesCount, handleSelectedMessages}) => {
+const ChatNavigationHeaderTitle = ({contentPressHandle, chatData, chatImage, name, online, selectedMessagesCount, handleSelectedMessages}) => {
+  const {type: chatType, id} = chatData;
   const defaultChatImage = chatType === 'public' ? require('../../assets/group-chat.png') : require('../../assets/default-user.png')
   const OnlineStatusIndication = () => {
     if(chatType === 'private'){
@@ -50,7 +51,7 @@ const ChatNavigationHeaderTitle = ({contentPressHandle, chatType, chatImage, nam
             </Text>
           </View>
         </TouchableOpacity>
-        : chatType === 'private' && <TouchableOpacity style={{alignItems: 'center', justifyContent: 'center'}} onPress={() => router.push('chat/info')}>
+        : chatType === 'private' && <TouchableOpacity style={{alignItems: 'center', justifyContent: 'center'}} onPress={() => router.push({pathname: 'chat/info', params: {id}})}>
           <View style={{width: 30, height: 30}}>
             <Image source={require('../../assets/chat-info.png')} style={{height: '100%', width: '100%'}}/>
           </View>

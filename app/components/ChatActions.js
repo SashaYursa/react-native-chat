@@ -15,21 +15,12 @@ const ChatActions = ({id}) => {
     const user = useSelector(state => state.auth.user);
     const dispatch = useDispatch()
     const preloadImages = useSelector(state => state.mediaUpload.mediaItems)
-//   const [preloadImages, setPreloadImages] = useState(null);
   const [newMessageText, setNewMessageText] = useState('');
   const [sendMessage, {isLoading: sendMessageIsLoading, error: senddMessageError}] = useSendMessageMutation()
-//   const [uploadChatMedia] = useUploadChatMediaMutation();
-//   console.log(sendMessageIsLoading, 'is loading ---', senddMessageError, '  error ----')
   const preloadImagesCountError = preloadImages?.length > 5;
   const buttonDisable = preloadImagesCountError || (!preloadImages?.length && !newMessageText.trim());
   const removePreloadImage = (image) => {
     dispatch(removeMediaItem(image))
-    // if(preloadImages?.length === 1){
-    //   setPreloadImages(null);
-    // }
-    // else{
-    //   setPreloadImages(preloadImages.filter(preloadImage => preloadImage.path !== image));
-    // }
   }
 
   const selectImages = async () => {

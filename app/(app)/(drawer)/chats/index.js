@@ -17,13 +17,11 @@ import { addLastMessage, addBlankMessage } from '../../../store/features/message
 import useDebounce from '../../../../hooks/useDebounce'
 import { useFetchAllChatsUsersQuery } from '../../../store/features/users/usersApi'
 import { setUsers, updateOnlineStatus } from '../../../store/features/users/usersSlice'
-import { legacy_createStore } from '@reduxjs/toolkit'
-import { useLazyStartReciveMessagesQuery } from '../../../store/features/messages/messagesApi'
 
 const Chats = ({user}) => {
     const [refresh, setRefresh] = useState(false);
-    const [reciveMessage, {error: reciveMessageError, data}] = useLazyStartReciveMessagesQuery()
-    console.log(data, 'recive message data')
+    // const [reciveMessage, {error: reciveMessageError, data}] = useLazyStartReciveMessagesQuery()
+    // console.log(data, 'recive message data')
     const dispatch = useDispatch();
     const currentChat = useSelector(state => state.chats.currentChat)
     const chatsData = useFetchChatsQuery(user.uid)
@@ -102,8 +100,8 @@ const Chats = ({user}) => {
     useEffect(() => {
         let unsubs = [];
         if(!chatsData.isLoading){
+            // reciveMessage({chat: chatsData, userId: user.uid})
             chatsData.data.map(chat => {
-                reciveMessage({chatId: chat.id, userId: user.uid})
                 const qMessages = query(collection(database, "messages", String(chat.id), "message"), orderBy('createdAt', 'desc'), limit(1));
                 const unsubscribe = onSnapshot(qMessages, async (snapShot) => {
                     if(!snapShot.docs.length){
@@ -141,7 +139,7 @@ const Chats = ({user}) => {
         return () => unsubs.forEach(unsub => {
             unsub();    
         });
-    }, [chatsData.isLoading, currentChat])
+    }, [chatsData.isLoading])
 
       // add to state currentChat i.e. open chat and open it
     const hadnleChatClick = ({id}) => {

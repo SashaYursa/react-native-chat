@@ -1,18 +1,18 @@
 import { View, Text, Image, TouchableOpacity} from 'react-native'
 import React, { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { AuthUserContext, FirebaseContext, SelectedChatContext, clearChatData } from '../_layout'
+import { SelectedChatContext, clearChatData } from '../_layout'
 import styled from 'styled-components'
 import { ActivityIndicator, TextInput } from 'react-native-paper';
 import useDebounce from '../../hooks/useDebounce'
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router'
-
+import { database } from '../../config/firebase';
 import { addDoc, collection, endAt, getDocs, orderBy, query, serverTimestamp, startAt, where } from 'firebase/firestore';
 import TopSearch from '../components/TopSearch';
 import UsersList from '../components/UsersList';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSelector } from 'react-redux';
 const Users = () => {
-  const {user} = useContext(AuthUserContext)
-  const {database} = useContext(FirebaseContext)
+  const user = useSelector(state => state.auth.user)
   const [searchText, setSearchText] = useState('')
   const {setMessages, setChatUsers, setChatData} = useContext(SelectedChatContext)
   const debouncedSearchValue = useDebounce(searchText, 1000);

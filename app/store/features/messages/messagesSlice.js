@@ -1,5 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit";
 import { messagesApi } from "./messagesApi";
+import { chatsApi } from "../chats/chatsApi";
 
 export const messagesSlice = createSlice({
     name: "messagesData",
@@ -95,8 +96,8 @@ export const messagesSlice = createSlice({
                 messages: [...state.chatsMessages[index].messages, ...action.payload.messages]
             }
         })
-        .addMatcher(messagesApi.endpoints.startReciveMessages.matchFulfilled, (state, action) => {
-            console.log(action.payload, '------------message in matchFulfilled')
+        .addMatcher(chatsApi.endpoints.createChat.matchFulfilled, (state, action) => {
+            state.chatsMessages.push({chatId: action.payload.id, messages: [], unreadedMessagesCount: 0, totalMessagesCount: 0, readedMessages: 0})
         })
     }
 })

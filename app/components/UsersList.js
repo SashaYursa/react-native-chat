@@ -3,11 +3,12 @@ import React, { memo, useContext, useEffect, useState } from 'react'
 import styled from 'styled-components'
 import UserImage from './UserImage'
 import CachedImage from './CachedImage'
+import { database } from '../../config/firebase'
 import { collection, endAt, getDocs, limit, orderBy, query, startAt } from 'firebase/firestore'
 import { AuthUserContext, FirebaseContext } from '../_layout'
+import { useSelector } from 'react-redux'
 const UsersList = memo(({searchValue, userAction, hideUsers = null}) => {
-    const { user } = useContext(AuthUserContext)
-    const {database} = useContext(FirebaseContext)
+    const user = useSelector(state => state.auth.user);
     const [usersLoading, setUsersLoading] = useState(true);
     const [searchUsers, setSearchUsers] = useState(null);
     const [filteredUsers, setFilteredUsers] = useState(null)

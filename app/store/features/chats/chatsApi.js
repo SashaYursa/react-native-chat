@@ -1,4 +1,4 @@
-import { collection, getDoc, getDocs, query, where } from "firebase/firestore";
+import { addDoc, collection, getDoc, getDocs, query, serverTimestamp, where } from "firebase/firestore";
 import { database } from "../../../../config/firebase";
 import { rootApi } from "../rootApi/rootApi";
 
@@ -23,8 +23,31 @@ export const chatsApi = rootApi.injectEndpoints({
                     return {error, data: undefined}
                 }
             }
+        }),
+        createChat: builder.mutation({
+            async queryFn(params) {
+                const chat = {
+                    ...params,
+                    image: null,
+                    createdAt: serverTimestamp()
+                }
+                try{
+                    return await addDoc(collection(database, 'chats'), chat)
+                    .catch(error => {
+                        console.log(error, 'create Chat error')
+                        return {error: error + ' create error'}
+                    })
+                    .then(doc => {
+                        return {data: {...chat, id: doc.id, createdAt: {seconds: Date.now()}}}
+                    })
+                }
+                catch(error){
+                    console.log(error, 'create chat error')
+                    return {error}
+                }
+            }
         })
     })
 })
 
-export const { useFetchChatsQuery } = chatsApi
+export const { useFetchChatsQuery, useCreateChatMutation } = chatsApi

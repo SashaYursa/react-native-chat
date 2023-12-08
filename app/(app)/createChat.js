@@ -1,5 +1,5 @@
 import { View, Text, SafeAreaView, Button, ScrollView, StyleSheet, Platform } from 'react-native'
-import React, { memo, useCallback, useContext, useMemo, useRef, useState } from 'react'
+import React, { memo, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import styled from 'styled-components'
 import { TextInput } from 'react-native-paper'
 import TopSearch from '../components/TopSearch'
@@ -9,53 +9,74 @@ import { AuthUserContext, SelectedChatContext, clearChatData } from '../_layout'
 import { database } from '../../config/firebase'
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore'
 import { router } from 'expo-router'
+import { useCreateChatMutation } from '../store/features/chats/chatsApi'
+import { useDispatch, useSelector } from 'react-redux'
+import { setCurrentChat } from '../store/features/chats/chatsSlice'
     
 const createChat = () => {
     const [chatName, setChatName] = useState('');
     const [searchUserText, setSearchUserText] = useState('');
     const debouncedSearchValue = useDebounce(searchUserText);
-    const usersInputRef = useRef()
-    const {user} = useContext(AuthUserContext);
+    const usersInputRef = useRef();
+    const user = useSelector(state => state.auth.user);
     const [usersForChat, setUsersForChat] = useState([]);
-    const {setMessages, setChatUsers, setChatData} = useContext(SelectedChatContext)
+    const [createChat, {data: createdChatData}] = useCreateChatMutation()
     const usersId = useMemo(() => {
         if(!usersForChat.length) return null
         return usersForChat.map(u => u.id)
     }, [usersForChat])
+    const dispatch = useDispatch()
 
     const addUserToChat = useCallback((user) => {
         setUsersForChat(users => [...users, user])
-    }, [])
+    }, []) 
 
     const removeSelectedUser = (user) => {
         setUsersForChat(users => users.filter(u => u.id !== user.id))
     }
 
-    const createChat = async () => {
-        clearChatData(setChatUsers, setMessages, setChatData)
-        await addDoc(collection(database, 'chats'),{
+    useEffect(() => {
+        if(createdChatData?.id){
+            dispatch(setCurrentChat({currentChat: createdChatData?.id}))
+            router.back();
+        }
+    }, [createdChatData?.id])
+
+
+    const createChatHandler = async () => {
+        const createChatParams = {
             name: chatName,
             users: [user.uid , ...usersId],
             type: 'public',
-            image: null,
             admin: [user.uid],
-            createdAt: serverTimestamp()
-        }).then(doc => {
-            router.back();
-            router.push(`chat/${doc.id}`)
-        })
+        }
+        await createChat(createChatParams)
+        // router.back();
+        // router.push(`chat/${createdChat.data.id}`)
+
+        // await addDoc(collection(database, 'chats'),{
+        //     name: chatName,
+        //     users: [user.uid , ...usersId],
+        //     type: 'public',
+        //     image: null,
+        //     admin: [user.uid],
+        //     createdAt: serverTimestamp()
+        // }).then(doc => {
+        //     router.back();
+        //     router.push(`chat/${doc.id}`)
+        // })
     }
     
     return (
         <SafeAreaView style={Platform.OS === 'android' ? {flex: 1, marginTop: 35} : {flex: 1}}>
             <Header>
-                <Button  title='Back' onPress={() => {
+                <Button title='Back' onPress={() => {
                     router.back()
                 }}/>
                 <HeaderTitle>
                     Create chat
                 </HeaderTitle>
-                <Button title='Create' disabled={!usersId || !chatName.trim().length} onPress={createChat}/>
+                <Button title='Create' disabled={!usersId || !chatName.trim().length} onPress={createChatHandler}/>
             </Header>
             <ChatInputFieldsContainer>
                 <TextInput label='Chat name' mode='outlined'

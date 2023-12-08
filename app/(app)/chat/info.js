@@ -6,15 +6,22 @@ import TimeAgo from '../../components/TimeAgo'
 import CachedImage from '../../components/CachedImage'
 import { AuthUserContext, SelectedChatContext } from '../../_layout'
 import { router } from 'expo-router'
+import { useSelector } from 'react-redux'
 
 const Info = () => {
-    const { user } = useContext(AuthUserContext);
-    const {chatData, chatUsers, setChatData, setChatUsers} = useContext(SelectedChatContext)
+    const { id } = useLocalSearchParams()
+    const user = useSelector(state => state.auth.user);
+    const chatData = useSelector(state => state.chats.chats.find(chat => chat.id === id))
+    const chatUsers = (useSelector(state => state.users.users)).filter(u => {
+        if(user.uid === u.id) return false
+        if(chatData?.users?.includes(u.id)) return true
+        return false
+    })
     const createdAtDate = new Date(chatData.createdAt.seconds * 1000)
     const createdAt = `${createdAtDate.getFullYear()}-${createdAtDate.getMonth() + 1}-${createdAtDate.getDate()} ${createdAtDate.getHours()}:${createdAtDate.getMinutes()}`
     const defaultChatImage = chatData.type === "public" ? require('../../../assets/group-chat.png') : require('../../../assets/default-user.png')
     const headImage = chatData.type === "private" ? chatUsers[0].image : chatData.image
-    const userIsAdmin = chatData.type === "public" && chatData?.admin.includes(user.uid) 
+    const userIsAdmin = chatData.type === "public" && chatData?.admin?.includes(user.uid) 
     return (
       <Container>
         <ChatInfoContainer>
