@@ -6,10 +6,14 @@ import EditChatForm from '../../components/Forms/EditChatForm'
 import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage'
 import { doc, setDoc, updateDoc } from 'firebase/firestore'
 import { database, fileStorage } from '../../../config/firebase'
+import { useSelector } from 'react-redux'
+import { useLocalSearchParams, useRouter } from 'expo-router'
 const Settings = () => {
-  const {chatData, setChatData} = useContext(SelectedChatContext)
-  const { user } = useContext(AuthUserContext)
+  const { id } = useLocalSearchParams()
+  const chatData = useSelector(state => state.chats.chats.find(chat => chat.id === id))
+  const user = useSelector(state => state.auth.user)
   const [uploadImageStatus, setUploadImageStatus] = useState(null);
+  const router = useRouter()
   useEffect(() => {
     console.log(uploadImageStatus, 'status--->')
   }, [uploadImageStatus])

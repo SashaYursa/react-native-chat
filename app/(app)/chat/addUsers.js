@@ -8,10 +8,13 @@ import UsersList from '../../components/UsersList'
 import { SelectedChatContext } from '../../_layout'
 import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore'
 import { database } from '../../../config/firebase'
+import { useLocalSearchParams } from 'expo-router'
+import { useSelector } from 'react-redux'
 
 const AddUsers = () => {
 	const [searchText, setSearchText] = useState('')
-	const {chatData, setChatData, setChatUsers, chatUsers} = useContext(SelectedChatContext)
+	const { id } = useLocalSearchParams()
+	const chatData = useSelector(state => state.chats.chats.find(chat => chat.id === id))
 	const debouncedSearchValue = useDebounce(searchText, 1000);
 	const inputRef = useRef()
 	useEffect(() => {
@@ -19,6 +22,13 @@ const AddUsers = () => {
 		inputRef.current.focus();
 		}
   	}, [inputRef])
+
+	const updateChatData = (params) => {
+		console.log('upd cht data', params)
+	}
+	const updateChatsUsers = (params) => {
+		console.log('upd cht usrs', params)
+	}
 
 	const addUser = useCallback(async (user) => {
 		// console.log(chatData)
@@ -40,7 +50,7 @@ const AddUsers = () => {
 					}
 				])
 			}
-			setChatData(chatData => {
+			updateChatData(chatData => {
 				console.log('chatData, setted ------->')
 				return {
 					...chatData,
@@ -50,7 +60,7 @@ const AddUsers = () => {
 					]
 				}
 			})
-			setChatUsers(chatUsers => {
+			updateChatsUsers(chatUsers => {
 				return [
 					...chatUsers,
 					{

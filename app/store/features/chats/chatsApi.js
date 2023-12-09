@@ -37,7 +37,8 @@ export const chatsApi = rootApi.injectEndpoints({
                         console.log(error, 'create Chat error')
                         return {error: error + ' create error'}
                     })
-                    .then(doc => {
+                    .then(async doc => {
+                        // await addDoc(collection(database, 'messages', doc.id, 'message'))
                         return {data: {...chat, id: doc.id, createdAt: {seconds: Date.now()}}}
                     })
                 }

@@ -139,7 +139,7 @@ const Chats = ({user}) => {
         return () => unsubs.forEach(unsub => {
             unsub();    
         });
-    }, [chatsData.isLoading])
+    }, [chatsData])
 
       // add to state currentChat i.e. open chat and open it
     const hadnleChatClick = ({id}) => {

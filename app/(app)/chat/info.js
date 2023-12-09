@@ -104,14 +104,14 @@ const Info = () => {
             </ContainerHeader>
             <ActionsContainer contentContainerStyle={{paddingBottom: 10}}>
                 {(chatData.type === 'public' && userIsAdmin) &&
-                <ActionButton onPress={() => router.push('chat/addUsers')} style={{backgroundColor: '#22092C'}}>
+                <ActionButton onPress={() => router.push({pathname: 'chat/addUsers', params: {id: chatData.id}})} style={{backgroundColor: '#22092C'}}>
                     <ActionButtonText>
                         Add users
                     </ActionButtonText>
                 </ActionButton>
                 }
                 { userIsAdmin &&
-                <ActionButton onPress={() => router.push('chat/settings')} style={{backgroundColor: '#22092C'}}>
+                <ActionButton onPress={() => router.push({pathname: 'chat/settings', params: {id: chatData.id}})} style={{backgroundColor: '#22092C'}}>
                     <ActionButtonText>
                         Settings
                     </ActionButtonText>
