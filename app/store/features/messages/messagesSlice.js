@@ -44,10 +44,17 @@ export const messagesSlice = createSlice({
                         ...rest,
                         chatId,
                     }
-                    state.chatsMessages[index].messages[findDay].data = [...message.data, ...state.chatsMessages[index].messages[findDay].data] 
+                    const findIndexPending = state.chatsMessages[index].messages[findDay].data.findIndex(m => m.text === message.data[0].text && m.isPending)
+                    if(findIndexPending === -1){
+                        state.chatsMessages[index].messages[findDay].data = [...message.data, ...state.chatsMessages[index].messages[findDay].data] 
+                    }else{
+                        state.chatsMessages[index].messages[findDay].data[findIndexPending] = message.data[0] 
+                    }
                 }
             }
-            state.loading = false
+        },
+        setLoading: (state, action) => {
+            state.loading = action.payload
         },
         addBlankMessage: (state, {payload: {chatId}}) => {
             state.chatsMessages.push({chatId, messages: [], unreadedMessagesCount: 0, totalMessagesCount: 0, readedMessages: 0})
@@ -98,9 +105,15 @@ export const messagesSlice = createSlice({
         .addMatcher(chatsApi.endpoints.createChat.matchFulfilled, (state, action) => {
             state.chatsMessages.push({chatId: action.payload.id, messages: [], unreadedMessagesCount: 0, totalMessagesCount: 0, readedMessages: 0})
         })
+        .addMatcher(messagesApi.endpoints.sendMessage.matchPending, (state, action) => {
+            console.log('pending state---->', action)
+        })
+        .addMatcher(messagesApi.endpoints.sendMessage.matchFulfilled, (state, action) => {
+            console.log('fulfilled state---->', action.payload)
+        })
     }
 })
 
-export const { setUsers, updateUser, updateOnlineStatus, addLastMessage, addBlankMessage } = messagesSlice.actions
+export const { setUsers, updateUser, updateOnlineStatus, addLastMessage, addBlankMessage, setLoading } = messagesSlice.actions
 
 export default messagesSlice.reducer;

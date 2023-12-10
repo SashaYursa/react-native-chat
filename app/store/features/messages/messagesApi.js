@@ -86,9 +86,8 @@ export const messagesApi = rootApi.injectEndpoints({
             }
         }),
         sendMessage: builder.mutation({
-            async queryFn({media, userId, text, chatId}){
+            async queryFn({media, userId, text, chatId, addMessage}){
                 try{
-                    let mediaItems = null;
                     const newText = text?.trim() === '' ? null : text
                     const data = {
                         uid: userId,
@@ -97,12 +96,40 @@ export const messagesApi = rootApi.injectEndpoints({
                         createdAt: serverTimestamp(),
                         isRead: [userId]
                     }
-                    await addDoc(collection(database, 'messages', chatId, 'message'), data)
-                    return {data: "ok"}
+                    let result = null;
+                    await addDoc(collection(database, 'messages', chatId, 'message'), data).then(data => {
+                        const res = data.data()
+                       result = {data: {...res, id: data.id}}
+                    })
+                    return result
                 }
                 catch(error){
                     return {error: 'send message error: ->', error}
                 }
+            },
+            async onQueryStarted({media, userId, text, chatId, addMessage}, {dispatch}) {
+                const messageCreatedAt = new Date(Date.now());
+                const messageSlug = messageCreatedAt.getFullYear() + "_" + messageCreatedAt.getMonth() + "_" + messageCreatedAt.getDate();      
+                const newText = text?.trim() === '' ? null : text
+                const data = {
+                    uid: userId,
+                    text: newText,
+                    media,
+                    createdAt: Date.now(),
+                    isRead: [userId],
+                    id: messageCreatedAt
+                }
+                dispatch(addMessage({
+                    message: {
+                        date: messageSlug, 
+                        data: [{
+                            ...data,
+                            isPending: true
+                        }],
+                       
+                    },
+                    chatId,
+                }))
             }
         }),
     //     startReciveMessages: builder.query({

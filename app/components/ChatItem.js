@@ -4,7 +4,8 @@ import styled from 'styled-components'
 import { AuthUserContext } from '../_layout'
 import ImageView from "react-native-image-viewing";
 import CachedImage from './CachedImage';
-const ChatItem = React.memo(({userName, isAuthor, userImage, chatType, messageMedia, messageText, messageId, messageCreatedAt, selectMessage}) => {
+import { ActivityIndicator } from 'react-native-paper';
+const ChatItem = React.memo(({userName, isAuthor, userImage, pending, chatType, messageMedia, messageText, messageId, messageCreatedAt, selectMessage}) => {
     // console.log('rereder inside')
     const [isOpenedImages, setIsOpenedImages] = useState(false);
     const [selectedImage, setSelectedImage] = useState(0);
@@ -38,7 +39,10 @@ const ChatItem = React.memo(({userName, isAuthor, userImage, chatType, messageMe
                 </MessageText>
             }
             <MessageInfo>
-                <MessageCreatedAt>{dateText}</MessageCreatedAt>
+                {pending 
+                ? <ActivityIndicator size='small'/>
+                :<MessageCreatedAt>{dateText}</MessageCreatedAt>
+                }
             </MessageInfo>
         </MessageDataContainer>    
         {messageMedia && 

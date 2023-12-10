@@ -10,6 +10,7 @@ import { getDownloadURL, ref, getStorage, deleteObject, uploadBytesResumable } f
 import { useDispatch, useSelector } from 'react-redux'
 import { useSendMessageMutation, useUploadChatMediaMutation } from '../store/features/messages/messagesApi'
 import { addMediaItems, removeAllMediaItems, removeMediaItem, setMediaUploadStatus } from '../store/reducers/mediaUpload'
+import { addLastMessage } from '../store/features/messages/messagesSlice'
 
 const ChatActions = ({id}) => {
     const user = useSelector(state => state.auth.user);
@@ -64,7 +65,7 @@ const ChatActions = ({id}) => {
                 return await uploadChatMediaItem(name)
             })) 
         }
-        sendMessage({media, userId: user.uid, text: newMessageText, chatId: id})
+        sendMessage({media, userId: user.uid, text: newMessageText, chatId: id, addMessage: addLastMessage})
         setNewMessageText('');
         dispatch(removeAllMediaItems())
     }

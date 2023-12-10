@@ -86,6 +86,7 @@ const ChatItemContainer = ({messagesCount, messages, chatData, chatUsers, select
             messageMedia={item.media}
             messageText={item.text}
             messageId={item.id}
+            pending={item?.isPending}
             messageCreatedAt={item?.createdAt?.seconds}
             isAuthor={item.uid === user.uid}
             chatType={chatData.type}

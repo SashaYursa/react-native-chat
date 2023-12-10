@@ -13,10 +13,10 @@ import { ActivityIndicator } from 'react-native-paper'
 import { useDispatch, useSelector } from 'react-redux'
 import { setChats, setCurrentChat } from '../../../store/features/chats/chatsSlice'
 import { useFetchChatsQuery } from '../../../store/features/chats/chatsApi'
-import { addLastMessage, addBlankMessage } from '../../../store/features/messages/messagesSlice'
+import { addLastMessage, addBlankMessage, setLoading } from '../../../store/features/messages/messagesSlice'
 import useDebounce from '../../../../hooks/useDebounce'
 import { useFetchAllChatsUsersQuery } from '../../../store/features/users/usersApi'
-import { setUsers, updateOnlineStatus } from '../../../store/features/users/usersSlice'
+import { setUsers, setUsersStatusLoading, updateOnlineStatus } from '../../../store/features/users/usersSlice'
 
 const Chats = ({user}) => {
     const [refresh, setRefresh] = useState(false);
@@ -24,13 +24,14 @@ const Chats = ({user}) => {
     const currentChat = useSelector(state => state.chats.currentChat)
     const {isLoading: chatsIsLoading, error: chatsError} = useFetchChatsQuery(user.uid)
     const chatsData = useSelector(state => state.chats.chats)
+    const messagesLoading = useSelector(state => state.messagesData.loading);
     const usersForChats = chatsIsLoading === false
     ? (chatsData.map(chat => chat.users)).flat(2).filter((value, index, array) => {
         if(value === user.uid) return false
         return array.indexOf(value) === index;
     }) 
     : []
-
+    
     const lastMessages = (useDebounce(useSelector(state => state.messagesData.chatsMessages), 100))?.map(({messages, ...rest}) => {
         const messageDays = messages[0]
         let message = null 
@@ -64,7 +65,7 @@ const Chats = ({user}) => {
             return b?.messageCreatedAt - a?.messageCreatedAt
         })
     useFetchAllChatsUsersQuery(usersForChats)
-    const {users: chatUsers, loading: usersLoading, error: usersError} = useDebounce(useSelector(state => state.users), 100)
+    const {users: chatUsers, loading: usersLoading, error: usersError, statusLoading} = useDebounce(useSelector(state => state.users), 100)
     const router = useRouter();
 
     useEffect(() => {
@@ -77,10 +78,14 @@ const Chats = ({user}) => {
     useEffect(() => {
         let unsubs = [];
         if(!usersLoading){
-            unsubs = usersForChats.map(userId => {
+            unsubs = usersForChats.map((userId, index) => {
                 const unsub = onValue(ref(rDatabase, '/status/' + userId), (snapShot) => {
                     const value = snapShot.val();
                     dispatch(updateOnlineStatus({id: userId, isOnline: value?.isOnline, timeStamp: value.timeStamp}))
+                    if(index == (usersForChats?.length - 1)){
+                        console.log('last user')
+                        dispatch(setUsersStatusLoading(false))
+                    }
                 })
                 return unsub;
             })
@@ -100,16 +105,13 @@ const Chats = ({user}) => {
     }
 
     const userIsInChat = (chatId) => {
-        // console.log(currentChat, '   current Chat')
-        // console.log(chatId, '   chat.id Chat')
         return currentChat === chatId
     }
     // observing users messages
     useEffect(() => {
         let unsubs = [];
         if(!chatsIsLoading){
-            // reciveMessage({chat: chatsData, userId: user.uid})
-            chatsData.map(chat => {
+            chatsData.map((chat, index) => {
                 const qMessages = query(collection(database, "messages", String(chat.id), "message"), orderBy('createdAt', 'desc'), limit(1));
                 const unsubscribe = onSnapshot(qMessages, async (snapShot) => {
                     if(!snapShot.docs.length){
@@ -119,7 +121,6 @@ const Chats = ({user}) => {
                     }
                     snapShot.docs.forEach(async e => { 
                         const data = e.data();
-                        
                         if(!data.isRead.includes(user.uid) && userIsInChat(chat.id)){
                             console.log(Platform.OS, 'user in chat and read this message')
                         }
@@ -139,7 +140,10 @@ const Chats = ({user}) => {
                                 ...unreadedMessagesCount
                             }))
                         }
-                        });
+                    });
+                    if(index == (chatsData?.length - 1)){
+                        dispatch(setLoading(false))
+                    }
                 })
                 return unsubscribe;  
             })
@@ -188,10 +192,6 @@ const Chats = ({user}) => {
             </ChatLink>
         )
     } 
-    // return <View><Text>1231231</Text></View>
-    if(!lastMessages?.length){
-        return <ActivityIndicator/>
-    }
 
     if(usersError || chatsError){
         return <View>
@@ -200,7 +200,7 @@ const Chats = ({user}) => {
                 </Text>
             </View>
     }
-    if(usersLoading || chatsIsLoading){
+    if(usersLoading || chatsIsLoading || !lastMessages?.length || messagesLoading || statusLoading){
         return <ActivityIndicator />
     }
 
@@ -212,7 +212,7 @@ const Chats = ({user}) => {
                     }>
                 <Container>
                     <ChatsList>
-                        {chatsWithMessages.length > 0 && chatsWithMessages.map(chat => {
+                        {chatsWithMessages?.length > 0 && chatsWithMessages.map(chat => {
                             return (
                                 <ChatItem key={chat.id} itemData={chat}/>
                             )
