@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from 'react'
+import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { View, Text, RefreshControl, ScrollView, Platform, TouchableOpacity, Image } from 'react-native'
 import styled from 'styled-components'
 import ChatListItem from '../../../components/ChatList/ChatListItem'
@@ -20,13 +20,12 @@ import { setUsers, updateOnlineStatus } from '../../../store/features/users/user
 
 const Chats = ({user}) => {
     const [refresh, setRefresh] = useState(false);
-    // const [reciveMessage, {error: reciveMessageError, data}] = useLazyStartReciveMessagesQuery()
-    // console.log(data, 'recive message data')
     const dispatch = useDispatch();
     const currentChat = useSelector(state => state.chats.currentChat)
-    const chatsData = useFetchChatsQuery(user.uid)
-    const usersForChats = chatsData.isLoading === false
-    ? (chatsData.data.map(chat => chat.users)).flat(2).filter((value, index, array) => {
+    const {isLoading: chatsIsLoading, error: chatsError} = useFetchChatsQuery(user.uid)
+    const chatsData = useSelector(state => state.chats.chats)
+    const usersForChats = chatsIsLoading === false
+    ? (chatsData.map(chat => chat.users)).flat(2).filter((value, index, array) => {
         if(value === user.uid) return false
         return array.indexOf(value) === index;
     }) 
@@ -42,19 +41,28 @@ const Chats = ({user}) => {
                 message: {
                     ...message,
                     text: message?.text ? message.text : message.media !== null ? 'Фото' : 'Повідомлень немає',
-                    createdAt: message?.createdAt.seconds
-                } 
+                    createdAt: message?.createdAt?.seconds
+                },
+                messageCreatedAt: message?.createdAt?.seconds
             }
         }
         else{
             return {
                 ...rest,
-                message: null
+                message: null,
+                messageCreatedAt: 0
             }
         }
     })
-    // console.log(JSON.stringify(lastMessages), 'last messages =>>>>>>>>')
-    
+    let chatsWithMessages = chatsData.map(chat => {
+            const message = lastMessages.find(m => m.chatId === chat.id)
+            return {
+                ...chat,
+                ...message
+            }
+        }).sort((a, b) => {
+            return b?.messageCreatedAt - a?.messageCreatedAt
+        })
     useFetchAllChatsUsersQuery(usersForChats)
     const {users: chatUsers, loading: usersLoading, error: usersError} = useDebounce(useSelector(state => state.users), 100)
     const router = useRouter();
@@ -99,9 +107,9 @@ const Chats = ({user}) => {
     // observing users messages
     useEffect(() => {
         let unsubs = [];
-        if(!chatsData.isLoading){
+        if(!chatsIsLoading){
             // reciveMessage({chat: chatsData, userId: user.uid})
-            chatsData.data.map(chat => {
+            chatsData.map(chat => {
                 const qMessages = query(collection(database, "messages", String(chat.id), "message"), orderBy('createdAt', 'desc'), limit(1));
                 const unsubscribe = onSnapshot(qMessages, async (snapShot) => {
                     if(!snapShot.docs.length){
@@ -139,7 +147,7 @@ const Chats = ({user}) => {
         return () => unsubs.forEach(unsub => {
             unsub();    
         });
-    }, [chatsData])
+    }, [chatsIsLoading, chatsData?.length])
 
       // add to state currentChat i.e. open chat and open it
     const hadnleChatClick = ({id}) => {
@@ -150,8 +158,9 @@ const Chats = ({user}) => {
         fetchData()
     }
     const ChatItem = ({itemData}) => {
-        const selectedChatMessage = lastMessages.find(lm => lm.chatId === itemData.id)
-        const message = selectedChatMessage?.message ? selectedChatMessage?.message : {
+        // const selectedChatData = chatsData.find(chat => chat.id === itemData.chatId)
+        // const selectedChatMessage = lastMessages.find(lm => lm.chatId === itemData.id)
+        const message = itemData?.message ? itemData?.message : {
             media: null,
             text: 'Повідомлень немає',
             createdAt: null,
@@ -171,9 +180,9 @@ const Chats = ({user}) => {
         return(
             <ChatLink onPress={() => hadnleChatClick(itemData)}>
                 <ChatListItem item={item} />
-                {selectedChatMessage?.unreadedMessagesCount > 0 &&
+                {itemData?.unreadedMessagesCount > 0 &&
                 <UnreadMessagesCountCountainer>
-                    <UnreadMessagesIndicator count={selectedChatMessage.unreadedMessagesCount}/>
+                    <UnreadMessagesIndicator count={itemData.unreadedMessagesCount}/>
                 </UnreadMessagesCountCountainer>
                 }
             </ChatLink>
@@ -184,14 +193,14 @@ const Chats = ({user}) => {
         return <ActivityIndicator/>
     }
 
-    if(usersError || chatsData.error){
+    if(usersError || chatsError){
         return <View>
                 <Text>
                     error in chat users or chats data
                 </Text>
             </View>
     }
-    if(usersLoading || chatsData.isLoading){
+    if(usersLoading || chatsIsLoading){
         return <ActivityIndicator />
     }
 
@@ -203,7 +212,7 @@ const Chats = ({user}) => {
                     }>
                 <Container>
                     <ChatsList>
-                        {chatsData.data.length > 0 && chatsData.data.map(chat => {
+                        {chatsWithMessages.length > 0 && chatsWithMessages.map(chat => {
                             return (
                                 <ChatItem key={chat.id} itemData={chat}/>
                             )

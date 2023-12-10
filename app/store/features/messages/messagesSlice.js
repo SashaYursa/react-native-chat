@@ -64,28 +64,27 @@ export const messagesSlice = createSlice({
                 }
             }
             else{
-                const day = action.payload.messages[0]
-                const findDay = state.chatsMessages[index].messages.findIndex(d => d.date === day.date)
-                if(findDay !== -1){
-                    const concatDayMessages = state.chatsMessages[index].messages[findDay].data.concat(day.data)
-                    const uniqueIds = [];
-                    const filteredMessages = [];
-                    for (const message of concatDayMessages) {
-                        // Перевіряємо, чи id вже є у списку унікальних id
-                        if (!uniqueIds.includes(message.id)) {
-                            // Додаємо id до списку унікальних id
-                            uniqueIds.push(message.id);
-                            
-                            // Додаємо повідомлення до відфільтрованого масиву
-                            filteredMessages.push(message);
+                action.payload.messages.forEach(day => {
+                    const findDay = state.chatsMessages[index].messages.findIndex(d => d.date === day.date)
+                    if(findDay !== -1){
+                        const concatDayMessages = state.chatsMessages[index].messages[findDay].data.concat(day.data)
+                        const uniqueIds = [];
+                        const filteredMessages = [];
+                        for (const message of concatDayMessages) {
+                            // Перевіряємо, чи id вже є у списку унікальних id
+                            if (!uniqueIds.includes(message.id)) {
+                                // Додаємо id до списку унікальних id
+                                uniqueIds.push(message.id);                            
+                                // Додаємо повідомлення до відфільтрованого масиву
+                                filteredMessages.push(message);
+                            }
                         }
+                        state.chatsMessages[index].messages[findDay].data = filteredMessages
                     }
-                    state.chatsMessages[index].messages[findDay].data = filteredMessages
-                }
-                else{
-                    state.chatsMessages[index].messages.push(day)
-                }
-                state.chatsMessages[index].messages = [...state.chatsMessages[index].messages, ...action.payload.messages.slice(1)]
+                    else{
+                        state.chatsMessages[index].messages.push(day)
+                    }
+                })
             }
             state.loading = false
         })

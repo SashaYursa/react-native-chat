@@ -10,43 +10,79 @@ import { addDoc, collection, endAt, getDocs, orderBy, query, serverTimestamp, st
 import TopSearch from '../components/TopSearch';
 import UsersList from '../components/UsersList';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
+import { setCurrentChat } from '../store/features/chats/chatsSlice';
+import { useCreateChatMutation } from '../store/features/chats/chatsApi';
 const Users = () => {
   const user = useSelector(state => state.auth.user)
+  const chatsData = useSelector(state => state.chats.chats)
   const [searchText, setSearchText] = useState('')
+  const [createChatMutation, {data: createdChatData}] = useCreateChatMutation()
   const {setMessages, setChatUsers, setChatData} = useContext(SelectedChatContext)
   const debouncedSearchValue = useDebounce(searchText, 1000);
   const inputRef = useRef();
   const router = useRouter();
-  
+  const dispatch = useDispatch();
   useEffect(() => {
     if(inputRef.current){
       inputRef.current.focus();
     }
   }, [inputRef])
 
-  const createChat = useCallback(async (selectedUser) => {
-    clearChatData(setChatUsers, setMessages, setChatData)
-    const qChats = query(collection(database, "chats"), 
-    where("users", "array-contains", user.uid),
-    where("type", "==", "private")
-    )
-    const result = await getDocs(qChats);
-    const chats = result.docs.map(chat => ({...chat.data(), id: chat.id})).filter(chat => {
-      return chat.users.includes(selectedUser.id);
-    })
-    if(chats.length){
-      router.push(`chat/${chats[0].id}`)
+  
+  useEffect(() => {
+    if(createdChatData?.id){
+        dispatch(setCurrentChat({currentChat: createdChatData?.id}))
+        router.back();
     }
-    else{
-      await addDoc(collection(database, 'chats'),{
+  }, [createdChatData?.id])
+
+  const findChat = (userId) => {
+    return chatsData.find(chat => {
+      if(chat.type === 'private'){
+        if(chat.users.includes(user.uid) && chat.users.includes(userId)){
+          return true
+        }
+      } 
+      return false
+    })
+  }
+
+  const createChat = useCallback(async (selectedUser) => {
+    const foundChat = findChat(selectedUser.id)
+    if(foundChat){
+      dispatch(setCurrentChat({currentChat: foundChat.id}))
+      router.back();
+    }else{
+      const createChatParams = {
         name: null,
         users: [user.uid, selectedUser.id],
         type: 'private',
-        image: null,
-        createdAt: serverTimestamp()
-      })
+        admin: [user.uid, selectedUser.id],
     }
+    await createChatMutation(createChatParams)
+    }
+    // // clearChatData(setChatUsers, setMessages, setChatData)
+    // const qChats = query(collection(database, "chats"), 
+    // where("users", "array-contains", user.uid),
+    // where("type", "==", "private")
+    // )
+    // const result = await getDocs(qChats);
+    // const chats = result.docs.map(chat => ({...chat.data(), id: chat.id})).filter(chat => {
+    //   return chat.users.includes(selectedUser.id);
+    // })
+    // if(chats.length){
+    //   router.push(`chat/${chats[0].id}`)
+    // }
+    // else{
+    //   await addDoc(collection(database, 'chats'),{
+    //     name: null,
+    //     users: [user.uid, selectedUser.id],
+    //     type: 'private',
+    //     image: null,
+    //     createdAt: serverTimestamp()
+    //   })
+    // }
   }, [])
   return (
     <SafeAreaView style={{backgroundColor: '#fff', flex: 1}}>
