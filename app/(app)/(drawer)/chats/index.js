@@ -175,7 +175,7 @@ const Chats = ({user}) => {
             image,
             userData: selectedUser,
             name: itemData.name ? itemData.name : selectedUser.displayName,
-            data: message.text,
+            data: message?.deleted ? "Повідомлення видалено" : message.text,
             time: message.createdAt,
             media: message.media,
             type: itemData.type,

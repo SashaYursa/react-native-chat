@@ -58,6 +58,13 @@ const ChatItemContainer = ({messagesCount, messages, chatData, chatUsers, select
           </DateSplitter>
         )
       }
+      if(item?.deleted){
+        return (
+          <View style={{marginLeft: 'auto', marginRight: 'auto', marginBottom: 5, padding: 10, backgroundColor: '#bfbfbf', borderRadius: 12}}>
+            <Text style={{fontSize: 14, fontWeight: 400, fontStyle: 'italic'}}>Повідомлення видалено...</Text>
+          </View>
+        )
+      }
       let messageUser;
       if(item.uid !== user.uid){
         messageUser = users.find(u => u.id === item.uid);
@@ -65,7 +72,7 @@ const ChatItemContainer = ({messagesCount, messages, chatData, chatUsers, select
       else{
         messageUser = user
       }
-      const is =  selectedMessages.includes(item.id);
+      const is =  selectedMessages.some(el => item.id === el.id);
       const selected = is && {
         backgroundColor: '#85aded'
       }

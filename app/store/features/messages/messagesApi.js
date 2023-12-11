@@ -1,13 +1,14 @@
-import { collection, doc, getDoc, getDocs, orderBy, query, limit, getDocFromCache, startAt, addDoc, serverTimestamp, onSnapshot, getCountFromServer, where } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, orderBy, query, limit, getDocFromCache, startAt, addDoc, serverTimestamp, onSnapshot, getCountFromServer, where, deleteDoc, updateDoc } from "firebase/firestore";
 import { database, fileStorage } from "../../../../config/firebase";
 import { rootApi } from "../rootApi/rootApi";
-import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage'
+import { deleteObject, getDownloadURL, getStorage, ref, uploadBytesResumable } from 'firebase/storage'
 import { useDispatch } from "react-redux";
+import shorthash from "shorthash";
+import * as FileSystem from 'expo-file-system'
 export const messagesApi = rootApi.injectEndpoints({
     endpoints: (builder) => ({
         fetchMessages: builder.query({
             async queryFn({chatId, count, lastMessageId}){
-                console.log('fetched messages')
                 try{
                     if(!count || !chatId){
                         return {error: 'error in fetchMessages, not enought expected valuse'}
@@ -86,7 +87,7 @@ export const messagesApi = rootApi.injectEndpoints({
             }
         }),
         sendMessage: builder.mutation({
-            async queryFn({media, userId, text, chatId, addMessage}){
+            async queryFn({media, userId, text, chatId, date, messageCreatedAt, messageId}){
                 try{
                     const newText = text?.trim() === '' ? null : text
                     const data = {
@@ -96,32 +97,30 @@ export const messagesApi = rootApi.injectEndpoints({
                         createdAt: serverTimestamp(),
                         isRead: [userId]
                     }
-                    let result = null;
-                    await addDoc(collection(database, 'messages', chatId, 'message'), data).then(data => {
-                        const res = data.data()
-                       result = {data: {...res, id: data.id}}
+                    const res = await addDoc(collection(database, 'messages', chatId, 'message'), data)
+                    .catch(error => {
+                        return {error}
                     })
-                    return result
+                    return {data: {newMessageId: res.id, date, chatId, oldMessageId: messageId}}
                 }
                 catch(error){
-                    return {error: 'send message error: ->', error}
+                    console.log("error in send message btw", error)
+                    return {error}
                 }
             },
-            async onQueryStarted({media, userId, text, chatId, addMessage}, {dispatch}) {
-                const messageCreatedAt = new Date(Date.now());
-                const messageSlug = messageCreatedAt.getFullYear() + "_" + messageCreatedAt.getMonth() + "_" + messageCreatedAt.getDate();      
+            async onQueryStarted({media, userId, text, chatId, addMessage, date, messageCreatedAt, messageId}, {dispatch}) {
                 const newText = text?.trim() === '' ? null : text
                 const data = {
                     uid: userId,
                     text: newText,
                     media,
-                    createdAt: Date.now(),
+                    createdAt: {seconds: messageCreatedAt},
                     isRead: [userId],
-                    id: messageCreatedAt
+                    id: messageId
                 }
                 dispatch(addMessage({
                     message: {
-                        date: messageSlug, 
+                        date, 
                         data: [{
                             ...data,
                             isPending: true
@@ -132,6 +131,64 @@ export const messagesApi = rootApi.injectEndpoints({
                 }))
             }
         }),
+        deleteMessage: builder.mutation({
+            async queryFn({selectedMessages, chatId}) {
+                try{
+                for(const selectedMessage of selectedMessages) {
+                    if(selectedMessage.media){
+                    const storage = getStorage();
+                    for (const mediaItem of selectedMessage.media) {
+                        const mediaParam = mediaItem.split("/media%2F")[1];
+                        const name = mediaParam.split("?")[0];
+                        const desertRef = ref(storage, `media/${name}`);
+                        await deleteObject(desertRef)
+                        .then(res => {
+                        const pathName = shorthash.unique(mediaItem);
+                        const path = `${FileSystem.cacheDirectory}${pathName}`;
+                        FileSystem.deleteAsync(path);
+                        deleteDoc(doc(database, 'messages', chatId, 'message', selectedMessage.id));
+                        })
+                        .catch((error) => {
+                            throw new Error(error)
+                        });
+                    }
+                    }
+                    else{
+                        await deleteDoc(doc(database, 'messages', chatId, 'message', selectedMessage.id));
+                    }
+                }
+                return {data: 'ok'}
+                }catch(error){
+                    return {error}
+                }
+            },
+            async onQueryStarted({selectedMessages, chatId, removeMessagesFromState}, {dispatch}) {
+                const messagesForDelete = [];
+                for(const selectedMessage of selectedMessages) {
+                    const messageCreatedAt = new Date(selectedMessage.createdAt.seconds < 17023243810 ? selectedMessage.createdAt.seconds * 1000 : selectedMessage.createdAt.seconds);
+                    const messageSlug = messageCreatedAt.getFullYear() + "_" + messageCreatedAt.getMonth() + "_" + messageCreatedAt.getDate();      
+                    messagesForDelete.push({
+                        date: messageSlug,
+                        data: selectedMessage
+                    })
+                }
+                dispatch(removeMessagesFromState({
+                    messagesForDelete,
+                    chatId,
+                }))
+            }
+        }),
+        sendErrorMutation: builder.mutation({
+            async queryFn({error, platformOS, platformVersion}){
+                try {
+                    addDoc(collection(database, 'errors', ), {...error, platform: `${platformOS}, ${platformVersion}`})
+                    return {data: 'ok'}
+                }catch(error){
+                    console.log(error, 'send error function to server has error ----> ', error)
+                    return {error: 'some error'}
+                }
+            }
+        })
     //     startReciveMessages: builder.query({
     //         async queryFn({chatsData, userId}){
     //             const messagesQuery = chatsData.data.map(chat => {
@@ -345,4 +402,4 @@ const uploadChatMedia = async (path) => {
     .catch(error => console.log('uploadTask error -----> ', error))
   }
 
-export const { useLazyFetchMessagesQuery, useFetchPrevMessagesMutation, useSendMessageMutation} = messagesApi
+export const { useLazyFetchMessagesQuery, useFetchPrevMessagesMutation, useSendMessageMutation, useDeleteMessageMutation, useSendErrorMutationMutation} = messagesApi

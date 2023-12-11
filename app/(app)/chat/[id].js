@@ -33,9 +33,10 @@ import { compareObjects } from '../_layout'
 import ChatNavigationHeaderTitle from '../../components/ChatNavigationHeaderTitle'
 import ChatActions from '../../components/ChatActions'
 import { useDispatch, useSelector } from 'react-redux'
-import { useFetchMessagesQuery, useFetchPrevMessagesMutation, useLazyFetchMessagesQuery, useLazyStartReciveMessagesQuery } from '../../store/features/messages/messagesApi'
+import { useDeleteMessageMutation, useFetchMessagesQuery, useFetchPrevMessagesMutation, useLazyFetchMessagesQuery, useLazyStartReciveMessagesQuery, useSendErrorMutationMutation } from '../../store/features/messages/messagesApi'
 import { Button } from 'react-native-paper'
 import { setCurrentChat } from '../../store/features/chats/chatsSlice'
+import { removeMessagesFromState } from '../../store/features/messages/messagesSlice'
 const MESSAGES_PER_REQUEST_LIMIT = 10;
 const Chat = () => {
   const { id } = useLocalSearchParams();
@@ -48,6 +49,8 @@ const Chat = () => {
     return false
   })
   const [trigger, {error: fetchMessagesError}] = useLazyFetchMessagesQuery()
+  const [deleteMessageAction, {data: deleteResult, error: deleteMessageError}] = useDeleteMessageMutation()
+  const [sendErrorToDeleteMessage, {data: errorResult}] = useSendErrorMutationMutation()
   useLayoutEffect(() => {
     console.log(id)
     trigger({chatId: id, count: MESSAGES_PER_REQUEST_LIMIT})
@@ -65,83 +68,26 @@ const Chat = () => {
     });
    }, [navigation]);
 
-  const deleteMessages = (selectedMessages) => {
+   useEffect(() => {
+    console.log('delete message error', deleteMessageError)
+    if(deleteMessageError){
+      console.log("File not delete, try again", deleteMessageError)
+      Alert.alert(deleteMessageError.message, deleteMessageError.body, [
+        {
+          text: 'OK',
+          onPress: () => {
+            sendErrorToDeleteMessage({error: deleteMessageError, platformOS: Platform.OS, platformVersion: Platform.Version})
+          },
+        }
+      ]);
+    }
+   }, [deleteMessageError])
 
+  const deleteMessages = async (selectedMessages) => {
+    deleteMessageAction({selectedMessages, chatId: id, removeMessagesFromState})
+    setSelectedMessages([])
   }
-  // // ----------- виконується 3
-  // // ----------- виконується після завантаження всіх користувачів в чаті 
-  // // ----------- оримує повідомлення чату і стежить за їх оновленнями
-  // useEffect(() => {
-  //   if(chatData){
-  //   const q = query(collection(database, 'messages', String(id), 'message'), orderBy('createdAt', 'desc'), limit(1))
-  //   const unsubscribe = onSnapshot(q, async (snapshot) => {
-  //     let newMessages = []
-  //     let messagesLenght = 0;
-  //     let lastId = null;
-  //     snapshot.docChanges().forEach(change => {
-  //       if(change.type === 'added') {
-  //         const messageData = change.doc.data();
-  //         const docId = change.doc.id;
-  //         if(!messageData.createdAt){
-  //           messageData.createdAt = {
-  //             seconds: Date.now()
-  //           }
-  //         }else{
-  //           messageData.createdAt = {
-  //             ...messageData.createdAt,
-  //             seconds: messageData.createdAt.seconds * 1000
-  //           }
-  //         }
-  //         if(!messageData.isRead.includes(user.uid)){
-  //           const data = {
-  //             isRead: [...messageData.isRead, user.uid]
-  //           }
-  //           updateDoc(doc(database, 'messages', String(id), 'message', docId), data)
-  //         }
-  //         const messageCreatedAt = new Date(messageData.createdAt.seconds)
-  //         const messageSlug = messageCreatedAt.getFullYear() + "_" + messageCreatedAt.getMonth() + "_" + messageCreatedAt.getDate(); 
-  //         newMessages.push({date: messageSlug, data: [{...messageData, id: change.doc.id}]})
-  //         lastId = docId;
-  //         messagesLenght++;
-  //       }
-  //       if(change.type === 'modified'){
-  //       }
-  //     })
-  //     setMessages(messages => {
-  //       const updatedMessages = [
-  //         ...messages
-  //       ]
-  //       newMessages.forEach(messageItem => {
-  //         const findDate = updatedMessages.findIndex(upd => upd.date === messageItem.date)
-  //         if(findDate !== -1){
-  //           messageItem.data.forEach(messageData => {
-  //             if(!updatedMessages[findDate].data.find(m => m.id === messageData.id)){
-  //               updatedMessages[findDate].data.unshift(messageData)
-  //             }
-  //           })
-  //         }else{
-  //           updatedMessages.unshift(messageItem) 
-  //         }
-  //       })
-  //       return updatedMessages
-  //     })
-  //   }, 
-  //   (error) => {console.log(error, '----> firebase onSnapshot messages')})
-  //   return () => unsubscribe();
-  //   }
-  // }, [chatData])
-
-  // useEffect(() => {
-  //   const setCount = async () => {
-  //     setMessagesCount((await getCountFromServer(collection(database, 'messages', id, 'message'))).data().count)
-  //   }
-  //   setCount()
-  // }, [id])
-
-
-  //     //----- виконується 3
-  //     //----- встановлення даних про співрозмовника в хедері чату
-  //     //----- виконується після завантаження користувачів чату
+  // setup header
   useLayoutEffect(() => {
       const user = chatUsers[0];
       navigation.setOptions({
@@ -171,70 +117,6 @@ const Chat = () => {
         }
       })
   }, [chatData, chatUsers])
-
-  // //--------------- виокнується 4 
-  // //--------------- Отримує статус кожного користувача чату і стежить за його оновленнями
-  // //--------------- стежить за даними з realtime firebase database, 
-  // //--------------- містить колбек, який спрацьовує коли користувач від'єднався від програми
-  // useEffect(() => {
-  //   let unsubs = [];
-  //   if(!loading){
-  //     unsubs = chatUsers.map(chatUser => {
-  //       const unsub = onValue(realRef(rDatabase, '/status/' + chatUser.id), (snapShot) => {
-  //         const value = snapShot.val();
-  //         setChatUsers(chats => {
-  //           return chats.map(u => {
-  //             if(chatUser.id === u.id){
-  //                   return {
-  //                       ...u,
-  //                       onlineStatus: value?.isOnline,
-  //                       timeStamp: value?.timeStamp
-  //                   }
-  //               }
-  //               return u;
-  //           })
-  //       })
-  //     })
-  //   return unsub;
-  // })
-  // }
-  // return () => unsubs.forEach(unsub => {
-  // unsub();    
-  // });
-  // }, [loading])
-
-  // useEffect(() => {
-  //   if(chatData && chatUsers && messages){
-  //     setLoading(false)
-  //   }
-  // }, [chatData, chatUsers, messages])
-
-  // //------- вибірка даних всіх користувачів в даному чаті,
-  // //------- встановлення їх в змінну chatUsers
-  // //------- встановлення в chatUsersIsLoading - false
-  // const getUsers = async (ids) => {
-  //   setChatUsersIsLoading(true)
-  //   const loadedChatUsers = [];
-  //   for(const id of ids){
-  //     if(user.uid !== id){
-  //       const qUser = query(collection(database, "users"), where("id", "==", id))
-  //       let res = await getDocs(qUser);
-  //       res = await Promise.all(res.docs.map(item => item.data()))
-  //       loadedChatUsers.push(await {
-  //         ...res[0],
-  //         onlineStatus: false,
-  //         lastSeen: null
-  //       })
-  //     }
-  //   }
-  //   return loadedChatUsers
-  // }
-
-  // const loadPreviousMessages = useCallback(async () => {
-  //   if(!loading){
-  //     fetchPrevMessagess()
-  //   }
-  // }, [messagesCount, messages, loading, lastLoadedId])
 
   const fetchPrevMessagess = async () => {
     let loadedMessagesCount = 0;
@@ -311,76 +193,34 @@ const Chat = () => {
     return oldMessages
   }
 
-  // const deleteMessages = (messagesForDelete) => {
-  //   messagesForDelete.forEach(message => {
-  //     let selectedMessage;  
-  //     messages.forEach(element => {
-  //       if(!selectedMessage){
-  //         const findItem  = element.data.find(m => m.id === message)
-  //         if(findItem){
-  //           selectedMessage = findItem
-  //         }
-  //       }
-  //     });
-  //     if(selectedMessage.media){
-  //       const storage = getStorage();
-  //       selectedMessage.media.forEach(mediaItem => {
-  //         const mediaParam = mediaItem.split("/media%2F")[1];
-  //         const name = mediaParam.split("?")[0];
-  //         const desertRef = ref(storage, `media/${name}`);
-  //         deleteObject(desertRef)
-  //         .then(res => {
-  //           const name = shorthash.unique(mediaItem);
-  //           const path = `${FileSystem.cacheDirectory}${name}`;
-  //           FileSystem.deleteAsync(path);
-  //           deleteDoc(doc(database, 'messages', id, 'message', message));
-  //         })
-  //         .catch((error) => {
-  //           Alert.alert('File not delete, try again',`${error}`, [
-  //             {
-  //               text: 'OK',
-  //               onPress: () => {
-  //                 addDoc(collection(database, 'errors', ), {error: `File not delete: ${error}`, platform: `${Platform.OS}, ${Platform.Version}`})
-  //                 console.log('Cancel Pressed')
-  //               },
-  //             }
-  //           ]);
-  //         });
-  //       }) 
-  //     }
-  //     else{
-  //       deleteDoc(doc(database, 'messages', id, 'message', message));
-  //     }
-  //     setSelectedMessages(messages => messages.filter(m => m !== selectedMessage.id))
-  //   })
-  //   setMessages(messages => messages.map(item => ({...item, data: item.data.filter(m => {
-  //         const deleteMessage = messagesForDelete.find(forDelete => forDelete === m.id)
-  //         if(deleteMessage) return false
-  //         return true
-  //       })
-  //     })
-  //   ))
-  // }
 
-  const loadPreviousMessages = () => {
-    const lastDisplayedDay = messagesData?.messages[messagesData?.messages.length -1]
-    const lastMessage = lastDisplayedDay.data[lastDisplayedDay.data.length - 1]
-    trigger({chatId: id, count: MESSAGES_PER_REQUEST_LIMIT, lastMessageId: lastMessage.id})
+  const loadPreviousMessages = (atemp = 1) => {
+    console.log(atemp, 'atemp')
+    const lastDisplayedDay = messagesData?.messages[messagesData?.messages.length - atemp]
+    if(lastDisplayedDay?.data){
+      const lastMessage = lastDisplayedDay.data.findLast(m => !m?.deleted)
+      if(lastMessage?.id){
+        console.log('have smth', atemp)
+        trigger({chatId: id, count: MESSAGES_PER_REQUEST_LIMIT, lastMessageId: lastMessage.id})
+      }else{
+        loadPreviousMessages(atemp + 1)
+      }
+    }
   }
 
   const updateSelectedMessages = useCallback((selectedMessage) => {
     const messageId = selectedMessage.id;
             if(selectedMessage.uid === user.uid) {
                 setSelectedMessages(selectedMessages => {
-                const findMessage = selectedMessages.find(id => id === messageId)
+                const findMessage = selectedMessages.find(m => m.id === messageId)
                 if(findMessage){
                     return [
-                        ...selectedMessages.filter(id => id !== messageId)
+                        ...selectedMessages.filter(m => m.id !== messageId)
                     ]
                 }
                 return [
                     ...selectedMessages,
-                    messageId
+                    selectedMessage
                 ]
             })
         }
@@ -411,7 +251,7 @@ const Chat = () => {
         }
       </>
     </ChatCanvas>
-    <Button onPress={loadPreviousMessages}>
+    <Button onPress={() => loadPreviousMessages()}>
         <Text>
           Load prev
         </Text>

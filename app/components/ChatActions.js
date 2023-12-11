@@ -1,5 +1,5 @@
 import { Alert, KeyboardAvoidingView, Text, TouchableOpacity, TextInput, View, Image } from 'react-native'
-import React, { useContext, useState } from 'react'
+import React, { useContext, useEffect, useState } from 'react'
 import styled from 'styled-components'
 import PreloadImages from './PreloadImages'
 import * as ImagePicker from 'expo-image-picker'
@@ -8,20 +8,26 @@ import { addDoc, collection, serverTimestamp } from 'firebase/firestore'
 import { AuthUserContext, FirebaseContext } from '../_layout'
 import { getDownloadURL, ref, getStorage, deleteObject, uploadBytesResumable } from 'firebase/storage'
 import { useDispatch, useSelector } from 'react-redux'
-import { useSendMessageMutation, useUploadChatMediaMutation } from '../store/features/messages/messagesApi'
+import { useSendMessageMutation } from '../store/features/messages/messagesApi'
 import { addMediaItems, removeAllMediaItems, removeMediaItem, setMediaUploadStatus } from '../store/reducers/mediaUpload'
 import { addLastMessage } from '../store/features/messages/messagesSlice'
+import { random } from 'shorthash'
 
 const ChatActions = ({id}) => {
     const user = useSelector(state => state.auth.user);
     const dispatch = useDispatch()
     const preloadImages = useSelector(state => state.mediaUpload.mediaItems)
   const [newMessageText, setNewMessageText] = useState('');
-  const [sendMessage, {isLoading: sendMessageIsLoading, error: senddMessageError}] = useSendMessageMutation()
+  const [sendMessage, {data: sendMessageData, isLoading: sendMessageIsLoading, error: senddMessageError}] = useSendMessageMutation()
   const preloadImagesCountError = preloadImages?.length > 5;
   const buttonDisable = preloadImagesCountError || (!preloadImages?.length && !newMessageText.trim());
   const removePreloadImage = (image) => {
     dispatch(removeMediaItem(image))
+  }
+  if(sendMessageIsLoading){
+    if(newMessageText !== ''){
+      setNewMessageText('')
+    }
   }
 
   const selectImages = async () => {
@@ -65,8 +71,19 @@ const ChatActions = ({id}) => {
                 return await uploadChatMediaItem(name)
             })) 
         }
-        sendMessage({media, userId: user.uid, text: newMessageText, chatId: id, addMessage: addLastMessage})
-        setNewMessageText('');
+        const text = newMessageText
+        setNewMessageText('')
+        const messageCreatedAt = new Date(Date.now());
+        const messageSlug = messageCreatedAt.getFullYear() + "_" + messageCreatedAt.getMonth() + "_" + messageCreatedAt.getDate();      
+        sendMessage({
+          media, 
+          userId: user.uid, 
+          text: newMessageText, 
+          chatId: id, 
+          addMessage: addLastMessage, 
+          date: messageSlug, 
+          messageCreatedAt, 
+          messageId: random(1)})
         dispatch(removeAllMediaItems())
     }
   } 

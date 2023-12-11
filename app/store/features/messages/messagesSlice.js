@@ -44,12 +44,19 @@ export const messagesSlice = createSlice({
                         ...rest,
                         chatId,
                     }
-                    const findIndexPending = state.chatsMessages[index].messages[findDay].data.findIndex(m => m.text === message.data[0].text && m.isPending)
-                    if(findIndexPending === -1){
-                        state.chatsMessages[index].messages[findDay].data = [...message.data, ...state.chatsMessages[index].messages[findDay].data] 
-                    }else{
-                        state.chatsMessages[index].messages[findDay].data[findIndexPending] = message.data[0] 
-                    }
+                    // const messageIndex = state.chatsMessages[index].messages[findDay].data.findIndex(m => m.id === message.data[0]?.id)
+                    // if(messageIndex !== -1){
+                    //     console.log('here!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+                        const findIndexPending = state.chatsMessages[index].messages[findDay].data.findIndex(m => m.id === message.data[0].id)
+                        if(findIndexPending === -1){
+                            state.chatsMessages[index].messages[findDay].data = [...message.data, ...state.chatsMessages[index].messages[findDay].data] 
+                        }
+                    // }else{
+                    //     const message = state.chatsMessages[index].messages[findDay].data[messageIndex]
+                    //     if(!message?.deleted){
+                    //         state.chatsMessages[index].messages[findDay].data[messageIndex] = message.data[0]
+                    //     }
+                    // }
                 }
             }
         },
@@ -58,6 +65,18 @@ export const messagesSlice = createSlice({
         },
         addBlankMessage: (state, {payload: {chatId}}) => {
             state.chatsMessages.push({chatId, messages: [], unreadedMessagesCount: 0, totalMessagesCount: 0, readedMessages: 0})
+        },
+        removeMessagesFromState: (state, action) => {
+            console.log(action.payload, 'payload -here')
+            for(const deletedMessage of action.payload.messagesForDelete){
+                const chatIndex = state.chatsMessages.findIndex(item => item.chatId === action.payload.chatId)
+                const dayIndex = state.chatsMessages[chatIndex].messages.findIndex(day => day.date === deletedMessage.date)
+                const messageIndex = state.chatsMessages[chatIndex].messages[dayIndex].data.findIndex(m => m.id === deletedMessage.data.id)
+                state.chatsMessages[chatIndex].messages[dayIndex].data[messageIndex] = {
+                    ...state.chatsMessages[chatIndex].messages[dayIndex].data[messageIndex],
+                    deleted: true,
+                } 
+            }
         }
     },
     extraReducers: (builder) => {
@@ -105,15 +124,19 @@ export const messagesSlice = createSlice({
         .addMatcher(chatsApi.endpoints.createChat.matchFulfilled, (state, action) => {
             state.chatsMessages.push({chatId: action.payload.id, messages: [], unreadedMessagesCount: 0, totalMessagesCount: 0, readedMessages: 0})
         })
-        .addMatcher(messagesApi.endpoints.sendMessage.matchPending, (state, action) => {
-            console.log('pending state---->', action)
-        })
-        .addMatcher(messagesApi.endpoints.sendMessage.matchFulfilled, (state, action) => {
-            console.log('fulfilled state---->', action.payload)
+        .addMatcher(messagesApi.endpoints.sendMessage.matchFulfilled, (state, {payload: {newMessageId, date, chatId, oldMessageId}}) => {
+            const chatIndex = state.chatsMessages.findIndex(item => item.chatId === chatId)
+            const dayIndex = state.chatsMessages[chatIndex].messages.findIndex(day => day.date === date)
+            const messageIndex = state.chatsMessages[chatIndex].messages[dayIndex].data.findIndex(m => m.id === oldMessageId)
+            state.chatsMessages[chatIndex].messages[dayIndex].data[messageIndex] = {
+                ...state.chatsMessages[chatIndex].messages[dayIndex].data[messageIndex],
+                id: newMessageId, 
+                isPending: false
+            }
         })
     }
 })
 
-export const { setUsers, updateUser, updateOnlineStatus, addLastMessage, addBlankMessage, setLoading } = messagesSlice.actions
+export const { setUsers, updateUser, updateOnlineStatus, addLastMessage, addBlankMessage, setLoading, removeMessagesFromState } = messagesSlice.actions
 
 export default messagesSlice.reducer;
