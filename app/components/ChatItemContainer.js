@@ -4,14 +4,37 @@ import { AuthUserContext } from '../_layout';
 import styled from 'styled-components';
 import ChatItem from './ChatItem';
 import { useSelector } from 'react-redux';
+import { useSetMessageAsReadMutation } from '../store/features/messages/messagesApi';
 
 const ChatItemContainer = ({messagesCount, messages, chatData, chatUsers, selectedMessages, updateSelectedMessages, loadPreviousMessages}) => {  
+  const user = useSelector(state => state.auth.user);
   
   const flatArray = messages.reduce((result, obj) => result.concat([...obj.data, obj.date]), []);
+  const [setMessageIsRead, {data: resultSetMessageIsRead, error: errorSetMessageIsRead}] = useSetMessageAsReadMutation()
+  const firstUnread = flatArray.findLastIndex(el => {
+    if (typeof el === 'string') return false
+    if(!el.isRead.includes(user.uid)) return true
+  })
+  if(firstUnread !== -1){
+    flatArray.splice((firstUnread + 1), 0, "Unreaded messages")
+  }
+  useEffect(() => {
+    if(flatArray[0]?.isRead){
+      if(flatArray[0]?.isRead.includes(user.uid) && !resultSetMessageIsRead){
+        console.log('isRead already')
+      }else{
+        setMessageIsRead({chatId: chatData.id, message: flatArray[0], userId: user.uid, date: flatArray.find(item => typeof item === 'string')})
+        console.log('isNotRead already')
+  
+      }
+    }  
+  }, [messages])
+
+  
+  const initialScrollIndex = firstUnread === -1 ? 0 : firstUnread
   const users = useSelector(state => state.users.users)
   const [endReached, setEndReached] = useState(false);
   const [allowSetEndReached, setAllowSetEndReached] = useState(false);
-  const user = useSelector(state => state.auth.user);
   const scrollRef = useRef();
     // useEffect(() => {
     //   if(endReached){  
@@ -49,6 +72,11 @@ const ChatItemContainer = ({messagesCount, messages, chatData, chatUsers, select
 
     const rerenderItem = ({ item }) => {
       if(typeof item === 'string'){
+        if (item === "Unreaded messages"){
+          return <View style={{width: '90%',marginEnd: 'auto', marginLeft: 'auto', marginBottom: 5, marginTop: 5, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff', padding: 10}}>
+            <Text style={{fontSize: 14, fontWeight: 400, }}>{item}</Text>
+          </View>
+        }
         const splitDate =  item.split('_');
         const dateObj = new Date(splitDate[0], splitDate[1], splitDate[2])
         const dateString = checkDate(dateObj);
@@ -131,6 +159,19 @@ const ChatItemContainer = ({messagesCount, messages, chatData, chatUsers, select
                     return item.id
                   }} 
                   renderItem={rerenderItem} 
+                  initialScrollIndex={initialScrollIndex}
+                  onContentSizeChange={() => {
+                    if (scrollRef && scrollRef.scrollToIndex ) {
+                      const wait = new Promise(resolve => setTimeout(resolve, 500));
+                      wait.then(() => {
+                        scrollRef.current?.scrollToIndex({ index: initialScrollIndex, animated: true });
+                      });
+                        scrollRef.scrollToIndex({  index: initialScrollIndex });
+                    }
+                }}
+                  onScrollToIndexFailed={info => {
+                    
+                  }}
                   // renderSectionFooter={({section: { date }}) => {
                   //   const splitDate =  date.split('_');
                   //   const dateObj = new Date(splitDate[0], splitDate[1], splitDate[2])

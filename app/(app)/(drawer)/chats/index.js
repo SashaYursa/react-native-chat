@@ -11,7 +11,7 @@ import { onValue, ref } from 'firebase/database'
 import UnreadMessagesIndicator from '../../../components/UnreadMessagesIndicator'
 import { ActivityIndicator } from 'react-native-paper'
 import { useDispatch, useSelector } from 'react-redux'
-import { setChats, setCurrentChat } from '../../../store/features/chats/chatsSlice'
+import { setCurrentChat } from '../../../store/features/chats/chatsSlice'
 import { useFetchChatsQuery } from '../../../store/features/chats/chatsApi'
 import { addLastMessage, addBlankMessage, setLoading } from '../../../store/features/messages/messagesSlice'
 import useDebounce from '../../../../hooks/useDebounce'
@@ -19,7 +19,6 @@ import { useFetchAllChatsUsersQuery } from '../../../store/features/users/usersA
 import { setUsers, setUsersStatusLoading, updateOnlineStatus } from '../../../store/features/users/usersSlice'
 
 const Chats = ({user}) => {
-    const [refresh, setRefresh] = useState(false);
     const dispatch = useDispatch();
     const currentChat = useSelector(state => state.chats.currentChat)
     const {isLoading: chatsIsLoading, error: chatsError} = useFetchChatsQuery(user.uid)
@@ -31,7 +30,8 @@ const Chats = ({user}) => {
         return array.indexOf(value) === index;
     }) 
     : []
-    
+
+
     const lastMessages = (useDebounce(useSelector(state => state.messagesData.chatsMessages), 100))?.map(({messages, ...rest}) => {
         const messageDays = messages[0]
         let message = null 
@@ -111,7 +111,7 @@ const Chats = ({user}) => {
     useEffect(() => {
         let unsubs = [];
         if(!chatsIsLoading){
-            chatsData.map((chat, index) => {
+            chatsData.forEach((chat, index) => {
                 const qMessages = query(collection(database, "messages", String(chat.id), "message"), orderBy('createdAt', 'desc'), limit(1));
                 const unsubscribe = onSnapshot(qMessages, async (snapShot) => {
                     if(!snapShot.docs.length){
@@ -121,7 +121,7 @@ const Chats = ({user}) => {
                     }
                     snapShot.docs.forEach(async e => { 
                         const data = e.data();
-                        if(!data.isRead.includes(user.uid) && userIsInChat(chat.id)){
+                        if(!data.isRead.includes(user.uid) && currentChat === chat.id){
                             console.log(Platform.OS, 'user in chat and read this message')
                         }
                         if(data?.createdAt?.seconds){
@@ -144,8 +144,9 @@ const Chats = ({user}) => {
                     if(index == (chatsData?.length - 1)){
                         dispatch(setLoading(false))
                     }
+                    unsubs.push(unsubscribe)
                 })
-                return unsubscribe;  
+                
             })
         }
         return () => unsubs.forEach(unsub => {
@@ -156,10 +157,6 @@ const Chats = ({user}) => {
       // add to state currentChat i.e. open chat and open it
     const hadnleChatClick = ({id}) => {
         dispatch(setCurrentChat({currentChat: id}))
-    }
-    const onRefresh = () => {
-        setRefresh(true);
-        fetchData()
     }
     const ChatItem = ({itemData}) => {
         // const selectedChatData = chatsData.find(chat => chat.id === itemData.chatId)
@@ -203,13 +200,11 @@ const Chats = ({user}) => {
     if(usersLoading || chatsIsLoading || !lastMessages?.length || messagesLoading || statusLoading){
         return <ActivityIndicator />
     }
+    console.log('rerender', Platform.OS)
 
     return (
         <View style={{flex: 1}}>
-            <ScrollView
-                    refreshControl={
-                        <RefreshControl refreshing={refresh} onRefresh={onRefresh} />
-                    }>
+            <ScrollView>
                 <Container>
                     <ChatsList>
                         {chatsWithMessages?.length > 0 && chatsWithMessages.map(chat => {

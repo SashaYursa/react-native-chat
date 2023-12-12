@@ -21,7 +21,7 @@ export const chatsSlice = createSlice({
             if(state.currentChat !== currentChat){
                 state.currentChat = currentChat
             }
-        } 
+        },
     },
     extraReducers: (builder) => {
         builder

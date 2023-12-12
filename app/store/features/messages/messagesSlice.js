@@ -67,7 +67,6 @@ export const messagesSlice = createSlice({
             state.chatsMessages.push({chatId, messages: [], unreadedMessagesCount: 0, totalMessagesCount: 0, readedMessages: 0})
         },
         removeMessagesFromState: (state, action) => {
-            console.log(action.payload, 'payload -here')
             for(const deletedMessage of action.payload.messagesForDelete){
                 const chatIndex = state.chatsMessages.findIndex(item => item.chatId === action.payload.chatId)
                 const dayIndex = state.chatsMessages[chatIndex].messages.findIndex(day => day.date === deletedMessage.date)
@@ -112,6 +111,8 @@ export const messagesSlice = createSlice({
                     }
                 })
             }
+            state.chatsMessages[index].unreadedMessagesCount = (state.chatsMessages[index].unreadedMessagesCount - action.payload.count)
+            state.chatsMessages[index].readedMessages = (state.chatsMessages[index].readedMessages + action.payload.count)
             state.loading = false
         })
         .addMatcher(messagesApi.endpoints.fetchPrevMessages.matchFulfilled, (state, action) => {
@@ -132,6 +133,15 @@ export const messagesSlice = createSlice({
                 ...state.chatsMessages[chatIndex].messages[dayIndex].data[messageIndex],
                 id: newMessageId, 
                 isPending: false
+            }
+        })
+        .addMatcher(messagesApi.endpoints.setMessageAsRead.matchFulfilled, (state, {message, chatId, date}) => {
+            console.log('data is --______>', payload)
+            if(payload){
+                const chatIndex = state.chatsMessages.findIndex(item => item.chatId === chatId)
+                const dayIndex = state.chatsMessages[chatIndex].messages.findIndex(day => day.date === date)
+                const messageIndex = state.chatsMessages[chatIndex].messages[dayIndex].data.findIndex(m => m.id === message.id)
+                state.chatsMessages[chatIndex].messages[dayIndex].data[messageIndex] = message
             }
         })
     }

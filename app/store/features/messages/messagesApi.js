@@ -8,7 +8,7 @@ import * as FileSystem from 'expo-file-system'
 export const messagesApi = rootApi.injectEndpoints({
     endpoints: (builder) => ({
         fetchMessages: builder.query({
-            async queryFn({chatId, count, lastMessageId}){
+            async queryFn({chatId, count, lastMessageId, userId}, {dispatch}){
                 try{
                     if(!count || !chatId){
                         return {error: 'error in fetchMessages, not enought expected valuse'}
@@ -19,41 +19,54 @@ export const messagesApi = rootApi.injectEndpoints({
                         messagesQuery = query(collection(database, 'messages', chatId, 'message'), orderBy('createdAt', 'desc'), limit(count), startAt(lastDoc))
                     }else{
                         messagesQuery = query(collection(database, 'messages', chatId, 'message'), orderBy('createdAt', 'desc'), limit(count))
-                    
                     }
                     const messagesDocs = await getDocs(messagesQuery)
                     if(messagesDocs.docs.length === 0){
                         return {error: 'no data'}
                     }
                     const messages = [];
-                    messagesDocs.docs.forEach(doc => {
-                        const message = doc.data()
+                    let countMessages = 0;
+                    messagesDocs.docs.forEach(res => {
+                        const message = res.data()
                         message.createdAt ? message.createdAt.seconds *= 1000 : message.createdAt = {seconds: Date.now()};
                         const messageCreatedAt = new Date(message?.createdAt?.seconds)
                         const messageSlug = messageCreatedAt.getFullYear() + "_" + messageCreatedAt.getMonth() + "_" + messageCreatedAt.getDate(); 
                         const currentDateIndex = messages.findIndex(messages => messages.date === messageSlug);
+                        // update isRead
+                        if(!message.isRead.includes(userId)){
+                            countMessages++
+                            updateDoc(doc(database, "messages", chatId, "message", res.id), {isRead: [
+                                ...message.isRead,
+                                userId
+                            ]})
+                            .catch(updateError => {
+                                console.log(updateError, 'updateError')
+                            })
+                        }
+
                         if(currentDateIndex !== -1){
-                            messages[currentDateIndex].data.push({...message, id: doc.id})
+                            messages[currentDateIndex].data.push({...message, id: res.id})
                         }
                         else{
                             messages.push({
                             date: messageSlug,
                             data: [
-                                {...message, id: doc.id}
-                            ]
+                                {...message, id: res.id}
+                            ],
                             })
                         }
+
                     })
-                    return{data: {chatId, messages}}                        
+                    return{data: {chatId, messages, count: countMessages}}                        
                 }
                 catch(error){
+                    console.log('error fetch messages =----->', error)
                     return {error}
                 }
             }
         }),
         fetchPrevMessages: builder.mutation({
             async queryFn({chatId, lastMessageId, count}){
-                console.log('fetch prev')
                 try{
                     const lastDoc = await getDoc(doc(database, "messages", chatId, "message", lastMessageId));
                     const messagesQuery = query(collection(database, 'messages', chatId, 'message'), orderBy('createdAt', 'desc'), limit(count), startAt(lastDoc))
@@ -186,6 +199,29 @@ export const messagesApi = rootApi.injectEndpoints({
                 }catch(error){
                     console.log(error, 'send error function to server has error ----> ', error)
                     return {error: 'some error'}
+                }
+            }
+        }),
+        setMessageAsRead: builder.mutation({
+            async queryFn({chatId, message, userId, date}){
+                try {
+                    updateDoc(doc(database, "messages", chatId, "message", message.id), {isRead: [
+                        ...message.isRead,
+                        userId
+                    ]})
+                    return {data: {
+                        chatId, 
+                        date,
+                        message: {
+                            ...message,
+                            isRead: [
+                                ...message.isRead,
+                                userId
+                            ]
+                        }
+                    }}
+                }catch(error){
+                    return {error}
                 }
             }
         })
@@ -402,4 +438,4 @@ const uploadChatMedia = async (path) => {
     .catch(error => console.log('uploadTask error -----> ', error))
   }
 
-export const { useLazyFetchMessagesQuery, useFetchPrevMessagesMutation, useSendMessageMutation, useDeleteMessageMutation, useSendErrorMutationMutation} = messagesApi
+export const { useLazyFetchMessagesQuery, useFetchPrevMessagesMutation, useSendMessageMutation, useSetMessageAsReadMutation, useDeleteMessageMutation, useSendErrorMutationMutation} = messagesApi

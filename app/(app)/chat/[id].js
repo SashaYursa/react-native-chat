@@ -37,7 +37,7 @@ import { useDeleteMessageMutation, useFetchMessagesQuery, useFetchPrevMessagesMu
 import { Button } from 'react-native-paper'
 import { setCurrentChat } from '../../store/features/chats/chatsSlice'
 import { removeMessagesFromState } from '../../store/features/messages/messagesSlice'
-const MESSAGES_PER_REQUEST_LIMIT = 10;
+const MESSAGES_PER_REQUEST_LIMIT = 30;
 const Chat = () => {
   const { id } = useLocalSearchParams();
   const dispatch = useDispatch();
@@ -52,8 +52,7 @@ const Chat = () => {
   const [deleteMessageAction, {data: deleteResult, error: deleteMessageError}] = useDeleteMessageMutation()
   const [sendErrorToDeleteMessage, {data: errorResult}] = useSendErrorMutationMutation()
   useLayoutEffect(() => {
-    console.log(id)
-    trigger({chatId: id, count: MESSAGES_PER_REQUEST_LIMIT})
+    trigger({chatId: id, count: MESSAGES_PER_REQUEST_LIMIT, userId: user.uid})
   }, [])
   const messagesData = (useSelector(state => state.messagesData.chatsMessages)).find(m => m.chatId === id)
   const {messages, unreadedMessagesCount, readedMessages, totalMessagesCount, loading: messagesLoading} = messagesData
@@ -69,9 +68,7 @@ const Chat = () => {
    }, [navigation]);
 
    useEffect(() => {
-    console.log('delete message error', deleteMessageError)
     if(deleteMessageError){
-      console.log("File not delete, try again", deleteMessageError)
       Alert.alert(deleteMessageError.message, deleteMessageError.body, [
         {
           text: 'OK',
@@ -195,13 +192,11 @@ const Chat = () => {
 
 
   const loadPreviousMessages = (atemp = 1) => {
-    console.log(atemp, 'atemp')
     const lastDisplayedDay = messagesData?.messages[messagesData?.messages.length - atemp]
     if(lastDisplayedDay?.data){
       const lastMessage = lastDisplayedDay.data.findLast(m => !m?.deleted)
       if(lastMessage?.id){
-        console.log('have smth', atemp)
-        trigger({chatId: id, count: MESSAGES_PER_REQUEST_LIMIT, lastMessageId: lastMessage.id})
+        trigger({chatId: id, count: MESSAGES_PER_REQUEST_LIMIT, lastMessageId: lastMessage.id, userId: user.uid})
       }else{
         loadPreviousMessages(atemp + 1)
       }
