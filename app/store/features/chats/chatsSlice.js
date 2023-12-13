@@ -32,6 +32,18 @@ export const chatsSlice = createSlice({
         .addMatcher(chatsApi.endpoints.createChat.matchFulfilled, (state, action) => {
             state.chats.push(action.payload)
         })
+        .addMatcher(chatsApi.endpoints.addUser.matchFulfilled, (state, action) => {
+            const findChatId = state.chats.findIndex(chat => chat.id === action.payload.chatId)
+            if(findChatId){
+                state.chats[findChatId].users = action.payload.users
+            }
+        })
+        .addMatcher(chatsApi.endpoints.deleteUserFromChat.matchFulfilled, (state, action) => {
+            const findChatId = state.chats.findIndex(chat => chat.id === action.payload.chatId)
+            if(findChatId){
+                state.chats[findChatId].users = action.payload.newUsers
+            }
+        })
     }
 })
 

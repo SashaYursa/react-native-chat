@@ -26,6 +26,12 @@ export const usersSlice = createSlice({
         },
         setUsersStatusLoading: (state, action) => {
             state.statusLoading = action.payload
+        },
+        loadUser: (state, action) => {
+            const userIncludes = state.users.find(user => user.id === action.payload.id)
+            if(!userIncludes){
+                state.users.push(action.payload)
+            }
         }
     },
     extraReducers: (builder) => {
@@ -34,9 +40,20 @@ export const usersSlice = createSlice({
             state.users = action.payload
             state.loading = false
         })
+        // .addMatcher(usersApi.endpoints.fetchSingleChatUser.matchFulfilled, (state, action) => {
+        //     const userIncludes = state.users.includes(action.payload.id)
+        //     console.log(action.payload, '-------------------------- payload')
+        //     if(userIncludes){
+        //         console.log('user already have')
+        //     }
+        //     else{
+        //         console.log('user is not include')
+        //         state.users.push(action.payload)
+        //     }
+        // })
     }
 })
 
-export const { setUsers, updateUser, updateOnlineStatus, setUsersStatusLoading } = usersSlice.actions
+export const { setUsers, updateUser, updateOnlineStatus, setUsersStatusLoading, loadUser } = usersSlice.actions
 
 export default usersSlice.reducer;

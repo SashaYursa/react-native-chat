@@ -1,4 +1,4 @@
-import { addDoc, collection, getDoc, getDocs, query, serverTimestamp, where } from "firebase/firestore";
+import { addDoc, collection, doc, getDoc, getDocs, query, serverTimestamp, updateDoc, where } from "firebase/firestore";
 import { database } from "../../../../config/firebase";
 import { rootApi } from "../rootApi/rootApi";
 
@@ -47,8 +47,34 @@ export const chatsApi = rootApi.injectEndpoints({
                     return {error}
                 }
             }
+        }),
+        addUser:  builder.mutation({
+            async queryFn({chatId, users}) {
+                try{
+                    const chatDoc = doc(database, 'chats', chatId)
+                    await updateDoc(chatDoc, {users})
+                    return {data: {chatId, users}}
+                }
+                catch(error){ 
+                    return {error}
+                }
+    			// const chatDocData = (await getDoc(chatDoc)).data()
+
+            }
+        }),
+        deleteUserFromChat: builder.mutation({
+            async queryFn({newUsers, chatId}){
+                try{
+                    const chatDoc = doc(database, 'chats', chatId) 
+                    updateDoc(chatDoc, {users: newUsers})
+                    return {data: {newUsers, chatId}}
+                }
+                catch(error){
+                    return {error}
+                }
+            }
         })
     })
 })
 
-export const { useFetchChatsQuery, useCreateChatMutation } = chatsApi
+export const { useFetchChatsQuery, useCreateChatMutation, useAddUserMutation, useDeleteUserFromChatMutation} = chatsApi

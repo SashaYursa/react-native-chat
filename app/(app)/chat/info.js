@@ -1,5 +1,5 @@
 import { View, Text, Image,TouchableOpacity, Platform, StyleSheet } from 'react-native'
-import React, { useContext } from 'react'
+import React, { useCallback, useContext, useEffect } from 'react'
 import styled from 'styled-components'
 import { useLocalSearchParams } from 'expo-router/src/hooks'
 import TimeAgo from '../../components/TimeAgo'
@@ -7,11 +7,20 @@ import CachedImage from '../../components/CachedImage'
 import { AuthUserContext, SelectedChatContext } from '../../_layout'
 import { router } from 'expo-router'
 import { useSelector } from 'react-redux'
+import { IconButton } from 'react-native-paper'
+import ChatUserItem from '../../components/ChatUserItem'
+import { useDeleteUserFromChatMutation } from '../../store/features/chats/chatsApi'
 
 const Info = () => {
     const { id } = useLocalSearchParams()
     const user = useSelector(state => state.auth.user);
     const chatData = useSelector(state => state.chats.chats.find(chat => chat.id === id))
+    const [deleteUserFromChat, {data: resDelete, error: resError}] = useDeleteUserFromChatMutation()
+    useEffect(() => {
+        if(resError){
+            console.log(resError)
+        }
+    }, [resError])
     const chatUsers = (useSelector(state => state.users.users)).filter(u => {
         if(user.uid === u.id) return false
         if(chatData?.users?.includes(u.id)) return true
@@ -22,6 +31,11 @@ const Info = () => {
     const defaultChatImage = chatData.type === "public" ? require('../../../assets/group-chat.png') : require('../../../assets/default-user.png')
     const headImage = chatData.type === "private" ? chatUsers[0].image : chatData.image
     const userIsAdmin = chatData.type === "public" && chatData?.admin?.includes(user.uid) 
+    
+    const deleteUser = useCallback((user) => {
+        const newUsers = chatData.users.filter(u => u !== user.id)
+        deleteUserFromChat({newUsers, chatId: chatData.id})
+    }, [id, chatData])
     return (
       <Container>
         <ChatInfoContainer>
@@ -68,32 +82,12 @@ const Info = () => {
                             online
                         </UserDataText>
                     </UserDataContainer>
+
                 </UserItem>
                 
                 {chatUsers.map(chatUser => (
-                    <UserItem key={chatUser.id}>
-                        <UserImageContainer>
-                            <UserItemImage>
-                                {chatUser.image 
-                                ? <CachedImage url={chatUser.image} style={{width: '100%', height: '100%'}}/>
-                                : <UserImage source={require('../../../assets/default-user.png')}/>
-                                }      
-                            </UserItemImage>
-                            <UserOnlineStatus style={!chatUser.onlineStatus && {backgroundColor: "#828181"}}/>  
-                        </UserImageContainer>
-                        <UserDataContainer>
-                            <UserDataText style={{fontWeight: 700}}>
-                                {
-                                    chatUser.displayName
-                                }
-                            </UserDataText>
-                            {chatUser.onlineStatus
-                                ? <UserDataText>online</UserDataText>
-                                : <TimeAgo date={chatUser.timeStamp} styleProps={{fontSize: 14, color: '#fff'}} textAfter={'тому'}/>
-                            }
-                        </UserDataContainer>
-                    </UserItem>  
-                    )
+                    <ChatUserItem key={chatUser.id} chatUser={chatUser} chatData={chatData} deleteUser={deleteUser}/>
+                )
                 )}
                 <View style={{height: 10}}></View>
             </UserItems>
@@ -233,7 +227,7 @@ align-items: center;
 justify-content: space-between;
 background-color: #4F6F52;
 border-radius: 12px;
-padding: 5px;
+padding: 5px 0 5px 5px;
 `
 
 const UserImageContainer = styled.View`

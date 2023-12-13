@@ -1,6 +1,5 @@
 import { View, Text, TouchableOpacity, Platform, FlatList } from 'react-native'
-import React, { useCallback, useContext, useEffect, useRef, useState } from 'react'
-import { AuthUserContext } from '../_layout';
+import React, { useEffect, useRef } from 'react'
 import styled from 'styled-components';
 import ChatItem from './ChatItem';
 import { useSelector } from 'react-redux';
@@ -15,35 +14,22 @@ const ChatItemContainer = ({messagesCount, messages, chatData, chatUsers, select
     if (typeof el === 'string') return false
     if(!el.isRead.includes(user.uid)) return true
   })
+
   if(firstUnread !== -1){
     flatArray.splice((firstUnread + 1), 0, "Unreaded messages")
   }
   useEffect(() => {
     if(flatArray[0]?.isRead){
-      if(flatArray[0]?.isRead.includes(user.uid) && !resultSetMessageIsRead){
-        console.log('isRead already')
-      }else{
+      if(!flatArray[0]?.isRead.includes(user.uid) && resultSetMessageIsRead){
         setMessageIsRead({chatId: chatData.id, message: flatArray[0], userId: user.uid, date: flatArray.find(item => typeof item === 'string')})
-        console.log('isNotRead already')
-  
       }
     }  
   }, [messages])
 
-  
-  const initialScrollIndex = firstUnread === -1 ? 0 : firstUnread
   const users = useSelector(state => state.users.users)
-  const [endReached, setEndReached] = useState(false);
-  const [allowSetEndReached, setAllowSetEndReached] = useState(false);
   const scrollRef = useRef();
-    // useEffect(() => {
-    //   if(endReached){  
-    //       loadPreviousMessages()
-    //       setEndReached(false)
-    //   }
-    // }, [scrollRef, endReached, messagesCount])
 
-    const checkDate = (date) => {
+  const checkDate = (date) => {
       function isYesterday() {
         const yesterday = new Date();
         yesterday.setDate(yesterday.getDate() - 1);
@@ -125,64 +111,22 @@ const ChatItemContainer = ({messagesCount, messages, chatData, chatUsers, select
             messageCreatedAt={item?.createdAt?.seconds}
             isAuthor={item.uid === user.uid}
             chatType={chatData.type}
-            // selectMessage={updateSelectedMessages} 
             />
         </MessagesContainer>
       )
     }
 
-    // return (
-    //   <View>
-    //     <Text>
-    //       123123
-    //     </Text>
-    //   </View>
-    // )
-
     return (
       <ChatSectionList contentContainerStyle={{paddingVertical: 10}}
                   ref={scrollRef}
-                  // onEndReached={(props) => {
-                  //   if(allowSetEndReached){
-                  //     setEndReached(true)
-                  //   }
-                  // }}
-                  // onMomentumScrollBegin={() => {
-                  //   setAllowSetEndReached(true)
-                  // }}
                   inverted
                   data={flatArray} 
                   showsVerticalScrollIndicator={false} 
-                  // sections={messages}
                   keyExtractor={item => {
                     if(typeof item === 'string') return item
                     return item.id
                   }} 
                   renderItem={rerenderItem} 
-                  initialScrollIndex={initialScrollIndex}
-                  onContentSizeChange={() => {
-                    if (scrollRef && scrollRef.scrollToIndex ) {
-                      const wait = new Promise(resolve => setTimeout(resolve, 500));
-                      wait.then(() => {
-                        scrollRef.current?.scrollToIndex({ index: initialScrollIndex, animated: true });
-                      });
-                        scrollRef.scrollToIndex({  index: initialScrollIndex });
-                    }
-                }}
-                  onScrollToIndexFailed={info => {
-                    
-                  }}
-                  // renderSectionFooter={({section: { date }}) => {
-                  //   const splitDate =  date.split('_');
-                  //   const dateObj = new Date(splitDate[0], splitDate[1], splitDate[2])
-                  //   const dateString = checkDate(dateObj);
-                  //   return(
-                  //     <DateSplitter>
-                  //       <DateSplitterText>{dateString}</DateSplitterText>
-                  //     </DateSplitter>
-                  //   )
-                  // }}
-                  // initialNumToRender={19}
                   />
     )
   }

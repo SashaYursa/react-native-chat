@@ -1,4 +1,4 @@
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { database } from "../../../../config/firebase";
 import { rootApi } from "../rootApi/rootApi";
 
@@ -8,13 +8,10 @@ export const usersApi = rootApi.injectEndpoints({
         //     async queryFn(userId) {
         //         try{
         //             if(userId){
-        //                 const qChats = query(collection(database, "chats"), where("users", "array-contains", userId));
-        //                 const res = await getDocs(qChats);
-        //                 const user = res.docs.map(doc => {
-        //                     const chatData = doc.data()
-        //                     return {...chatData, id: doc.id}
-        //                 })
-        //                 return {data: chats, error: null}
+        //                 const qUser = doc(database, "users", userId)
+        //                 const res = await getDoc(qUser)
+        //                 const user = res.data()
+        //                 return{data: user}  
         //             }
         //             return {error: "no userId"}
         //         }
@@ -42,7 +39,7 @@ export const usersApi = rootApi.injectEndpoints({
                     return {error}
                 }
             }
-        })
+        }),
     })
 })
 export const { useFetchAllChatsUsersQuery } = usersApi

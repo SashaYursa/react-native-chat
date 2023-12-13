@@ -115,80 +115,80 @@ const Chat = () => {
       })
   }, [chatData, chatUsers])
 
-  const fetchPrevMessagess = async () => {
-    let loadedMessagesCount = 0;
-    messages.forEach(m => {
-      loadedMessagesCount += m.data.length;
-    })
-    if(loadedMessagesCount < messagesCount){
-    setLoading(true)
-    const lastDoc = await getDoc(doc(database, "messages", id, "message", lastLoadedId));
-    const q = query(collection(database, 'messages', String(id), 'message'), orderBy('createdAt', 'desc'), limit(70), startAt(lastDoc))
-    const oldMessages = await loadMessages(q)
-    setMessages(messages => {
-      const updatedMessages = [
-        ...messages
-      ]
-      oldMessages.forEach(messageItem => {
-        const findDate = updatedMessages.findIndex(upd => upd.date === messageItem.date)
-        if(findDate !== -1){
-          messageItem.data.forEach(messageData => {
-            if(messageData?.id !== lastLoadedId){
-              updatedMessages[findDate].data.push(messageData)
-            }
-          })
-        }else{
-          updatedMessages.push(messageItem) 
-        }
-      })
-      return updatedMessages
-    })
-    setLoading(false)
-    }
-  }
+  // const fetchPrevMessagess = async () => {
+  //   let loadedMessagesCount = 0;
+  //   messages.forEach(m => {
+  //     loadedMessagesCount += m.data.length;
+  //   })
+  //   if(loadedMessagesCount < messagesCount){
+  //   setLoading(true)
+  //   const lastDoc = await getDoc(doc(database, "messages", id, "message", lastLoadedId));
+  //   const q = query(collection(database, 'messages', String(id), 'message'), orderBy('createdAt', 'desc'), limit(70), startAt(lastDoc))
+  //   const oldMessages = await loadMessages(q)
+  //   setMessages(messages => {
+  //     const updatedMessages = [
+  //       ...messages
+  //     ]
+  //     oldMessages.forEach(messageItem => {
+  //       const findDate = updatedMessages.findIndex(upd => upd.date === messageItem.date)
+  //       if(findDate !== -1){
+  //         messageItem.data.forEach(messageData => {
+  //           if(messageData?.id !== lastLoadedId){
+  //             updatedMessages[findDate].data.push(messageData)
+  //           }
+  //         })
+  //       }else{
+  //         updatedMessages.push(messageItem) 
+  //       }
+  //     })
+  //     return updatedMessages
+  //   })
+  //   setLoading(false)
+  //   }
+  // }
 
-  const loadMessages = async (query) => {
-    const result = await getDocs(query)
-    const oldMessages = [];
-    const messagesForRead = [];
-    let lastLoaded = null;
-    result.docs.forEach(doc => {
-      const messageData = doc.data();
-      if(messageData.isRead.includes(user.uid)){
-      }else{
-        messagesForRead.push({id: doc?.id, data: messageData})
-      }
+  // const loadMessages = async (query) => {
+  //   const result = await getDocs(query)
+  //   const oldMessages = [];
+  //   const messagesForRead = [];
+  //   let lastLoaded = null;
+  //   result.docs.forEach(doc => {
+  //     const messageData = doc.data();
+  //     if(messageData.isRead.includes(user.uid)){
+  //     }else{
+  //       messagesForRead.push({id: doc?.id, data: messageData})
+  //     }
 
-      messageData.createdAt.seconds = messageData.createdAt.seconds * 1000;
-      const messageCreatedAt = new Date(messageData?.createdAt?.seconds)
-      const messageSlug = messageCreatedAt.getFullYear() + "_" + messageCreatedAt.getMonth() + "_" + messageCreatedAt.getDate(); 
-      const currentDateIndex = oldMessages.findIndex(messages => messages.date === messageSlug);
-      if(currentDateIndex !== -1){
-        const existedMessage = oldMessages[currentDateIndex].data.find(message => message?.id === doc?.id)
-        if(!existedMessage){
-          oldMessages[currentDateIndex].data.push({...messageData, id: doc?.id})
-        }
-      }
-      else{
-        oldMessages.push({
-          date: messageSlug,
-          data: [
-            {...messageData, id: doc.id}
-          ]
-        })
-      }
-      lastLoaded = doc.id     
-    } 
-    )
-    messagesForRead.forEach(messageForRead => {
-      const data = {
-        isRead: [...messageForRead.data.isRead, user.uid]
-      }
-      updateDoc(doc(database, 'messages', String(id), 'message', messageForRead.id), data)
-    })
-    setLastLoadedId(lastLoaded)
-    return oldMessages
-  }
+  //     messageData.createdAt.seconds = messageData.createdAt.seconds * 1000;
+  //     const messageCreatedAt = new Date(messageData?.createdAt?.seconds)
+  //     const messageSlug = messageCreatedAt.getFullYear() + "_" + messageCreatedAt.getMonth() + "_" + messageCreatedAt.getDate(); 
+  //     const currentDateIndex = oldMessages.findIndex(messages => messages.date === messageSlug);
+  //     if(currentDateIndex !== -1){
+  //       const existedMessage = oldMessages[currentDateIndex].data.find(message => message?.id === doc?.id)
+  //       if(!existedMessage){
+  //         oldMessages[currentDateIndex].data.push({...messageData, id: doc?.id})
+  //       }
+  //     }
+  //     else{
+  //       oldMessages.push({
+  //         date: messageSlug,
+  //         data: [
+  //           {...messageData, id: doc.id}
+  //         ]
+  //       })
+  //     }
+  //     lastLoaded = doc.id     
+  //   } 
+  //   )
+  //   messagesForRead.forEach(messageForRead => {
+  //     const data = {
+  //       isRead: [...messageForRead.data.isRead, user.uid]
+  //     }
+  //     updateDoc(doc(database, 'messages', String(id), 'message', messageForRead.id), data)
+  //   })
+  //   setLastLoadedId(lastLoaded)
+  //   return oldMessages
+  // }
 
 
   const loadPreviousMessages = (atemp = 1) => {
@@ -229,11 +229,16 @@ const Chat = () => {
   
   return (
     <>
+    <Button onPress={() => loadPreviousMessages()}>
+        <Text>
+          Load prev
+        </Text>
+    </Button>
     <ChatCanvas>
       <> 
         {messages?.length === 0
           ? <View>
-              <Text>⚠️error fetching messages⚠️</Text>
+              <Text>⚠️No messages⚠️</Text>
             </View>
           : <ChatItemContainer 
               messagesCount={totalMessagesCount} 
@@ -246,11 +251,6 @@ const Chat = () => {
         }
       </>
     </ChatCanvas>
-    <Button onPress={() => loadPreviousMessages()}>
-        <Text>
-          Load prev
-        </Text>
-    </Button>
     <ChatActions id={id}/>
     </>
   )
