@@ -1,5 +1,5 @@
 import { View, Text, Image, TouchableOpacity, ScrollView } from 'react-native'
-import React, { memo, useState } from 'react'
+import React, { memo, useEffect, useState } from 'react'
 import styled from 'styled-components'
 import BackButton from './Buttons/BackButton'
 import EditUserForm from './Forms/EditUserForm';
@@ -8,58 +8,25 @@ import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
 import * as Progress from 'react-native-progress';
 import { setDoc, doc } from 'firebase/firestore';
 import { updateProfile } from 'firebase/auth';
-const EditUser = ({user, updateCurrentUser, setDisplayModal, uploadUser}) => {
-
-    const [uploadImageStatus, setUploadImageStatus] = useState(null);
-
-    const uploadUserImage = async (path) => {
-        const fileName = path.split('/').pop();
-        
-        const response = await fetch(path).catch(err => console.log(err))
-        const blobImage = await response.blob();
-        
-        const storageRef = ref(fileStorage, `usersImages/${fileName}`);
-        const uploadTask = uploadBytesResumable(storageRef, blobImage)
-        uploadTask.on("state_changed", (snapshot => {
-          const progress = Math.floor((snapshot.bytesTransferred / snapshot.totalBytes) * 100) / 100
-            setUploadImageStatus(progress)
-        }),
-        (error => console.log('uploadTask.on error --------->', error))
-        )
-        return uploadTask.then(async () => {
-          return await getDownloadURL(uploadTask.snapshot.ref).then(url => url)
-        })
-        .catch(error => console.log('uploadTask error -----> ', error))
-    }
+import { setUploadUserImageStatus } from '../store/features/auth/authSlice';
+import { useSelector } from 'react-redux';
+import { useUpdateUserMutation } from '../store/features/auth/authApi';
+const EditUser = ({user, setDisplayModal, uploadUser}) => {
+    const uploadImageStatus = useSelector(state => state.auth.uploadUserImageStatus)
+    const [updateUserMutation, {error: updateUserError, data: updateUserData}] = useUpdateUserMutation()
+    
+    useEffect(() => {
+        if(updateUserData){
+            setDisplayModal(false)
+        }
+    }, [updateUserData])
+    useEffect(() => {
+        console.log('update user error', updateUserError)
+    }, [updateUserError])
 
     const updateUser = async (updateData) => {
-        let image = updateData.image;
-        if(updateData.uploadedImage !== null){
-        console.log('updated')
-        image = await uploadUserImage(updateData.uploadedImage);
-        }
-
-        const userDocRef = doc(database, 'users', user.id)
-        const updatedUser = {
-            ...user,
-            image,
-            displayName: updateData.displayName
-        }
-
-        await setDoc(userDocRef, updatedUser).catch(error => {
-            console.log('setDoc error in EditUser --->', error)
-        })
-
-        await updateProfile(auth.currentUser, {
-        displayName: updateData.displayName, 
-        photoURL: image
-        })
-        .then(() => {
-            updateCurrentUser(updatedUser)
-        })
-        .catch(error => console.log('updateProfile error in EditUser --->', error))
+        updateUserMutation({user,updateData, setUploadUserImageStatus})
     }
-    console.log(uploadImageStatus)
     return (
         <Container>
             {

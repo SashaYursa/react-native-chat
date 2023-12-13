@@ -17,30 +17,11 @@ import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
 import { useSelector } from 'react-redux';
 const Profile = ({}) => {
   const user = useSelector(state => state.auth.user);
-  const [loading, setLoading] = useState(true)
   const [displayModal, setDisplayModal] = useState(false)
-  const [userData, setUserData] = useState(null)
   const [uploadImageStatus, setUploadImageStatus] = useState(null)
-  useEffect(() => {
-    setLoading(true)
-    const getUser = async () =>{
-    const qUser = query(collection(database, "users"), where("id", "==", user.uid))
-    let res = await getDocs(qUser);
-    res = await Promise.all(res.docs.map(item => item.data()))
-    setUserData(await res[0]);
-    setLoading(false)
-    } 
-    getUser()
-  }, [user.uid])
 
   const handleEditUser = () => {
     setDisplayModal(displayModal => !displayModal)
-  }
-
-  const updateCurrentUser = async (updateData) => {
-    console.log(updateData, 'ddddd')
-    setUserData(updateData);
-    setDisplayModal(false);
   }
 
   useEffect(() => {
@@ -57,17 +38,11 @@ const Profile = ({}) => {
   if(displayModal){
     return (
       <Modal animationType='slide'>
-        <EditUser setDisplayModal={setDisplayModal} user={userData} updateCurrentUser={updateCurrentUser}/>
+        <EditUser setDisplayModal={setDisplayModal} user={user}/>
       </Modal>
     )
   }
-  return loading 
-  ? (
-    <View style={{flex: 1, alignItems: 'center', justifyContent: 'center'}}>
-      <ActivityIndicator size='large'/>
-    </View>
-  )
-  : (
+  return (
     <SafeArea>
     <Container>
     <TopButtonsContainer>
@@ -80,7 +55,7 @@ const Profile = ({}) => {
         </EditButton>
       </TopButton>
     </TopButtonsContainer>
-    <User user={userData}>
+    <User user={user}>
     <ActionContainer>
       <ActionData>
       </ActionData>

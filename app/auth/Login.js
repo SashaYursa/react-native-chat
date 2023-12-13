@@ -8,7 +8,7 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useLoginMutation } from '../store/features/auth/authApi';
 
 const Login = () => {
-  const [login] = useLoginMutation()
+  const [login, {error: loginError}] = useLoginMutation()
   // ReactNativeAsyncStorage.getItem("email").then(email => {
   //     if(email){
   //       ReactNativeAsyncStorage.getItem("password").then(password => {
@@ -55,7 +55,7 @@ const Login = () => {
   }
   return (
     <AuthContainer>
-      <LoginForm handleLogin={loginUser}/>
+      <LoginForm handleLogin={login} loginError={loginError}/>
     </AuthContainer>
   )
 }

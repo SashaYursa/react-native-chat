@@ -30,7 +30,6 @@ const EditUserForm = ({userData, updateUser}) => {
                 return item.uri
             }
             })
-            console.log(images[0])
             setValue('uploadedImage', images[0])
         }
     }

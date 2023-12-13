@@ -23,7 +23,7 @@ const Layout = () => {
             drawerLabel: () => {
               return(
                   <View style={{gap: 10, alignItems: 'flex-start', justifyContent: 'flex-start'}}>
-                    <Image style={{width: 70, height: 70, borderRadius: 70}} source={user.photoURL ? {uri: user.photoURL} :require('../../../assets/default-user.png')} size={30}/>
+                    <Image style={{width: 70, height: 70, borderRadius: 70}} source={user.image ? {uri: user.image} :require('../../../assets/default-user.png')} size={30}/>
                     <Text style={{fontWeight: 700}}>
                       {user.displayName ? user.displayName : user.email}
                     </Text>

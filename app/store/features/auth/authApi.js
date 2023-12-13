@@ -1,9 +1,11 @@
-import { doc, getDoc } from "firebase/firestore";
-import { auth, database, rDatabase } from "../../../../config/firebase";
+import { collection, doc, getDoc, query, setDoc, updateDoc, where } from "firebase/firestore";
+import { auth, database, fileStorage, rDatabase } from "../../../../config/firebase";
 import { rootApi } from "../rootApi/rootApi";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { getAuth, signInWithEmailAndPassword, updateProfile } from "firebase/auth";
 import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
 import { onDisconnect, ref, serverTimestamp, set } from "firebase/database";
+import {getDownloadURL, ref as sRef} from "firebase/storage"
+import { uploadBytesResumable } from "firebase/storage";
 export const authApi = rootApi.injectEndpoints({
     endpoints: (builder) => ({
         login: builder.mutation({
@@ -15,20 +17,70 @@ export const authApi = rootApi.injectEndpoints({
                     const data = await signInWithEmailAndPassword(auth, email, password)
                     ReactNativeAsyncStorage.setItem("email", email)
                     ReactNativeAsyncStorage.setItem("password", password)
-                      const rUserRef = ref(rDatabase, '/status/' + data.user.uid);
-                      onDisconnect(rUserRef)
-                        .set({ timeStamp: serverTimestamp(), isOnline: false })
-                        .then(() => {
-                            set(rUserRef, { timeStamp: serverTimestamp(), isOnline: true})
-                        });
+                    const rUserRef = ref(rDatabase, '/status/' + data.user.uid)
+                    let response = await getDoc(doc(database, "users", data.user.uid))
+                    response = response.data()
+                    data.user = {
+                        ...data.user,
+                        ...response
+                    }
+                    onDisconnect(rUserRef)
+                    .set({ timeStamp: serverTimestamp(), isOnline: false })
+                    .then(() => {
+                        set(rUserRef, { timeStamp: serverTimestamp(), isOnline: true})
+                    });
                     return {data}
                 }
                 catch(error){
-                    console.log('error', error)
+                    console.log('error in login', error)
+                    return {error}
+                }
+            }
+        }),
+        updateUser: builder.mutation({
+            async queryFn({user, updateData, setUploadUserImageStatus}, {dispatch}) {
+                try{
+
+                    const uploadUserImage = async (path) => {
+                        const fileName = path.split('/').pop();
+                        
+                        const response = await fetch(path).catch(err => console.log(err))
+                        const blobImage = await response.blob();
+                        
+                        const storageRef = sRef(fileStorage, `usersImages/${fileName}`);
+                        const uploadTask = uploadBytesResumable(storageRef, blobImage)
+                        uploadTask.on("state_changed", (snapshot => {
+                          const progress = Math.floor((snapshot.bytesTransferred / snapshot.totalBytes) * 100) / 100
+                          dispatch(setUploadUserImageStatus(progress))
+                        }),
+                        (error => console.log('uploadTask.on error --------->', error))
+                        )
+                        return uploadTask.then(async () => {
+                          return await getDownloadURL(uploadTask.snapshot.ref).then(url => url)
+                        })
+                        .catch(error => console.log('uploadTask error -----> ', error))
+                    }
+                    let image = updateData.image;
+                    if(updateData.uploadedImage !== null){
+                    image = await uploadUserImage(updateData.uploadedImage);
+                    }
+                    const updatedUser = {
+                        image,
+                        displayName: updateData.displayName
+                    }
+                    await updateDoc(doc(database, 'users', user.uid), updatedUser).catch(error => {
+                        console.log('setDoc error in EditUser --->', error)
+                    })
+                    const selectedAuth = getAuth()
+                    updateProfile(selectedAuth.currentUser, {displayName: updatedUser.displayName, photoURL: image}).catch(error => {})
+                    return {data: updatedUser}
+                }
+                catch(error){
+                    console.log('update user error', error)
                     return {error}
                 }
             }
         })
     })
 })
-export const { useLoginMutation } = authApi
+export const { useLoginMutation, useUpdateUserMutation } = authApi

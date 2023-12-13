@@ -67,8 +67,8 @@ const Info = () => {
                 <UserItem>
                 <UserImageContainer>
                         <UserItemImage>
-                            {user.photoURL 
-                                ? <CachedImage url={user.photoURL} style={{width: '100%', height: '100%'}}/>
+                            {user.image 
+                                ? <CachedImage url={user.image} style={{width: '100%', height: '100%'}}/>
                                 : <UserImage source={require('../../../assets/default-user.png')}/>
                             }  
                         </UserItemImage>
