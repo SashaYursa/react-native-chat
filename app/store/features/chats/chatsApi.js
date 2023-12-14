@@ -1,6 +1,7 @@
 import { addDoc, collection, doc, getDoc, getDocs, query, serverTimestamp, updateDoc, where } from "firebase/firestore";
-import { database } from "../../../../config/firebase";
+import { database, fileStorage } from "../../../../config/firebase";
 import { rootApi } from "../rootApi/rootApi";
+import { deleteObject, getDownloadURL, ref as sRef, uploadBytesResumable } from "firebase/storage";
 
 export const chatsApi = rootApi.injectEndpoints({
     endpoints: (builder) => ({
@@ -73,8 +74,67 @@ export const chatsApi = rootApi.injectEndpoints({
                     return {error}
                 }
             }
+        }),
+        updateChat: builder.mutation({
+            async queryFn({updateData, chatData, setUploadChatImageStatus}, {dispatch}){
+                const uploadChatImage = async (path) => {
+                    const fileName = path.split('/').pop();
+                    
+                    const response = await fetch(path).catch(err => console.log(err))
+                    const blobImage = await response.blob();
+                    
+                    const storageRef = sRef(fileStorage, `chatsImages/${fileName}`);
+                    const uploadTask = uploadBytesResumable(storageRef, blobImage)
+                    uploadTask.on("state_changed", (snapshot => {
+                      const progress = Math.floor((snapshot.bytesTransferred / snapshot.totalBytes) * 100) / 100
+                        dispatch(setUploadChatImageStatus(progress))
+                    }),
+                    (error => console.log('uploadTask.on error --------->', error))
+                    )
+                    return uploadTask.then(async () => {
+                      return await getDownloadURL(uploadTask.snapshot.ref).then(url => url)
+                    })
+                    .catch(error => console.log('uploadTask error -----> ', error))
+                  }
+                  const removePrevImage = (prevImage) => {
+                    const mediaParam = prevImage.split("/chatsImages%2F")[1];
+                    const name = mediaParam.split("?")[0];
+                    const desertRef = sRef(fileStorage, `chatsImages/${name}`);
+                    // Delete the file
+                    deleteObject(desertRef)
+                    .catch((error) => {
+                        console.log('delet chat image error -----> ', error)
+                    });
+                  }
+                try{
+                    let image = updateData.image;
+                    if(updateData.uploadedImage !== null){
+                        if(chatData.image){
+                            removePrevImage(chatData.image)
+                        }
+                        image = await uploadChatImage(updateData.uploadedImage);
+                    }
+                    else if(updateData.imageIsRemoved){
+                        if(chatData.image){
+                            removePrevImage(chatData.image)
+                        }
+                    }
+                    const updatedChat = {
+                    image,
+                    name: updateData.chatName
+                    }
+                    await updateDoc(doc(database, 'chats', chatData.id), updatedChat).catch(error => {
+                        console.log('setDoc error in EditChat --->', error)
+                    })
+                    return {data: {updatedChat, chatData}}
+                }
+                catch(error) {
+                    return {error}
+                }
+            
+            }
         })
     })
 })
 
-export const { useFetchChatsQuery, useCreateChatMutation, useAddUserMutation, useDeleteUserFromChatMutation} = chatsApi
+export const { useFetchChatsQuery, useCreateChatMutation, useAddUserMutation, useDeleteUserFromChatMutation, useUpdateChatMutation} = chatsApi

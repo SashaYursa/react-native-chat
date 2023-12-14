@@ -1,39 +1,14 @@
 import { View, Text, Alert, Platform, ActivityIndicator} from 'react-native'
-import React, { useCallback, useContext, useEffect, useLayoutEffect, useState } from 'react'
+import React, { useCallback, useEffect, useLayoutEffect, useState } from 'react'
 import styled from 'styled-components'
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router'
-import {
-  collection,
-  addDoc,
-  onSnapshot,
-  query,
-  orderBy,
-  doc,
-  getDoc,
-  where,
-  getDocs,
-  limit,
-  deleteDoc,
-  startAt,
-  getCountFromServer,
-  setDoc,
-  updateDoc,
-} from 'firebase/firestore'
-import * as FileSystem from 'expo-file-system'
-import { ref, getStorage, deleteObject } from 'firebase/storage'
-import {ref as realRef, update} from 'firebase/database'
 import "firebase/compat/auth";
 import "firebase/compat/firestore";
-import { AuthUserContext, FirebaseContext, SelectedChatContext } from '../../_layout'
-import { rDatabase } from '../../../config/firebase'
-import { onValue } from 'firebase/database'
 import ChatItemContainer from '../../components/ChatItemContainer'
-import shorthash from 'shorthash'
-import { compareObjects } from '../_layout'
 import ChatNavigationHeaderTitle from '../../components/ChatNavigationHeaderTitle'
 import ChatActions from '../../components/ChatActions'
 import { useDispatch, useSelector } from 'react-redux'
-import { useDeleteMessageMutation, useFetchMessagesQuery, useFetchPrevMessagesMutation, useLazyFetchMessagesQuery, useLazyStartReciveMessagesQuery, useSendErrorMutationMutation } from '../../store/features/messages/messagesApi'
+import { useDeleteMessageMutation, useLazyFetchMessagesQuery, useSendErrorMutationMutation } from '../../store/features/messages/messagesApi'
 import { Button } from 'react-native-paper'
 import { setCurrentChat } from '../../store/features/chats/chatsSlice'
 import { removeMessagesFromState } from '../../store/features/messages/messagesSlice'

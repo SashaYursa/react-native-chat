@@ -11,7 +11,8 @@ const EditUserForm = ({userData, updateUser}) => {
     const initValues = {
         displayName: userData.displayName,
         image: userData.image,
-        uploadedImage: null
+        uploadedImage: null,
+        imageIsRemoved: false
     }
 
     const selectUserImage = async (setValue) => {
@@ -54,6 +55,9 @@ const EditUserForm = ({userData, updateUser}) => {
                     
                     { (values.uploadedImage !== null || initValues.image !== null) &&
                     <RemoveImageButton onPress={() => {
+                        if(userData.image !== null){
+                            setFieldValue('imageIsRemoved', true)
+                        }
                         setFieldValue('uploadedImage', null)
                         setFieldValue('image', null)
                         }}>

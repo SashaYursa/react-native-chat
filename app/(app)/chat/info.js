@@ -1,13 +1,10 @@
 import { View, Text, Image,TouchableOpacity, Platform, StyleSheet } from 'react-native'
-import React, { useCallback, useContext, useEffect } from 'react'
+import React, { useCallback, useEffect } from 'react'
 import styled from 'styled-components'
 import { useLocalSearchParams } from 'expo-router/src/hooks'
-import TimeAgo from '../../components/TimeAgo'
 import CachedImage from '../../components/CachedImage'
-import { AuthUserContext, SelectedChatContext } from '../../_layout'
 import { router } from 'expo-router'
 import { useSelector } from 'react-redux'
-import { IconButton } from 'react-native-paper'
 import ChatUserItem from '../../components/ChatUserItem'
 import { useDeleteUserFromChatMutation } from '../../store/features/chats/chatsApi'
 
@@ -31,7 +28,6 @@ const Info = () => {
     const defaultChatImage = chatData.type === "public" ? require('../../../assets/group-chat.png') : require('../../../assets/default-user.png')
     const headImage = chatData.type === "private" ? chatUsers[0].image : chatData.image
     const userIsAdmin = chatData.type === "public" && chatData?.admin?.includes(user.uid) 
-    
     const deleteUser = useCallback((user) => {
         const newUsers = chatData.users.filter(u => u !== user.id)
         deleteUserFromChat({newUsers, chatId: chatData.id})

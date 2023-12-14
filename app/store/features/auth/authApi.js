@@ -4,7 +4,7 @@ import { rootApi } from "../rootApi/rootApi";
 import { getAuth, signInWithEmailAndPassword, updateProfile } from "firebase/auth";
 import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
 import { onDisconnect, ref, serverTimestamp, set } from "firebase/database";
-import {getDownloadURL, ref as sRef} from "firebase/storage"
+import {deleteObject, getDownloadURL, ref as sRef} from "firebase/storage"
 import { uploadBytesResumable } from "firebase/storage";
 export const authApi = rootApi.injectEndpoints({
     endpoints: (builder) => ({
@@ -40,7 +40,6 @@ export const authApi = rootApi.injectEndpoints({
         updateUser: builder.mutation({
             async queryFn({user, updateData, setUploadUserImageStatus}, {dispatch}) {
                 try{
-
                     const uploadUserImage = async (path) => {
                         const fileName = path.split('/').pop();
                         
@@ -60,9 +59,27 @@ export const authApi = rootApi.injectEndpoints({
                         })
                         .catch(error => console.log('uploadTask error -----> ', error))
                     }
+                    const removePrevImage = (prevImage) => {
+                        const mediaParam = prevImage.split("/usersImages%2F")[1];
+                        const name = mediaParam.split("?")[0];
+                        const desertRef = sRef(fileStorage, `usersImages/${name}`);
+                        deleteObject(desertRef)
+                        .catch((error) => {
+                            console.log('delet chat image error -----> ', error)
+                        });
+                      }
                     let image = updateData.image;
+                    console.log('removed image ===> ', user.image)
                     if(updateData.uploadedImage !== null){
-                    image = await uploadUserImage(updateData.uploadedImage);
+                        if(user.image){
+                            removePrevImage(user.image)
+                        }    
+                        image = await uploadUserImage(updateData.uploadedImage);
+                    }
+                    else if(updateData.imageIsRemoved){
+                        if(user.image){
+                            removePrevImage(user.image)
+                        }
                     }
                     const updatedUser = {
                         image,

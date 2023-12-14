@@ -7,7 +7,8 @@ export const chatsSlice = createSlice({
         currentChat: null,
         chats: [],
         loading: true,
-        error: null 
+        error: null,
+        uploadChatImageStatus: null
     },
     reducers: {
         setChats:(state, action) => {
@@ -22,6 +23,9 @@ export const chatsSlice = createSlice({
                 state.currentChat = currentChat
             }
         },
+        setUploadChatImageStatus: (state, action) => {
+            state.uploadChatImageStatus = action.payload
+        }
     },
     extraReducers: (builder) => {
         builder
@@ -44,9 +48,18 @@ export const chatsSlice = createSlice({
                 state.chats[findChatId].users = action.payload.newUsers
             }
         })
+        .addMatcher(chatsApi.endpoints.updateChat.matchFulfilled, (state, action) => {
+            const findChatId = state.chats.findIndex(chat => chat.id === action.payload.chatData.id)
+            if(findChatId){
+                state.chats[findChatId] = {
+                    ...state.chats[findChatId],
+                    ...action.payload.updatedChat
+                }
+            }
+        })
     }
 })
 
-export const { setChats, setCurrentChat } = chatsSlice.actions
+export const { setChats, setCurrentChat, setUploadChatImageStatus } = chatsSlice.actions
 
 export default chatsSlice.reducer;

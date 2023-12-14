@@ -9,12 +9,16 @@ import * as Progress from 'react-native-progress';
 import { setDoc, doc } from 'firebase/firestore';
 import { updateProfile } from 'firebase/auth';
 import { setUploadUserImageStatus } from '../store/features/auth/authSlice';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { useUpdateUserMutation } from '../store/features/auth/authApi';
 const EditUser = ({user, setDisplayModal, uploadUser}) => {
     const uploadImageStatus = useSelector(state => state.auth.uploadUserImageStatus)
     const [updateUserMutation, {error: updateUserError, data: updateUserData}] = useUpdateUserMutation()
-    
+    const dispatch = useDispatch()
+    useEffect(() => {
+        dispatch(setUploadUserImageStatus(null))
+    }, [])
+
     useEffect(() => {
         if(updateUserData){
             setDisplayModal(false)
@@ -25,7 +29,7 @@ const EditUser = ({user, setDisplayModal, uploadUser}) => {
     }, [updateUserError])
 
     const updateUser = async (updateData) => {
-        updateUserMutation({user,updateData, setUploadUserImageStatus})
+        updateUserMutation({user, updateData, setUploadUserImageStatus})
     }
     return (
         <Container>

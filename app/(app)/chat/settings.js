@@ -1,76 +1,75 @@
 import { View, Text, SafeAreaView, Platform, Button } from 'react-native'
-import React, { useContext, useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import styled from 'styled-components'
-import { AuthUserContext, SelectedChatContext } from '../../_layout'
 import EditChatForm from '../../components/Forms/EditChatForm'
 import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage'
-import { doc, setDoc, updateDoc } from 'firebase/firestore'
+import { doc, updateDoc } from 'firebase/firestore'
 import { database, fileStorage } from '../../../config/firebase'
-import { useSelector } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
 import { useLocalSearchParams, useRouter } from 'expo-router'
+import { setUploadChatImageStatus } from '../../store/features/chats/chatsSlice'
+import { useUpdateChatMutation } from '../../store/features/chats/chatsApi'
+import * as Progress from 'react-native-progress';
+import { goBack } from 'expo-router/src/global-state/routing'
 const Settings = () => {
-  const { id } = useLocalSearchParams()
-  const chatData = useSelector(state => state.chats.chats.find(chat => chat.id === id))
-  const user = useSelector(state => state.auth.user)
-  const [uploadImageStatus, setUploadImageStatus] = useState(null);
-  const router = useRouter()
-  useEffect(() => {
-    console.log(uploadImageStatus, 'status--->')
-  }, [uploadImageStatus])
-  const uploadChatImage = async (path) => {
-        const fileName = path.split('/').pop();
-        
-        const response = await fetch(path).catch(err => console.log(err))
-        const blobImage = await response.blob();
-        
-        const storageRef = ref(fileStorage, `usersImages/${fileName}`);
-        const uploadTask = uploadBytesResumable(storageRef, blobImage)
-        uploadTask.on("state_changed", (snapshot => {
-          const progress = Math.floor((snapshot.bytesTransferred / snapshot.totalBytes) * 100) / 100
-            setUploadImageStatus(progress)
-        }),
-        (error => console.log('uploadTask.on error --------->', error))
-        )
-        return uploadTask.then(async () => {
-          return await getDownloadURL(uploadTask.snapshot.ref).then(url => url)
-        })
-        .catch(error => console.log('uploadTask error -----> ', error))
-    }
+    const { id } = useLocalSearchParams()
+    const chatData = useSelector(state => state.chats.chats.find(chat => chat.id === id))
+    const uploadChatImageStatus = useSelector(state => state.chats.uploadChatImageStatus)
+    const user = useSelector(state => state.auth.user)
+    const [updateChatAction, {error: updateChatError, data: updateChatData}] = useUpdateChatMutation()
+    const dispatch = useDispatch()
+    const router = useRouter()
+
+    useEffect(() => {
+        if(uploadChatImageStatus){
+        dispatch(setUploadChatImageStatus(null))
+        }
+    }, [])
+    useEffect(() => {
+        if(updateChatData){
+            router.back()
+        }
+    }, [updateChatData])
 
     const updateChat = async (updateData) => {
-        let image = updateData.image;
-        if(updateData.uploadedImage !== null){
-        console.log('updated')
-        image = await uploadChatImage(updateData.uploadedImage);
-        }
-
-        const chatDocRef =  doc(database, 'chats', chatData.id)
-        const updatedChat = {
-          image,
-          name: updateData.chatName
-        }
-        
-        await updateDoc(chatDocRef, updatedChat).catch(error => {
-            console.log('setDoc error in EditChat --->', error)
-        })
+        updateChatAction({updateData, chatData, setUploadChatImageStatus})
     }
-  return (
-    <Container>
-      <Header>
-        <Button  title='Back' onPress={() => {
-            router.back()
-        }}/>
-        <HeaderTitle>
-            Chat settings
-        </HeaderTitle>
-        <Button  title='Save' onPress={() => {
-        }}/>
-      </Header>
-      <EditChatForm chatData={chatData} updateChat={updateChat} />
-    </Container>
     
-  )
+    return (
+        <Container>
+        {
+            uploadChatImageStatus ?
+            <UploadContainer>
+                <Progress.Bar progress={uploadChatImageStatus} width={200} />
+            </UploadContainer>
+            : null
+        }
+        <Header>
+            <Button  title='Back' onPress={() => {
+                router.back()
+            }}/>
+            <HeaderTitle>
+                Chat settings
+            </HeaderTitle>
+            <Button disabled color='#fff' title='Save' onPress={() => {
+            }}/>
+        </Header>
+        <EditChatForm chatData={chatData} updateChat={updateChat} />
+        </Container>
+        
+    )
 }
+const UploadContainer = styled.View`
+position: absolute;
+top: 0;
+right: 0;
+bottom: 0;
+left: 0;
+background-color: rgba(0, 0, 0, 0.52);
+z-index: 3;
+align-items: center;
+justify-content: center;
+`
 const Container = styled.SafeAreaView`
 flex-grow: 1;
 background-color: #fff;

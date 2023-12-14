@@ -6,13 +6,13 @@ import styled from 'styled-components'
 import * as ImagePicker from 'expo-image-picker';
 import CachedImage from '../CachedImage';
 const EditChatForm = ({chatData, updateChat}) => {
-    console.log(chatData, '--------> chatdata')
     const userImageHandleImage = require('../../../assets/remove-item.png')
     const defaultChatImage = require('../../../assets/group-chat.png');
     const initValues = {
         chatName: chatData.name,
         image: chatData.image,
-        uploadedImage: null
+        uploadedImage: null,
+        imageIsRemoved: false
     }
 
     const selectChatImage = async (setValue) => {
@@ -31,7 +31,6 @@ const EditChatForm = ({chatData, updateChat}) => {
                 return item.uri
             }
             })
-            console.log(images[0])
             setValue('uploadedImage', images[0])
         }
     }
@@ -55,7 +54,13 @@ const EditChatForm = ({chatData, updateChat}) => {
                     }
                     
                     { (values.uploadedImage !== null || chatData.image !== null) &&
-                    <RemoveImageButton onPress={() => setFieldValue('uploadedImage', null)}>
+                    <RemoveImageButton onPress={() => {
+                        if(chatData.image !== null){
+                            setFieldValue('imageIsRemoved', true)
+                        }
+                        setFieldValue('uploadedImage', null)
+                        setFieldValue('image', null)
+                    }}>
                         <Image style={{width: '100%', height: '100%'}} source={userImageHandleImage} />
                     </RemoveImageButton>
                     }
@@ -73,7 +78,7 @@ const EditChatForm = ({chatData, updateChat}) => {
                     value={values.chatName}
                     />
                 </TextFields>
-                <Button style={{alignSelf: 'center', marginTop: 20}} icon="check" mode="elevated" uppee textColor='#000' onPress={handleSubmit}>
+                <Button style={{position: 'absolute', display: 'none'}} icon="check" mode="elevated" uppee textColor='#000' onPress={handleSubmit}>
                     Save
                 </Button>
                 </View>
