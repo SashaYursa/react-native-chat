@@ -1,7 +1,7 @@
 import { collection, doc, getDoc, query, setDoc, updateDoc, where } from "firebase/firestore";
 import { auth, database, fileStorage, rDatabase } from "../../../../config/firebase";
 import { rootApi } from "../rootApi/rootApi";
-import { getAuth, signInWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { createUserWithEmailAndPassword, getAuth, signInWithEmailAndPassword, signOut, updateProfile } from "firebase/auth";
 import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
 import { onDisconnect, ref, serverTimestamp, set } from "firebase/database";
 import {deleteObject, getDownloadURL, ref as sRef} from "firebase/storage"
@@ -32,7 +32,35 @@ export const authApi = rootApi.injectEndpoints({
                     return {data}
                 }
                 catch(error){
-                    console.log('error in login', error)
+                    return {error}
+                }
+            }
+        }),
+        registration: builder.mutation({
+            async queryFn({password, email}) {
+                try{
+                    const data = await createUserWithEmailAndPassword(auth, email, password)
+                    const user = data.user
+                    await setDoc(doc(database, 'users', user.uid),{
+                    id: user.uid,
+                    email: user.email,
+                    displayName: user.email,
+                    image: null,
+                    createdAt: serverTimestamp()
+                    })
+                    await ReactNativeAsyncStorage.setItem("email", email)
+                    await ReactNativeAsyncStorage.setItem("password", password)
+                    let response = await getDoc(doc(database, "users", user.uid))
+                    response = response.data()
+                    return {
+                        data:{
+                            ...user,
+                            ...response
+                        }
+                    }
+                }
+                catch(error){
+                    console.log('registration error, ->', error)
                     return {error}
                 }
             }
@@ -69,7 +97,6 @@ export const authApi = rootApi.injectEndpoints({
                         });
                       }
                     let image = updateData.image;
-                    console.log('removed image ===> ', user.image)
                     if(updateData.uploadedImage !== null){
                         if(user.image){
                             removePrevImage(user.image)
@@ -97,7 +124,20 @@ export const authApi = rootApi.injectEndpoints({
                     return {error}
                 }
             }
+        }),
+        loguot: builder.mutation({
+            async queryFn(){
+                try {
+                    await ReactNativeAsyncStorage.removeItem("email")
+                    await ReactNativeAsyncStorage.removeItem("password")
+                    await signOut(auth)
+                    return {data: 'ok'}
+                }catch(error){
+                    console.log('logout error, ---->', error)
+                    return {error}
+                }
+            }
         })
     })
 })
-export const { useLoginMutation, useUpdateUserMutation } = authApi
+export const { useLoginMutation, useUpdateUserMutation, useLoguotMutation, useRegistrationMutation } = authApi

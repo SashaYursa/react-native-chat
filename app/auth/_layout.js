@@ -37,7 +37,14 @@ const AuthLayout = () => {
           </MoveButton>
         }}/>
         <Stack.Screen name='SignUp' options={{
-          headerTitle: ''
+          headerTitle: '',
+          headerRight: () => <MoveButton
+          onPress = {()=> router.push('auth/Login')}
+          style={({pressed}) => [
+            {
+              backgroundColor: pressed ? 'gray' : 'white',
+            },
+          ]}><ButtonText>Login</ButtonText></MoveButton>
         }} />
     </Stack>
   )

@@ -25,7 +25,7 @@ const EditUser = ({user, setDisplayModal, uploadUser}) => {
         }
     }, [updateUserData])
     useEffect(() => {
-        console.log('update user error', updateUserError)
+        // console.log('update user error', updateUserError)
     }, [updateUserError])
 
     const updateUser = async (updateData) => {
@@ -40,7 +40,7 @@ const EditUser = ({user, setDisplayModal, uploadUser}) => {
                     </UploadContainer>
                 : null
             }
-            <EditWrapper contentContainerStyle={{paddingVertical: 50}}>
+            <EditWrapper contentContainerStyle={{paddingVertical: 10}}>
                 <BackButtonContainer>
                     <BackButton onPress={() => setDisplayModal(false)}/>
                 </BackButtonContainer>

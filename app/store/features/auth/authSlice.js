@@ -1,13 +1,13 @@
 import { createSlice } from "@reduxjs/toolkit";
 import { authApi } from "./authApi";
-
-export const authSlice = createSlice({
-    name: "auth",
-    initialState: {
+const initialState = {
         user: null,
         error: null,
         uploadUserImageStatus: null
-    },
+    }
+export const authSlice = createSlice({
+    name: "auth",
+    initialState,
     reducers: {
         setUser: (state, action) => {
             state.user = action.payload
@@ -26,6 +26,12 @@ export const authSlice = createSlice({
                 ...state.user,
                 ...action.payload
             }
+        })
+        .addMatcher(authApi.endpoints.loguot.matchFulfilled, (state) => {
+            state.user = null
+        })
+        .addMatcher(authApi.endpoints.registration.matchFulfilled, (state, action) => {
+            state.user = action.payload
         })
     }
 })

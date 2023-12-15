@@ -78,7 +78,7 @@ const EditChatForm = ({chatData, updateChat}) => {
                     value={values.chatName}
                     />
                 </TextFields>
-                <Button style={{position: 'absolute', display: 'none'}} icon="check" mode="elevated" uppee textColor='#000' onPress={handleSubmit}>
+                <Button style={{marginLeft: 'auto', marginEnd: 'auto'}} icon="check" mode="elevated" uppee textColor='#000' onPress={handleSubmit}>
                     Save
                 </Button>
                 </View>

@@ -17,10 +17,6 @@ const AddUsers = () => {
 
 	const chatData = useSelector(state => state.chats.chats.find(chat => chat.id === id))
 
-	useEffect(() => {
-		console.log('chat data update is here')
-		console.log(chatData)
-	}, [chatData])
 	const debouncedSearchValue = useDebounce(searchText, 1000);
 	const inputRef = useRef()
 	useEffect(() => {

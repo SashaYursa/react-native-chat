@@ -83,7 +83,6 @@ const Chats = ({user}) => {
                     const value = snapShot.val();
                     dispatch(updateOnlineStatus({id: userId, isOnline: value?.isOnline, timeStamp: value.timeStamp}))
                     if(index == (usersForChats?.length - 1)){
-                        console.log('last user')
                         dispatch(setUsersStatusLoading(false))
                     }
                 })
@@ -91,7 +90,6 @@ const Chats = ({user}) => {
             })
         }
         return () => unsubs.forEach(unsub => {
-            console.log(unsub, '-----> unsub')
             if(unsub){
                 unsub();    
             }
@@ -121,9 +119,6 @@ const Chats = ({user}) => {
                     }
                     snapShot.docs.forEach(async e => { 
                         const data = e.data();
-                        if(!data.isRead.includes(user.uid) && currentChat === chat.id){
-                            console.log(Platform.OS, 'user in chat and read this message')
-                        }
                         if(data?.createdAt?.seconds){
                             const messageCreatedAt = new Date(data?.createdAt?.seconds * 1000)
                             const messageSlug = messageCreatedAt.getFullYear() + "_" + messageCreatedAt.getMonth() + "_" + messageCreatedAt.getDate();  
@@ -197,15 +192,17 @@ const Chats = ({user}) => {
                 </Text>
             </View>
     }
-    if(usersLoading || chatsIsLoading || !lastMessages?.length || messagesLoading || statusLoading){
+    if((usersLoading || chatsIsLoading || messagesLoading || statusLoading) && chatsData.length > 0 ){
         return <ActivityIndicator />
     }
-    console.log('rerender', Platform.OS)
 
     return (
         <View style={{flex: 1}}>
             <ScrollView>
                 <Container>
+                    {chatsData?.length === 0 &&
+                    <Text>No chats</Text>
+                    }
                     <ChatsList>
                         {chatsWithMessages?.length > 0 && chatsWithMessages.map(chat => {
                             return (

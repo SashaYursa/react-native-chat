@@ -13,11 +13,6 @@ const Info = () => {
     const user = useSelector(state => state.auth.user);
     const chatData = useSelector(state => state.chats.chats.find(chat => chat.id === id))
     const [deleteUserFromChat, {data: resDelete, error: resError}] = useDeleteUserFromChatMutation()
-    useEffect(() => {
-        if(resError){
-            console.log(resError)
-        }
-    }, [resError])
     const chatUsers = (useSelector(state => state.users.users)).filter(u => {
         if(user.uid === u.id) return false
         if(chatData?.users?.includes(u.id)) return true

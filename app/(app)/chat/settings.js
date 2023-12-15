@@ -44,16 +44,19 @@ const Settings = () => {
             </UploadContainer>
             : null
         }
-        <Header>
-            <Button  title='Back' onPress={() => {
-                router.back()
-            }}/>
-            <HeaderTitle>
-                Chat settings
-            </HeaderTitle>
-            <Button disabled color='#fff' title='Save' onPress={() => {
-            }}/>
-        </Header>
+        {Platform.OS === 'ios' &&
+            <Header>
+                <Button  title='Back' onPress={() => {
+                    router.back()
+                }}/>
+                <HeaderTitle>
+                    Chat settings
+                </HeaderTitle>
+                {/* <></> */}
+                <Button disabled color='#fff' title='Save' onPress={() => {
+                }}/>
+            </Header>
+        }
         <EditChatForm chatData={chatData} updateChat={updateChat} />
         </Container>
         

@@ -14,26 +14,26 @@ import { Button } from 'react-native-paper';
 import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
 import { fileStorage } from '../../../../config/firebase';
 import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
+import { useLoguotMutation } from '../../../store/features/auth/authApi';
 const Profile = ({}) => {
   const user = useSelector(state => state.auth.user);
+  const [logoutAction, {error: logoutError, data: logoutData}] = useLoguotMutation()
   const [displayModal, setDisplayModal] = useState(false)
   const [uploadImageStatus, setUploadImageStatus] = useState(null)
-
+  const dispatch = useDispatch()
   const handleEditUser = () => {
     setDisplayModal(displayModal => !displayModal)
   }
 
   useEffect(() => {
-    console.log(uploadImageStatus, 'preload')
-  }, [uploadImageStatus])
+    if(logoutData === 'ok'){
+      router.push('auth/Login')
+    }
+  }, [logoutData])
 
   const logout = () => {
-    ReactNativeAsyncStorage.removeItem("email")
-    ReactNativeAsyncStorage.removeItem("password")
-    signOut(auth).then(()=> {
-      router.push('auth/Login')
-    })
+    logoutAction()
   }
   if(displayModal){
     return (

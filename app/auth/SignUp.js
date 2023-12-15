@@ -1,33 +1,49 @@
-import { View, Text } from 'react-native'
-import React from 'react'
+import { View, ActivityIndicator } from 'react-native'
+import React, { useEffect } from 'react'
 import AuthContainer from '../components/Auth/AuthContainer'
 import SignUpForm from '../components/Auth/SignUpForm'
-import { auth, database } from '../../config/firebase'
-import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth'
-import { addDoc, collection, doc, serverTimestamp, setDoc } from 'firebase/firestore'
+import { useRegistrationMutation } from '../store/features/auth/authApi'
+import styled from 'styled-components'
 const SignUp = () => {
-  const addUser = (email,password, passwordConfirm) => {
+  const [registrationAction, {error: registrationError, data: registrationData, isLoading: registrationLoading}] = useRegistrationMutation()
+  useEffect(() => {
+    if(registrationError){
+      console.log('register error', registrationError)
+    }
+  }, [registrationError])
+  useEffect(() => {
+    if(registrationData){
+      console.log('registrationData', registrationData)
+    }
+  }, [registrationData])
+  const registration = (email, password, passwordConfirm) => {
+    
     if(password === passwordConfirm){
-      createUserWithEmailAndPassword(auth, email, password)
-      .then(data => {
-        const user = data.user
-        return setDoc(doc(database, 'users', user.uid),{
-          id: user.uid,
-          email: user.email,
-          displayName: user.email,
-          image: null,
-          createdAt: serverTimestamp()
-        })
-      })
-      .then(data => console.log(data))
-      .catch(error => console.log(error, 'error'))
+      registrationAction({password, email})
     }
   }
   return (
-    <AuthContainer>
-      <SignUpForm handleRegistration={addUser}/>
-    </AuthContainer>
+    <>
+      {registrationLoading &&
+        <LoadingContainer>
+          <ActivityIndicator size="large"/>
+        </LoadingContainer>
+      }
+      <AuthContainer>
+        <SignUpForm handleRegistration={registration}/>
+      </AuthContainer>
+    </>
   )
 }
+
+const LoadingContainer = styled.View`
+position: absolute;
+top: 0;
+right: 0;
+bottom: 0;
+left: 0;
+align-items: center;
+justify-content: center;
+`
 
 export default SignUp
