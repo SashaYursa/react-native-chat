@@ -5,11 +5,11 @@ export default{
     "slug": "chat",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/mainicon.png",
     "userInterfaceStyle": "light",
     "scheme": "chat-app",
     "splash": {
-      "image": "./assets/splash.png",
+      "image": "./assets/mainsplash.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -20,27 +20,32 @@ export default{
       "supportsTablet": true
     },
     "android": {
+      "package": "com.yursaolexandr.chat",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/mainicon.png",
         "backgroundColor": "#ffffff"
       }
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    extra: {
-      apiKey: process.env.apiKey,
-      authDomain: process.env.authDomain,
-      projectId: process.env.projectId,
-      storageBucket: process.env.storageBucket,
-      messagingSenderId: process.env.messagingSenderId,
-      appId: process.env.appId
+    "extra": {
+      "apiKey": process.env.apiKey,
+      "authDomain": process.env.authDomain,
+      "projectId": process.env.projectId,
+      "storageBucket": process.env.storageBucket,
+      "messagingSenderId": process.env.messagingSenderId,
+      "appId": process.env.appId,
+      "eas": {
+        "projectId": "af488e39-bbc4-455a-9390-f5fd09e580fc"
+      }
     },
     "plugins": [
       "expo-router"
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "owner": "yursaolexandr"
   }
 }

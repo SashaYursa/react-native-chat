@@ -40,7 +40,7 @@ const EditUser = ({user, setDisplayModal, uploadUser}) => {
                     </UploadContainer>
                 : null
             }
-            <EditWrapper contentContainerStyle={{paddingVertical: 10}}>
+            <EditWrapper contentContainerStyle={{paddingVertical: 30}}>
                 <BackButtonContainer>
                     <BackButton onPress={() => setDisplayModal(false)}/>
                 </BackButtonContainer>

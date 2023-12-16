@@ -51,20 +51,6 @@ const createChat = () => {
             admin: [user.uid],
         }
         await createChat(createChatParams)
-        // router.back();
-        // router.push(`chat/${createdChat.data.id}`)
-
-        // await addDoc(collection(database, 'chats'),{
-        //     name: chatName,
-        //     users: [user.uid , ...usersId],
-        //     type: 'public',
-        //     image: null,
-        //     admin: [user.uid],
-        //     createdAt: serverTimestamp()
-        // }).then(doc => {
-        //     router.back();
-        //     router.push(`chat/${doc.id}`)
-        // })
     }
     
     return (

@@ -1,8 +1,0 @@
-{
-    "name": "chatApp",
-    "displayName": "ChatApp",
-    "android": {
-        "package": "com.chatapp",
-        "googleServicesFile": "./google-services.json"
-    }
-}    

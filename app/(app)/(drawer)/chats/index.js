@@ -171,7 +171,7 @@ const Chats = ({user}) => {
             time: message.createdAt,
             media: message.media,
             type: itemData.type,
-            onlineStatus: selectedUser.isOnline
+            onlineStatus: selectedUser?.isOnline
         }
         return(
             <ChatLink onPress={() => hadnleChatClick(itemData)}>
